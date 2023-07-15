@@ -18,7 +18,8 @@
 
 #include <iostream>
 
-std::string unzipped_fmu_folder = "D:/workspace/DigitalDynamicsLab/fmu_generator_standalone_build";
+//std::string unzipped_fmu_folder = "D:/workspace/DigitalDynamicsLab/fmu_generator_standalone_build";
+std::string unzipped_fmu_folder = FMU_PATH_DEFAULT;
 int main(int argc, char* argv[]) {
     
 

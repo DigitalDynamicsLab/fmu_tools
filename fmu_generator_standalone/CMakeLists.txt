@@ -54,6 +54,7 @@ add_custom_command(
 add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsStandalone.hpp)
 target_include_directories(fmu_host_standalone PUBLIC "fmi2_headers")
 target_include_directories(fmu_host_standalone PUBLIC "rapidxml")
+target_compile_definitions(fmu_host_standalone PUBLIC FMU_PATH_DEFAULT="${CMAKE_BINARY_DIR}")
 set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 add_dependencies(fmu_host_standalone fmu_entity)
 
