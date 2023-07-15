@@ -11,10 +11,27 @@ target_include_directories(fmu_entity PUBLIC "fmi2_headers")
 target_include_directories(fmu_entity PUBLIC "rapidxml")
 
 
-
 # set_property(TARGET fmu_entity PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+if(WIN32)
+    SET(OS_SUFFIX "win")
+elseif(APPLE)
+    SET(OS_SUFFIX "darwin")
+elseif(UNIX)
+    SET(OS_SUFFIX "linux")
+else()
+    MESSAGE(FATAL_ERROR "Unknown OS")
+endif()
 
-SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/binaries/win64/$<0:>")
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    SET(OS_SUFFIX "${OS_SUFFIX}64")
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    SET(OS_SUFFIX "${OS_SUFFIX}32")
+endif()
+
+MESSAGE(STATUS "Dedicated FMU folder: ${OS_SUFFIX}")
+
+
+SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/binaries/${OS_SUFFIX}/$<0:>")
 set_target_properties(fmu_entity PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 set_target_properties(fmu_entity PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 set_target_properties(fmu_entity PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
@@ -22,17 +39,14 @@ set_target_properties(fmu_entity PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${FMU_RUNTI
 set_target_properties(fmu_entity PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 set_target_properties(fmu_entity PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 
-# Create the ZIP command
-# file(GLOB_RECURSE zipFiles_1 "${FMU_RUNTIME_OUTPUT_DIRECTORY}/*")
-# file(GLOB_RECURSE zipFiles_2 "${CMAKE_SOURCE_DIR}/modelDescription.xml")
-# SET(zipFiles ${zipFiles_1} ${zipFiles_1})
+# Create the FMU command
 add_custom_command(
     TARGET fmu_entity
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/modelDescription.xml" "${CMAKE_BINARY_DIR}"
     COMMAND ${CMAKE_COMMAND} -E tar "cf" "fmu_entity.fmu" "modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Creating ZIP file: fmu_entity.fmu"
+    COMMENT "Creating FMU file: fmu_entity.fmu"
 )
 
 
@@ -48,9 +62,7 @@ add_executable(nonfmu_host nonfmu_host.cpp FmuToolsStandalone.hpp)
 target_include_directories(nonfmu_host PUBLIC "fmi2_headers")
 target_link_libraries(nonfmu_host PUBLIC fmu_entity)
 # target_include_directories(nonfmu_host PUBLIC "rapidxml")
-
-# Set the working directory for MSVC
-set_property(TARGET nonfmu_host PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 
 
 

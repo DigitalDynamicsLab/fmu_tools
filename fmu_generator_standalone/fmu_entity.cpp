@@ -33,7 +33,7 @@ public:
     std::map<fmi2ValueReference, fmi2Boolean*> fmi2Boolean_map;
     std::map<fmi2ValueReference, fmi2String*> fmi2String_map;
 
-    fmi2CallbackFunctions callbackfunctions;
+    fmi2CallbackFunctions callbackFunctions;
 
     size_t fmi2CallbackLoggerCategoryID;
 
@@ -183,7 +183,7 @@ fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn, size_t nC
 
 fmi2Component fmi2Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn){
     ChFmuPendulum* fmu_instance = new ChFmuPendulum(instanceName, fmuType, fmuGUID);
-    fmu_instance->callbackfunctions = *functions;
+    fmu_instance->callbackFunctions = *functions;
     fmu_instance->loggingOn = loggingOn;
     
     return fmu_instance;
