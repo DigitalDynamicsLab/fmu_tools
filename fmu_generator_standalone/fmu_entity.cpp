@@ -5,12 +5,19 @@
 #include <vector>
 #include <array>
 #include <map>
+#include <iostream>
+#include <string>
+
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+
 
 class ChFmuComponent{
 public:
     ChFmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID): instanceName(_instanceName), fmuType(_fmuType), fmuGUID(_fmuGUID){}
     virtual ~ChFmuComponent(){}
-private:
+protected:
     fmi2String instanceName;
     fmi2Type fmuType;
     fmi2String fmuGUID;
@@ -25,6 +32,22 @@ public:
     std::map<fmi2ValueReference, fmi2Integer*> fmi2Integer_map;
     std::map<fmi2ValueReference, fmi2Boolean*> fmi2Boolean_map;
     std::map<fmi2ValueReference, fmi2String*> fmi2String_map;
+
+    fmi2CallbackFunctions callbackfunctions;
+
+    size_t fmi2CallbackLoggerCategoryID;
+
+    void SetCallbackLoggerCategory(fmi2String category){
+        for (size_t cc = 0; cc<4; ++cc)
+        {
+            if (category==fmi2CallbackLoggerCategories[cc])
+                fmi2CallbackLoggerCategoryID = cc;
+            break;
+        }
+    }
+
+    fmi2String fmi2CallbackLoggerCategories[4] = {"logStatusFatal","logStatusError","logStatusWarning","logAll"};
+    bool loggingOn = true;
 
     virtual fmi2Status DoStep(double stepSize = -1){ return fmi2Status::fmi2Error; };
 
@@ -53,23 +76,31 @@ std::array<double, 4> operator+(const std::array<double, 4>& lhs, const std::arr
 class ChFmuPendulum: public ChFmuComponent{
 public:
     ChFmuPendulum(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID): g(9.81), ChFmuComponent(_instanceName, _fmuType, _fmuGUID){
-        fmi2Real_map[0] = &q[0];
-        fmi2Real_map[1] = &q[1];
-        fmi2Real_map[2] = &q[2];
-        fmi2Real_map[3] = &q[3];
-        fmi2Real_map[4] = &q_t[0];
-        fmi2Real_map[5] = &q_t[1];
-        fmi2Real_map[6] = &q_t[2];
-        fmi2Real_map[7] = &q_t[3];
-        fmi2Real_map[8] = &len;
-        fmi2Real_map[9] = &m;
-        fmi2Real_map[10] = &M;
+        fmi2Real_map[0] = &q_t[0];
+        fmi2Real_map[1] = &q[0];
+        fmi2Real_map[2] = &q[1];
+        fmi2Real_map[3] = &q_t[2];
+        fmi2Real_map[4] = &q[2];
+        fmi2Real_map[5] = &q[3];
+        fmi2Real_map[6] = &len;
+        fmi2Real_map[7] = &m;
+        fmi2Real_map[8] = &M;
+
+        fmi2Boolean_map[0] = &approximateOn;
+
+        q = {0, 0, 0, M_PI/4};
     }
     virtual ~ChFmuPendulum(){}
 
     virtual fmi2Status DoStep(double _stepSize = -1) override {
-        if (_stepSize<0)
+        if (_stepSize<0){
+            if (fmi2CallbackLoggerCategoryID>=2){
+                std::string str = "fmi2DoStep requeste a negative stepsize: " + std::to_string(_stepSize) + ".\n";
+                callbackFunctions.logger(this, instanceName, fmi2Status::fmi2Warning, "Warning", str.c_str());
+            }
+
             return fmi2Status::fmi2Warning;
+        }
 
         _stepSize = std::min(_stepSize, stepSize);
 
@@ -79,8 +110,14 @@ public:
         get_q_t(q + _stepSize*k3, k4); // = q_t(q(step, :) + stepsize*k3);
 
         q_t = (1.0/6.0)*(k1 + 2.0*k2 + 2.0*k3 + k4);
-        q = q + (_stepSize/6)*q_t;
+        q = q + _stepSize*q_t;
         time = time + _stepSize;
+
+
+        if (fmi2CallbackLoggerCategoryID>=3){
+            std::string str = "Step at time: " + std::to_string(time) + " succeeded.\n";
+            callbackFunctions.logger(this, instanceName, fmi2Status::fmi2OK, "Status", str.c_str());
+        }
 
         return fmi2Status::fmi2OK;
     }
@@ -93,10 +130,18 @@ public:
         return -(sin(th)*(len*m*cos(th)*th_t*th_t + M*g + g*m))/(len*(-m*cos(th)*cos(th) + M + m));
     }
 
+    double get_x_tt_linear(double th_t, double th) {
+        return (m*th*(len*th_t*th_t + g))/M;
+    }
+
+    double get_th_tt_linear(double th_t, double th) {
+        return -(th*(len*m*th_t*th_t + M*g + g*m))/(len*M);
+    }
+
     void get_q_t(const std::array<double, 4>& _q, std::array<double, 4>& q_t){
-        q_t[0] = get_x_tt(_q[2], _q[3]);
+        q_t[0] = approximateOn ? get_x_tt_linear(_q[2], _q[3]) : get_x_tt(_q[2], _q[3]);
         q_t[1] = _q[0];
-        q_t[2] = get_th_tt(_q[2], _q[3]);
+        q_t[2] = approximateOn ? get_th_tt_linear(_q[2], _q[3]) : get_th_tt(_q[2], _q[3]);
         q_t[3] = _q[2];
     }
 
@@ -104,10 +149,12 @@ public:
 private:
     std::array<double, 4> q;
     std::array<double, 4> q_t;
-    double len = 0;
-    double m = 0;
-    double M = 0;
+    double len = 0.5;
+    double m = 1.0;
+    double M = 1.0;
     const double g;
+
+    fmi2Boolean approximateOn = fmi2False;
 
     // TEMP
     std::array<double, 4> k1;
@@ -127,10 +174,18 @@ const char* fmi2GetVersion(void){
     return fmi2Version;
 }
 
-fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn, size_t nCategories, const fmi2String categories[]){ return fmi2Status::fmi2OK; }
+fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn, size_t nCategories, const fmi2String categories[]){
+    ChFmuPendulum* ch_ptr = reinterpret_cast<ChFmuPendulum*>(c);
+    ch_ptr->loggingOn = loggingOn==fmi2True ? true : false;
+    ch_ptr->SetCallbackLoggerCategory(categories[nCategories]);
+    return fmi2Status::fmi2OK;
+}
 
 fmi2Component fmi2Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn){
     ChFmuPendulum* fmu_instance = new ChFmuPendulum(instanceName, fmuType, fmuGUID);
+    fmu_instance->callbackfunctions = *functions;
+    fmu_instance->loggingOn = loggingOn;
+    
     return fmu_instance;
 }
 
@@ -213,8 +268,18 @@ fmi2Status fmi2SetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nv
     }
     return fmi2Status::fmi2OK;
 }
+
 fmi2Status fmi2SetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[]){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2SetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[]){ return fmi2Status::fmi2OK; }
+fmi2Status fmi2SetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[]){
+    auto& fmi2Boolean_map = reinterpret_cast<ChFmuPendulum*>(c)->fmi2Boolean_map;
+    for (size_t s = 0; s<nvr; ++s){
+        auto it = fmi2Boolean_map.find(vr[s]);
+        if (it != fmi2Boolean_map.end())
+            *it->second = value[s];
+        else return fmi2Status::fmi2Error;
+    }
+    return fmi2Status::fmi2OK;
+}
 fmi2Status fmi2SetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2String value[]){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2GetFMUstate(fmi2Component c, fmi2FMUstate* FMUstate){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2SetFMUstate(fmi2Component c, fmi2FMUstate FMUstate){ return fmi2Status::fmi2OK; }

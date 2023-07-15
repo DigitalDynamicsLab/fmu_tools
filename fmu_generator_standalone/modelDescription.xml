@@ -2,25 +2,19 @@
 <fmiModelDescription
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   fmiVersion="2.0"
-  modelName="Unnamed4"
+  modelName="fmu_entity"
   guid="{16ce9076-4f15-4484-9e18-fefd58f15f51}"
-  generationTool="Dymola Version 2020 (64-bit), 2019-04-10 (requires license to execute)"
-  generationDateAndTime="2023-03-17T11:01:22Z"
+  generationTool="fmu_generator_standalone"
   variableNamingConvention="structured"
   numberOfEventIndicators="0">
-  <ModelExchange
-    modelIdentifier="fmu_entity"
-    canGetAndSetFMUstate="true"
-    canSerializeFMUstate="true"
-    providesDirectionalDerivative="true"/>
   <CoSimulation
     modelIdentifier="fmu_entity"
     canHandleVariableCommunicationStepSize="true"
     canInterpolateInputs="true"
     maxOutputDerivativeOrder="1"
-    canGetAndSetFMUstate="true"
-    canSerializeFMUstate="true"
-    providesDirectionalDerivative="true"/>
+    canGetAndSetFMUstate="false"
+    canSerializeFMUstate="false"
+    providesDirectionalDerivative="false"/>
   <UnitDefinitions>
     <Unit name="1"/>
     <Unit name="s">
@@ -32,127 +26,117 @@
     <Unit name="m/s"> 
       <BaseUnit s="-1" m="1"/> 
     </Unit>
+    <Unit name="m/s2"> 
+      <BaseUnit s="-2" m="1"/> 
+    </Unit>
     <Unit name="rad">
       <BaseUnit rad="1"/>
     </Unit>
     <Unit name="rad/s"> 
       <BaseUnit s="-1" rad="1"/>
+    </Unit>
+    <Unit name="rad/s2"> 
+      <BaseUnit s="-2" rad="1"/>
     </Unit> 
     <Unit name="kg">
       <BaseUnit rad="1"/>
     </Unit>
   </UnitDefinitions>
-  <!-- <TypeDefinitions>
-    <SimpleType
-      name="Modelica.Blocks.Interfaces.RealInput">
-      <Real/>
-    </SimpleType>
-    <SimpleType
-      name="Modelica.Blocks.Interfaces.RealOutput">
-      <Real/>
-    </SimpleType>
-    <SimpleType
-      name="Modelica.Blocks.Types.Init">
-      <Enumeration>
-        <Item name="NoInit"
-          value="1"
-          description="No initialization (start values are used as guess values with fixed=false)"/>
-        <Item name="SteadyState"
-          value="2"
-          description="Steady state initialization (derivatives of states are zero)"/>
-        <Item name="InitialState"
-          value="3"
-          description="Initialization with initial states"/>
-        <Item name="InitialOutput"
-          value="4"
-          description="Initialization with initial outputs (and steady state of the states if possible)"/>
-      </Enumeration>
-    </SimpleType>
-  </TypeDefinitions> -->
+  <LogCategories>
+    <Category name="logAll"/>
+    <Category name="logStatusWarning"/>
+    <Category name="logStatusError"/>
+    <Category name="logStatusFatal"/>
+  </LogCategories>
   <DefaultExperiment startTime="0.0"
     stopTime="10.0"
     tolerance="1E-06"/>
   <ModelVariables>
+    <!--index="1" -->
     <ScalarVariable
-      name="der(x)"
+      name="x_tt"
       valueReference="0"
+      causality="output">
+      <Real unit="m/s2"/>
+    </ScalarVariable>
+    <!--index="2" -->
+    <ScalarVariable
+      name="x_t"
+      valueReference="1"
       causality="output">
       <Real unit="m/s"/>
     </ScalarVariable>
+    <!--index="3" -->
     <ScalarVariable
       name="x"
-      valueReference="1"
-      causality="output">
-      <Real/>
-    </ScalarVariable>
-    <ScalarVariable
-      name="der(theta)"
       valueReference="2"
       causality="output">
-      <Real/>
+      <Real unit="m"/>
     </ScalarVariable>
+    <!--index="4" -->
     <ScalarVariable
-      name="theta"
+      name="theta_tt"
       valueReference="3"
       causality="output">
-      <Real/>
+      <Real unit="rad/s2"/>
     </ScalarVariable>
+    <!--index="5" -->
     <ScalarVariable
-      name="der(der(x))"
+      name="theta_t"
       valueReference="4"
       causality="output">
-      <Real/>
+      <Real unit="rad/s"/>
     </ScalarVariable>
+    <!--index="6" -->
     <ScalarVariable
-      name="der(x)"
+      name="theta"
       valueReference="5"
       causality="output">
-      <Real/>
+      <Real unit="rad"/>
     </ScalarVariable>
-    <ScalarVariable
-      name="der(der(theta))"
-      valueReference="6"
-      causality="output">
-      <Real/>
-    </ScalarVariable>
-    <ScalarVariable
-      name="der(theta)"
-      valueReference="7"
-      causality="output">
-      <Real/>
-    </ScalarVariable>
+    <!--index="7" -->
     <ScalarVariable
       name="len"
-      valueReference="8"
+      valueReference="6"
       causality="parameter"
       variability="fixed">
       <Real unit="m" start="0.5"/>
     </ScalarVariable>
+    <!--index="8" -->
     <ScalarVariable
       name="m"
-      valueReference="9"
+      valueReference="7"
       causality="parameter"
       variability="fixed">
       <Real unit="kg" start="1.0"/>
     </ScalarVariable>
+    <!--index="9" -->
     <ScalarVariable
       name="M"
-      valueReference="10"
+      valueReference="8"
       causality="parameter"
       variability="fixed">
       <Real unit="kg" start="1.0"/>
+    </ScalarVariable>
+    <!--index="10" -->
+    <ScalarVariable
+      name="approximateOn"
+      valueReference="0"
+      causality="parameter"
+      variability="fixed">
+      <Boolean start="true"/>
     </ScalarVariable>
   </ModelVariables>
   <ModelStructure>
     <!-- <Outputs>
-      <Unknown index="8"
+      <Unknown index="2"
         dependencies=""
         dependenciesKind=""/>
-      <Unknown index="9"
+      <Unknown index="3"
         dependencies=""
         dependenciesKind=""/>
-    </Outputs>
-    <Derivatives>
+    </Outputs> -->
+    <!-- <Derivatives>
       <Unknown index="6"
         dependencies="7"
         dependenciesKind="fixed"/>
