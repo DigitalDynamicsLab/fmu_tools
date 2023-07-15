@@ -12,13 +12,12 @@
 #include <math.h>
 
 
-
 class ChFmuComponent{
 public:
     ChFmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID): instanceName(_instanceName), fmuType(_fmuType), fmuGUID(_fmuGUID){}
     virtual ~ChFmuComponent(){}
 protected:
-    fmi2String instanceName;
+    std::string instanceName;
     fmi2Type fmuType;
     fmi2String fmuGUID;
 public:
@@ -96,7 +95,7 @@ public:
         if (_stepSize<0){
             if (fmi2CallbackLoggerCategoryID>=2){
                 std::string str = "fmi2DoStep requeste a negative stepsize: " + std::to_string(_stepSize) + ".\n";
-                callbackFunctions.logger(this, instanceName, fmi2Status::fmi2Warning, "Warning", str.c_str());
+                callbackFunctions.logger(reinterpret_cast<void*>(this), instanceName.c_str(), fmi2Status::fmi2Warning, "Warning", str.c_str());
             }
 
             return fmi2Status::fmi2Warning;
@@ -116,7 +115,7 @@ public:
 
         if (fmi2CallbackLoggerCategoryID>=3){
             std::string str = "Step at time: " + std::to_string(time) + " succeeded.\n";
-            callbackFunctions.logger(this, instanceName, fmi2Status::fmi2OK, "Status", str.c_str());
+            callbackFunctions.logger(reinterpret_cast<void*>(this), instanceName.c_str(), fmi2Status::fmi2OK, "Status", str.c_str());
         }
 
         return fmi2Status::fmi2OK;
@@ -178,6 +177,7 @@ fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn, size_t nC
     ChFmuPendulum* ch_ptr = reinterpret_cast<ChFmuPendulum*>(c);
     ch_ptr->loggingOn = loggingOn==fmi2True ? true : false;
     ch_ptr->SetCallbackLoggerCategory(categories[nCategories]);
+
     return fmi2Status::fmi2OK;
 }
 
@@ -186,7 +186,7 @@ fmi2Component fmi2Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2Str
     fmu_instance->callbackFunctions = *functions;
     fmu_instance->loggingOn = loggingOn;
     
-    return fmu_instance;
+    return reinterpret_cast<void*>(fmu_instance);
 }
 
 void fmi2FreeInstance(fmi2Component c){
@@ -289,17 +289,17 @@ fmi2Status fmi2SerializeFMUstate(fmi2Component c, fmi2FMUstate FMUstate, fmi2Byt
 fmi2Status fmi2DeSerializeFMUstate(fmi2Component c, const fmi2Byte serializedState[], size_t size, fmi2FMUstate* FMUstate){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2GetDirectionalDerivative(fmi2Component c, const fmi2ValueReference vUnknown_ref[], size_t nUnknown, const fmi2ValueReference vKnown_ref[], size_t nKnown, const fmi2Real dvKnown[], fmi2Real dvUnknown[]){ return fmi2Status::fmi2OK; }
 
-//// Model Exchange
-fmi2Status fmi2EnterEventMode(fmi2Component c){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2NewDiscreteStates(fmi2Component c, fmi2EventInfo* fmi2eventInfo){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2EnterContinuousTimeMode(fmi2Component c){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2CompletedIntegratorStep(fmi2Component c, fmi2Boolean noSetFMUStatePriorToCurrentPoint, fmi2Boolean* enterEventMode, fmi2Boolean* terminateSimulation){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2SetTime(fmi2Component c, fmi2Real time){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2SetContinuousStates(fmi2Component c, const fmi2Real x[], size_t nx){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2GetDerivatives(fmi2Component c, fmi2Real derivatives[], size_t nx){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2GetEventIndicators(fmi2Component c, fmi2Real eventIndicators[], size_t ni){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2GetContinuousStates(fmi2Component c, fmi2Real x[], size_t nx){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component c, fmi2Real x_nominal[], size_t nx){ return fmi2Status::fmi2OK; }
+////// Model Exchange
+//fmi2Status fmi2EnterEventMode(fmi2Component c){ return fmi2Status::fmi2OK; }
+//fmi2Status fmi2NewDiscreteStates(fmi2Component c, fmi2EventInfo* fmi2eventInfo){ return fmi2Status::fmi2OK; }
+//fmi2Status fmi2EnterContinuousTimeMode(fmi2Component c){ return fmi2Status::fmi2OK; }
+//fmi2Status fmi2CompletedIntegratorStep(fmi2Component c, fmi2Boolean noSetFMUStatePriorToCurrentPoint, fmi2Boolean* enterEventMode, fmi2Boolean* terminateSimulation){ return fmi2Status::fmi2OK; }
+//fmi2Status fmi2SetTime(fmi2Component c, fmi2Real time){ return fmi2Status::fmi2OK; }
+//fmi2Status fmi2SetContinuousStates(fmi2Component c, const fmi2Real x[], size_t nx){ return fmi2Status::fmi2OK; }
+//fmi2Status fmi2GetDerivatives(fmi2Component c, fmi2Real derivatives[], size_t nx){ return fmi2Status::fmi2OK; }
+//fmi2Status fmi2GetEventIndicators(fmi2Component c, fmi2Real eventIndicators[], size_t ni){ return fmi2Status::fmi2OK; }
+//fmi2Status fmi2GetContinuousStates(fmi2Component c, fmi2Real x[], size_t nx){ return fmi2Status::fmi2OK; }
+//fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component c, fmi2Real x_nominal[], size_t nx){ return fmi2Status::fmi2OK; }
 
 // Co-Simulation
 fmi2Status fmi2SetRealInputDerivatives(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer order[], const fmi2Real value[]){ return fmi2Status::fmi2OK; }
