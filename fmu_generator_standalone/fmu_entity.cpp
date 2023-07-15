@@ -95,7 +95,7 @@ public:
         if (_stepSize<0){
             if (fmi2CallbackLoggerCategoryID>=2){
                 std::string str = "fmi2DoStep requeste a negative stepsize: " + std::to_string(_stepSize) + ".\n";
-                callbackFunctions.logger(reinterpret_cast<void*>(this), instanceName.c_str(), fmi2Status::fmi2Warning, "Warning", str.c_str());
+                callbackFunctions.logger(callbackFunctions.componentEnvironment, instanceName.c_str(), fmi2Status::fmi2Warning, "Warning", str.c_str());
             }
 
             return fmi2Status::fmi2Warning;
@@ -115,7 +115,7 @@ public:
 
         if (fmi2CallbackLoggerCategoryID>=3){
             std::string str = "Step at time: " + std::to_string(time) + " succeeded.\n";
-            callbackFunctions.logger(reinterpret_cast<void*>(this), instanceName.c_str(), fmi2Status::fmi2OK, "Status", str.c_str());
+            callbackFunctions.logger(callbackFunctions.componentEnvironment, instanceName.c_str(), fmi2Status::fmi2OK, "Status", str.c_str());
         }
 
         return fmi2Status::fmi2OK;
