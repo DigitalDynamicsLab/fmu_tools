@@ -6,13 +6,13 @@ project(fmu_generator_standalone)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-set(FMU_MODEL_NAME "myfmu" CACHE STRING "FMU Model Name")
-
+set(FMU_MODEL_NAME "fmu_pendulum" CACHE STRING "FMU Model Name")
 
 add_library(fmu_instance SHARED fmu_entity.hpp fmu_instance.cpp)
 target_include_directories(fmu_instance PUBLIC "fmi2_headers")
 target_include_directories(fmu_instance PUBLIC "rapidxml")
 target_compile_definitions(fmu_instance PUBLIC ${FMU_MODEL_NAME})
+set_target_properties(fmu_instance PROPERTIES OUTPUT_NAME ${FMU_MODEL_NAME})
 
 # set_property(TARGET fmu_instance PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 

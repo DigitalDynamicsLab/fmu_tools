@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     // PARSE THE XML of fmu
     //
 
-    FMU_unit my_fmu;
+    FmuUnit my_fmu;
 
     try {
         my_fmu.Load(unzipped_fmu_folder);
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     std::cout << "FMU platform: " << my_fmu._fmi2GetTypesPlatform() << "\n";
 
 
-    my_fmu.Instantiate("fmu_entity");
+    my_fmu.Instantiate("fmu_instance");
 
     double start_time = 0;
     double stop_time = 2;

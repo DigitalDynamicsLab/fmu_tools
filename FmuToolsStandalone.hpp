@@ -21,35 +21,39 @@
 //typedef void*     (*fmi2CallbackAllocateMemory)(size_t, size_t);
 //typedef void      (*fmi2CallbackFreeMemory)    (void*);
 //typedef void      (*fmi2StepFinished)          (fmi2ComponentEnvironment, fmi2Status);
-void mylogger(fmi2ComponentEnvironment c, fmi2String instanceName, fmi2Status status, fmi2String category, fmi2String message, ...)
+
+
+void logger_default(fmi2ComponentEnvironment c, fmi2String instanceName, fmi2Status status, fmi2String category, fmi2String message, ...)
 {
-    char msg[2024];
-    va_list argp;
-    va_start(argp, message);
-    vsprintf(msg, message, argp);
+    //char msg[2024];
+    //va_list argp;
+    //va_start(argp, message);
+    //vsprintf(msg, message, argp);
+    //if (!instanceName) instanceName = "?";
+    //if (!category) category = "?";
+    //printf("fmiStatus = %d;  %s (%s): %s\n", status, instanceName, category, msg);
+
     if (!instanceName) instanceName = "?";
     if (!category) category = "?";
-    printf("fmiStatus = %d;  %s (%s): %s\n", status, instanceName, category, msg);
+    std::cout << "[" << instanceName << " | " << status << "] " << category << ": " << message;
 }
 
-// Type of structure with all pointers to callbacks
-typedef struct {
-    fmi2CallbackLogger         logger;
-    fmi2CallbackAllocateMemory allocateMemory;
-    fmi2CallbackFreeMemory     freeMemory;
-    fmi2StepFinished           stepFinished;
-    fmi2ComponentEnvironment   componentEnvironment;
-} fmi2_callback_functions_t_aux;
-
+static fmi2CallbackFunctions callbackFunctions_default = {
+    logger_default,
+    calloc,
+    free,
+    nullptr,
+    nullptr
+};
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 /// Class holding a reference to a single FMU variable
-/// Note that this is retreived from the information from the XML
+/// Note that this is retrieved from the information from the XML
 
-class FMU_variable {
+class FmuVariable {
 public:
     std::string name;
     fmi2ValueReference valueReference = 0;
@@ -68,7 +72,7 @@ public:
 
     e_fmu_variable_type type = e_fmu_variable_type::FMU_UNKNOWN;
 
-    FMU_variable()
+    FmuVariable()
     {
     }
 };
@@ -88,14 +92,14 @@ public:
 ///                dir
 /// 
 
-class FMU_variable_tree_node {
+class FmuVariableTreeNode {
 public:
     std::string object_name;
 
-    std::map<std::string, FMU_variable_tree_node> children;
-    FMU_variable* leaf = nullptr;
+    std::map<std::string, FmuVariableTreeNode> children;
+    FmuVariable* leaf = nullptr;
 
-    FMU_variable_tree_node() {}
+    FmuVariableTreeNode() {}
 };
 
 
@@ -105,9 +109,9 @@ public:
 /// system of a visualizer in the FMU. 
 /// The visualizer could be a cylinder, a sphere, a mesh, etc.
 
-class FMU_visualizer {
+class FmuVisualShape {
 public:
-    FMU_variable_tree_node * visualizer_node;
+    FmuVariableTreeNode * visualizer_node;
 
     unsigned int pos_references[3];
     unsigned int rot_references[9];
@@ -130,7 +134,7 @@ public:
 /// Class holding a set of scalar variables (3xposition, 9xrotation) for the coordinate
 /// system of a visualizer in the FMU. 
 
-class FMU_body {
+class FmuBody {
 public:
 
     unsigned int pos_references[3];
@@ -146,11 +150,11 @@ public:
 /// It contains functions to load the DLL in run-time, to parse the XML,
 /// to set/get variables, etc.
 
-class FMU_unit {
+class FmuUnit {
 
 public:
     /// Construction
-    FMU_unit() {
+    FmuUnit() {
         // default binaries directory in FMU unzipped directory
         binaries_dir = "/binaries/win64";
     };
@@ -177,12 +181,12 @@ public:
     std::string info_cosimulation_canGetAndSetFMUstate;
     std::string info_cosimulation_canSerializeFMUstate;
 
-    std::map<std::string, FMU_variable> flat_variables;
+    std::map<std::string, FmuVariable> flat_variables;
 
-    FMU_variable_tree_node tree_variables;
+    FmuVariableTreeNode tree_variables;
 
-    std::vector<FMU_visualizer> visualizers;
-    std::vector<FMU_body> bodies;
+    std::vector<FmuVisualShape> visualizers;
+    std::vector<FmuBody> bodies;
 
 
     // wrappers for runtime dll linking:
@@ -190,7 +194,7 @@ private:
     HINSTANCE hGetProcIDDLL;
 public:
     //private:
-    fmi2_callback_functions_t_aux       callbacks;
+    fmi2CallbackFunctions       callbacks;
 
     fmi2Component                       component;
 
@@ -317,7 +321,7 @@ public:
         // Iterate over the variables
         for (auto variable_node = variables_node->first_node("ScalarVariable"); variable_node; variable_node = variable_node->next_sibling())
         {
-            FMU_variable mvar;
+            FmuVariable mvar;
 
             // fetch properties
 
@@ -346,16 +350,16 @@ public:
             // fetch type from sub node
 
             if (auto variables_type = variable_node->first_node("Real"))
-                mvar.type = FMU_variable::e_fmu_variable_type::FMU_REAL;
+                mvar.type = FmuVariable::e_fmu_variable_type::FMU_REAL;
 
             if (auto variables_type = variable_node->first_node("String"))
-                mvar.type = FMU_variable::e_fmu_variable_type::FMU_STRING;
+                mvar.type = FmuVariable::e_fmu_variable_type::FMU_STRING;
 
             if (auto variables_type = variable_node->first_node("Integer"))
-                mvar.type = FMU_variable::e_fmu_variable_type::FMU_INTEGER;
+                mvar.type = FmuVariable::e_fmu_variable_type::FMU_INTEGER;
 
             if (auto variables_type = variable_node->first_node("Boolean"))
-                mvar.type = FMU_variable::e_fmu_variable_type::FMU_BOOLEAN;
+                mvar.type = FmuVariable::e_fmu_variable_type::FMU_BOOLEAN;
 
             flat_variables[mvar.name] = mvar;
 
@@ -463,7 +467,7 @@ public:
 
             // scan all tokens delimited by "."
             int ntokens = 0;
-            FMU_variable_tree_node* tree_node = &this->tree_variables;
+            FmuVariableTreeNode* tree_node = &this->tree_variables;
             while (std::getline(ss, token, '.') && ntokens < 300)
             {
                 auto next_node = tree_node->children.find(token);
@@ -473,7 +477,7 @@ public:
                 }
                 else
                 {
-                    FMU_variable_tree_node new_node;
+                    FmuVariableTreeNode new_node;
                     new_node.object_name = token;
                     tree_node->children[token] = new_node;
                     tree_node = &tree_node->children[token];
@@ -486,7 +490,7 @@ public:
     }
 
     /// Dump the tree of variables (recursive)
-    void DumpTree(FMU_variable_tree_node* mynode, int tab) {
+    void DumpTree(FmuVariableTreeNode* mynode, int tab) {
         for (auto& in : mynode->children) {
             for (int itab = 0; itab<tab; ++itab) {
                 std::cout << "\t";
@@ -503,11 +507,11 @@ public:
         }
     }
 
-    void BuildBodyList(FMU_variable_tree_node* mynode) {
+    void BuildBodyList(FmuVariableTreeNode* mynode) {
 
     }
 
-    void BuildVisualizersList(FMU_variable_tree_node* mynode) {
+    void BuildVisualizersList(FmuVariableTreeNode* mynode) {
         auto found_shtype = mynode->children.find("shapeType");
         auto found_R = mynode->children.find("R");
         auto found_r1 = mynode->children.find("r[1]");
@@ -559,7 +563,7 @@ public:
                 found_T32 != found_R->second.children.end() &&
                 found_T33 != found_R->second.children.end()) {
 
-                FMU_visualizer my_v;
+                FmuVisualShape my_v;
                 my_v.pos_references[0] = found_r1->second.leaf->valueReference;
                 my_v.pos_references[1] = found_r2->second.leaf->valueReference;
                 my_v.pos_references[2] = found_r3->second.leaf->valueReference;
@@ -605,7 +609,7 @@ public:
         std::string resource_dir = std::string("file:///C:/temp"),
         bool logging = false) {
 
-        this->callbacks.logger = mylogger;
+        this->callbacks.logger = logger_default;
         this->callbacks.allocateMemory = calloc;
         this->callbacks.freeMemory = free;
         this->callbacks.stepFinished = NULL;

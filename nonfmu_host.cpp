@@ -23,14 +23,6 @@
 
 #include <ostream>
 
-void logger(fmi2ComponentEnvironment c, fmi2String instanceName, fmi2Status status, fmi2String category, fmi2String message, ...)
-{
-    if (!instanceName) instanceName = "?";
-    if (!category) category = "?";
-    std::cout << "[" << instanceName << " | " << status << "] " << category << ": " << message;
-}
-
-
 
 // Remember to set the Working Directory to $(OutDir)
 std::string unzipped_fmu_folder = ".";
@@ -41,14 +33,15 @@ int main(int argc, char* argv[]) {
     double t_end = 10;
     double stepsize = 1e-2;
 
-    fmi2CallbackFunctions callbackFunctions = {
-        logger,
-        calloc,
-        free,
-        nullptr,
-        nullptr
-    };
+    //fmi2CallbackFunctions callbackFunctions = {
+    //    logger_default,
+    //    calloc,
+    //    free,
+    //    nullptr,
+    //    nullptr
+    //};
 
+    fmi2CallbackFunctions callbackFunctions = callbackFunctions_default;
 
     fmi2Component component = fmi2Instantiate("fmu_entity", fmi2Type::fmi2CoSimulation, "GUID", "", &callbackFunctions, fmi2False, fmi2False);
     fmi2Status fmi2SetupExperiment_status = fmi2SetupExperiment(component, fmi2False, 1e-6, time, fmi2False, t_end);
