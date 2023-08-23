@@ -2,13 +2,13 @@
 <fmiModelDescription
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   fmiVersion="2.0"
-  modelName="fmu_entity"
+  modelName="fmu_instance"
   guid="{16ce9076-4f15-4484-9e18-fefd58f15f51}"
   generationTool="fmu_generator_standalone"
   variableNamingConvention="structured"
   numberOfEventIndicators="0">
   <CoSimulation
-    modelIdentifier="fmu_entity"
+    modelIdentifier="fmu_instance"
     canHandleVariableCommunicationStepSize="true"
     canInterpolateInputs="true"
     maxOutputDerivativeOrder="1"

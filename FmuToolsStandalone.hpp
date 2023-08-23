@@ -1,6 +1,5 @@
 #pragma once
-
-#include "fmi2_headers/fmi2FunctionTypes.h"
+#include "FmuToolsCommon.hpp"
 #include <string>
 #include "rapidxml/rapidxml.hpp"
 #include <vector>
@@ -22,6 +21,33 @@
 //typedef void      (*fmi2CallbackFreeMemory)    (void*);
 //typedef void      (*fmi2StepFinished)          (fmi2ComponentEnvironment, fmi2Status);
 
+std::string fmi2Status_toString(fmi2Status status){
+    switch (status)
+    {
+    case fmi2Status::fmi2Discard:
+        return "Discard";
+        break;
+    case fmi2Status::fmi2Error:
+        return "Error";
+        break;
+    case fmi2Status::fmi2Fatal:
+        return "Fatal";
+        break;
+    case fmi2Status::fmi2OK:
+        return "OK";
+        break;
+    case fmi2Status::fmi2Pending:
+        return "Pending";
+        break;
+    case fmi2Status::fmi2Warning:
+        return "Warning";
+        break;
+    default:
+        throw std::exception("Wrong fmi2Status");
+        break;
+    }
+}
+
 
 void logger_default(fmi2ComponentEnvironment c, fmi2String instanceName, fmi2Status status, fmi2String category, fmi2String message, ...)
 {
@@ -35,7 +61,7 @@ void logger_default(fmi2ComponentEnvironment c, fmi2String instanceName, fmi2Sta
 
     if (!instanceName) instanceName = "?";
     if (!category) category = "?";
-    std::cout << "[" << instanceName << " | " << status << "] " << category << ": " << message;
+    std::cout << "[" << instanceName << "|" << fmi2Status_toString(status) << "] " << ": " << message;
 }
 
 static fmi2CallbackFunctions callbackFunctions_default = {
@@ -47,35 +73,6 @@ static fmi2CallbackFunctions callbackFunctions_default = {
 };
 
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-/// Class holding a reference to a single FMU variable
-/// Note that this is retrieved from the information from the XML
-
-class FmuVariable {
-public:
-    std::string name;
-    fmi2ValueReference valueReference = 0;
-    std::string description;
-    std::string variability;
-    std::string causality;
-    std::string initial;
-
-    enum class e_fmu_variable_type {
-        FMU_UNKNOWN,
-        FMU_REAL,
-        FMU_INTEGER,
-        FMU_BOOLEAN,
-        FMU_STRING
-    };
-
-    e_fmu_variable_type type = e_fmu_variable_type::FMU_UNKNOWN;
-
-    FmuVariable()
-    {
-    }
-};
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,7 +94,7 @@ public:
     std::string object_name;
 
     std::map<std::string, FmuVariableTreeNode> children;
-    FmuVariable* leaf = nullptr;
+    FmuScalarVariable* leaf = nullptr;
 
     FmuVariableTreeNode() {}
 };
@@ -181,7 +178,7 @@ public:
     std::string info_cosimulation_canGetAndSetFMUstate;
     std::string info_cosimulation_canSerializeFMUstate;
 
-    std::map<std::string, FmuVariable> flat_variables;
+    std::map<std::string, FmuScalarVariable> flat_variables;
 
     FmuVariableTreeNode tree_variables;
 
@@ -197,6 +194,8 @@ public:
     fmi2CallbackFunctions       callbacks;
 
     fmi2Component                       component;
+
+    fmi2SetDebugLoggingTYPE*            _fmi2SetDebugLogging;
 
     fmi2InstantiateTYPE*                _fmi2Instantiate;
     fmi2FreeInstanceTYPE*               _fmi2FreeInstance;
@@ -321,7 +320,7 @@ public:
         // Iterate over the variables
         for (auto variable_node = variables_node->first_node("ScalarVariable"); variable_node; variable_node = variable_node->next_sibling())
         {
-            FmuVariable mvar;
+            FmuScalarVariable mvar;
 
             // fetch properties
 
@@ -350,16 +349,16 @@ public:
             // fetch type from sub node
 
             if (auto variables_type = variable_node->first_node("Real"))
-                mvar.type = FmuVariable::e_fmu_variable_type::FMU_REAL;
+                mvar.type = FmuScalarVariable::e_fmu_variable_type::FMU_REAL;
 
             if (auto variables_type = variable_node->first_node("String"))
-                mvar.type = FmuVariable::e_fmu_variable_type::FMU_STRING;
+                mvar.type = FmuScalarVariable::e_fmu_variable_type::FMU_STRING;
 
             if (auto variables_type = variable_node->first_node("Integer"))
-                mvar.type = FmuVariable::e_fmu_variable_type::FMU_INTEGER;
+                mvar.type = FmuScalarVariable::e_fmu_variable_type::FMU_INTEGER;
 
             if (auto variables_type = variable_node->first_node("Boolean"))
-                mvar.type = FmuVariable::e_fmu_variable_type::FMU_BOOLEAN;
+                mvar.type = FmuScalarVariable::e_fmu_variable_type::FMU_BOOLEAN;
 
             flat_variables[mvar.name] = mvar;
 
@@ -385,6 +384,11 @@ public:
             throw std::runtime_error("Could not locate the DLL from its file name " + dll_name + "\n");
 
         // run time binding of functions
+
+        this->_fmi2SetDebugLogging = (fmi2SetDebugLoggingTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2SetDebugLogging");
+        if (!this->_fmi2SetDebugLogging)
+            throw std::runtime_error("Could not find fmi2SetDebugLogging() in the DLL. Wrong or outdated FMU dll?");
+
         this->_fmi2Instantiate = (fmi2InstantiateTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2Instantiate");
         if (!this->_fmi2Instantiate)
             throw std::runtime_error("Could not find fmi2Instantiate() in the DLL. Wrong or outdated FMU dll?");

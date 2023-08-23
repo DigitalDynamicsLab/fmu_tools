@@ -5,14 +5,15 @@ cmake_minimum_required(VERSION 3.15)
 project(fmu_generator_standalone)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
-set(FMU_MODEL_NAME "fmu_pendulum" CACHE STRING "FMU Model Name")
+set(FMU_MODEL_IDENTIFIER "fmu_instance" CACHE STRING "FMU Model Identifier")
 
-add_library(fmu_instance SHARED fmu_entity.hpp fmu_instance.cpp)
+add_library(fmu_instance SHARED FmuToolsCommon.hpp fmu_entity.h fmu_entity.cpp fmu_instance.h fmu_instance.cpp)
 target_include_directories(fmu_instance PUBLIC "fmi2_headers")
 target_include_directories(fmu_instance PUBLIC "rapidxml")
-target_compile_definitions(fmu_instance PUBLIC ${FMU_MODEL_NAME})
-set_target_properties(fmu_instance PROPERTIES OUTPUT_NAME ${FMU_MODEL_NAME})
+target_compile_definitions(fmu_instance PUBLIC ${FMU_MODEL_IDENTIFIER})
+set_target_properties(fmu_instance PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
 
 # set_property(TARGET fmu_instance PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
@@ -70,16 +71,16 @@ add_custom_command(
     TARGET fmu_instance
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/modelDescription.xml" "${CMAKE_BINARY_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_MODEL_NAME}.fmu" "modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
+    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_MODEL_IDENTIFIER}.fmu" "modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Creating FMU file: ${FMU_MODEL_NAME}.fmu"
+    COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
 )
 
 
 # -------------------------------------------------
 # Target that runs the compiled fmu
 # -------------------------------------------------
-add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsStandalone.hpp)
+add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsCommon.hpp FmuToolsStandalone.hpp)
 target_include_directories(fmu_host_standalone PUBLIC "fmi2_headers")
 target_include_directories(fmu_host_standalone PUBLIC "rapidxml")
 target_compile_definitions(fmu_host_standalone PUBLIC FMU_PATH_DEFAULT="${CMAKE_BINARY_DIR}")
@@ -89,7 +90,7 @@ add_dependencies(fmu_host_standalone fmu_instance)
 # -------------------------------------------------
 # Target that runs the fmu project, but skips the modelDescription.xml loading and other auxiliary things
 # -------------------------------------------------
-add_executable(nonfmu_host nonfmu_host.cpp FmuToolsStandalone.hpp)
+add_executable(nonfmu_host nonfmu_host.cpp FmuToolsCommon.hpp FmuToolsStandalone.hpp)
 target_include_directories(nonfmu_host PUBLIC "fmi2_headers")
 target_link_libraries(nonfmu_host PUBLIC fmu_instance)
 # target_include_directories(nonfmu_host PUBLIC "rapidxml")

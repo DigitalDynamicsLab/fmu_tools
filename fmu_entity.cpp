@@ -1,60 +1,149 @@
 
-#include "fmi2_headers/fmi2Functions.h"
+#include "fmu_entity.h"
 #include <cassert>
 #include <vector>
 #include <array>
 #include <map>
 #include <iostream>
+#include <fstream>
 #include <string>
+#include <set>
+
+#include "rapidxml.hpp"
+#include "rapidxml_print.hpp"
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-
-class ChFmuComponent{
-public:
-    ChFmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID): instanceName(_instanceName), fmuType(_fmuType), fmuGUID(_fmuGUID){    }
-    virtual ~ChFmuComponent(){}
-protected:
-    std::string instanceName;
-    fmi2Type fmuType;
-    fmi2String fmuGUID;
-public:
-    bool initializationMode = false;
-    double startTime = 0;
-    double stopTime = 1;
-    double stepSize = 1e-3;
-    double time = 0;
-
-    std::map<fmi2ValueReference, fmi2Real*> fmi2Real_map;
-    std::map<fmi2ValueReference, fmi2Integer*> fmi2Integer_map;
-    std::map<fmi2ValueReference, fmi2Boolean*> fmi2Boolean_map;
-    std::map<fmi2ValueReference, fmi2String*> fmi2String_map;
-
-    fmi2CallbackFunctions callbackFunctions;
-
-    const static size_t fmi2CallbackLoggerCategorySize = 4;
-
-    size_t fmi2CallbackLoggerCategoryID;
-
-    void SetCallbackLoggerCategory(fmi2String category){
-        for (size_t cc = 0; cc<fmi2CallbackLoggerCategorySize; ++cc)
-        {
-            if (category==fmi2CallbackLoggerCategories[cc])
-                fmi2CallbackLoggerCategoryID = cc;
-            break;
-        }
-    }
-
-    fmi2String fmi2CallbackLoggerCategories[fmi2CallbackLoggerCategorySize] = {"logStatusFatal","logStatusError","logStatusWarning","logAll"};
-    bool loggingOn = true;
-
-    virtual fmi2Status DoStep(double stepSize = -1){ return fmi2Status::fmi2Error; };
-
+const std::set<std::string> ChFmuComponent::logCategories_available = {
+    "logEvents",
+    "logSingularLinearSystems",
+    "logNonlinearSystems",
+    "logDynamicStateSelection",
+    "logStatusWarning",
+    "logStatusDiscard",
+    "logStatusError",
+    "logStatusFatal",
+    "logStatusPending",
+    "logAll"
 };
 
 
+void ChFmuComponent::ExportModelDescription(std::string path){
+    // Create the XML document
+    rapidxml::xml_document<> doc; // setting this as pointer does not remove the stack problem
+
+    // Add the XML declaration
+    rapidxml::xml_node<>* declaration = doc.allocate_node(rapidxml::node_declaration);
+    declaration->append_attribute(doc.allocate_attribute("version", "1.0"));
+    declaration->append_attribute(doc.allocate_attribute("encoding", "UTF-8"));
+    doc.append_node(declaration);
+
+    // Create the root node
+    rapidxml::xml_node<>* rootNode = doc.allocate_node(rapidxml::node_element, "fmiModelDescription");
+    rootNode->append_attribute(doc.allocate_attribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"));
+    rootNode->append_attribute(doc.allocate_attribute("fmiVersion", "2.0"));
+    rootNode->append_attribute(doc.allocate_attribute("modelName", "fmu_instance"));
+    rootNode->append_attribute(doc.allocate_attribute("guid", "{16ce9076-4f15-4484-9e18-fefd58f15f51}"));
+    rootNode->append_attribute(doc.allocate_attribute("generationTool", "fmu_generator_standalone"));
+    rootNode->append_attribute(doc.allocate_attribute("variableNamingConvention", "structured"));
+    rootNode->append_attribute(doc.allocate_attribute("numberOfEventIndicators", "0"));
+    doc.append_node(rootNode);
+
+    // Add CoSimulation node
+    rapidxml::xml_node<>* coSimNode = doc.allocate_node(rapidxml::node_element, "CoSimulation");
+    coSimNode->append_attribute(doc.allocate_attribute("modelIdentifier", "fmu_instance"));
+    coSimNode->append_attribute(doc.allocate_attribute("canHandleVariableCommunicationStepSize", "true"));
+    coSimNode->append_attribute(doc.allocate_attribute("canInterpolateInputs", "true"));
+    coSimNode->append_attribute(doc.allocate_attribute("maxOutputDerivativeOrder", "1"));
+    coSimNode->append_attribute(doc.allocate_attribute("canGetAndSetFMUstate", "false"));
+    coSimNode->append_attribute(doc.allocate_attribute("canSerializeFMUstate", "false"));
+    coSimNode->append_attribute(doc.allocate_attribute("providesDirectionalDerivative", "false"));
+    rootNode->append_node(coSimNode);
+
+    // Add UnitDefinitions node
+    rapidxml::xml_node<>* unitDefsNode = doc.allocate_node(rapidxml::node_element, "UnitDefinitions");
+    // Add Unit nodes and attributes here...
+    rootNode->append_node(unitDefsNode);
+
+    // Add LogCategories node
+    rapidxml::xml_node<>* logCatNode = doc.allocate_node(rapidxml::node_element, "LogCategories");
+    // Add Category nodes and attributes here...
+    rootNode->append_node(logCatNode);
+
+    // Add DefaultExperiment node
+    rapidxml::xml_node<>* defaultExpNode = doc.allocate_node(rapidxml::node_element, "DefaultExperiment");
+    defaultExpNode->append_attribute(doc.allocate_attribute("startTime", "0.0"));
+    defaultExpNode->append_attribute(doc.allocate_attribute("stopTime", "10.0"));
+    defaultExpNode->append_attribute(doc.allocate_attribute("tolerance", "1E-06"));
+    rootNode->append_node(defaultExpNode);
+
+    // Add ModelVariables node
+    rapidxml::xml_node<>* modelVarsNode = doc.allocate_node(rapidxml::node_element, "ModelVariables");
+    for (auto& vs: scalarVariables){
+        // Create a ScalarVariable node
+        rapidxml::xml_node<>* scalarVarNode = doc.allocate_node(rapidxml::node_element, "ScalarVariable");
+        scalarVarNode->append_attribute(doc.allocate_attribute("name", vs.name.c_str()));
+        scalarVarNode->append_attribute(doc.allocate_attribute("valueReference", std::to_string(vs.valueReference).c_str() ));
+        if (!vs.description.empty()) scalarVarNode->append_attribute(doc.allocate_attribute("description", vs.description.c_str()));
+        if (!vs.causality.empty())   scalarVarNode->append_attribute(doc.allocate_attribute("causality",   vs.causality.c_str()));
+        if (!vs.variability.empty()) scalarVarNode->append_attribute(doc.allocate_attribute("variability", vs.variability.c_str()));
+        if (!vs.initial.empty())     scalarVarNode->append_attribute(doc.allocate_attribute("initial",     vs.initial.c_str()));
+        modelVarsNode->append_node(scalarVarNode);
+
+        // TODO
+        //switch (vs.type)
+        //{
+        //case FmuScalarVariable::e_fmu_variable_type::FMU_REAL:
+        //    // Add a Real node as a child of ScalarVariable
+        //    rapidxml::xml_node<>* realNode = doc.allocate_node(rapidxml::node_element, "Real");
+        //    realNode->append_attribute(doc.allocate_attribute("unit", "m/s2"));
+        //    scalarVarNode->append_node(realNode);
+        //    break;
+        //case FmuScalarVariable::e_fmu_variable_type::FMU_INTEGER:
+        //    // Add a Real node as a child of ScalarVariable
+        //    rapidxml::xml_node<>* realNode = doc.allocate_node(rapidxml::node_element, "Integer");
+        //    realNode->append_attribute(doc.allocate_attribute("unit", "m/s2"));
+        //    scalarVarNode->append_node(realNode);
+        //    break;
+        //case FmuScalarVariable::e_fmu_variable_type::FMU_REAL:
+        //    // Add a Real node as a child of ScalarVariable
+        //    rapidxml::xml_node<>* realNode = doc.allocate_node(rapidxml::node_element, "Real");
+        //    realNode->append_attribute(doc.allocate_attribute("unit", "m/s2"));
+        //    scalarVarNode->append_node(realNode);
+        //    break;
+        //default:
+        //    break;  
+        //}
+
+    }
+
+    rootNode->append_node(modelVarsNode);
+
+    // Add ModelStructure node
+    rapidxml::xml_node<>* modelStructNode = doc.allocate_node(rapidxml::node_element, "ModelStructure");
+    // Add Outputs, Derivatives, and InitialUnknowns nodes and attributes here...
+    rootNode->append_node(modelStructNode);
+
+    // Save the XML document to a file
+    std::ofstream outFile(path + "/modelDescription.xml");
+    outFile << doc;
+    outFile.close();
+
+}
+
+
+            
 //////////////// FMU FUNCTIONS /////////////////
+
+
+fmi2Component fmi2Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn){
+    ChFmuComponent* fmu = fmi2Instantiate_getPointer(instanceName, fmuType, fmuGUID);
+    fmu->callbackFunctions = *functions;
+    fmu->loggingOn = loggingOn;
+    
+    return reinterpret_cast<void*>(fmu);
+}
 
 const char* fmi2GetTypesPlatform(void){
     return "default";
@@ -65,20 +154,15 @@ const char* fmi2GetVersion(void){
 }
 
 fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn, size_t nCategories, const fmi2String categories[]){
-    ChFmuComponent* ch_ptr = reinterpret_cast<ChFmuComponent*>(c);
-    ch_ptr->loggingOn = loggingOn==fmi2True ? true : false;
-    ch_ptr->SetCallbackLoggerCategory(categories[nCategories]);
+    ChFmuComponent* fmu_ptr = reinterpret_cast<ChFmuComponent*>(c);
+    fmu_ptr->loggingOn = loggingOn==fmi2True ? true : false;
+    for (auto cs = 0; cs < nCategories; ++cs){
+        fmu_ptr->AddCallbackLoggerCategory(categories[cs]);
+    }
 
     return fmi2Status::fmi2OK;
 }
 
-fmi2Component fmi2Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn){
-    ChFmuComponent* fmu_instance = new ChFmuComponent(instanceName, fmuType, fmuGUID);
-    fmu_instance->callbackFunctions = *functions;
-    fmu_instance->loggingOn = loggingOn;
-    
-    return reinterpret_cast<void*>(fmu_instance);
-}
 
 void fmi2FreeInstance(fmi2Component c){
     delete reinterpret_cast<ChFmuComponent*>(c);
@@ -104,12 +188,31 @@ fmi2Status fmi2ExitInitializationMode(fmi2Component c){
 fmi2Status fmi2Terminate(fmi2Component c){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2Reset(fmi2Component c){ return fmi2Status::fmi2OK; }
 
+
+// TODO: profile this piece of code
+//fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){
+//    auto& fmi2Real_map = reinterpret_cast<ChFmuComponent*>(c)->fmi2Real_map;
+//    for (size_t s = 0; s<nvr; ++s){
+//        auto it = fmi2Real_map.find(vr[s]);
+//        if (it != fmi2Real_map.end())
+//            value[s] = *it->second;
+//        else return fmi2Status::fmi2Error;
+//    }
+//    return fmi2Status::fmi2OK;
+//}
+
 fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){
-    auto& fmi2Real_map = reinterpret_cast<ChFmuComponent*>(c)->fmi2Real_map;
+    auto& scalarVariables = reinterpret_cast<ChFmuComponent*>(c)->scalarVariables;
+
     for (size_t s = 0; s<nvr; ++s){
-        auto it = fmi2Real_map.find(vr[s]);
-        if (it != fmi2Real_map.end())
-            value[s] = *it->second;
+        double valref = vr[s];
+        auto predicate_samevalreftype = [vr, s](const FmuScalarVariable& var) {
+            return var.valueReference == vr[s];
+            return var.type == FmuScalarVariable::e_fmu_variable_type::FMU_REAL;
+        };
+        auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
+        if (it != scalarVariables.end())
+            value[s] = *it->ptr.fmi2Real_ptr;
         else return fmi2Status::fmi2Error;
     }
     return fmi2Status::fmi2OK;
