@@ -18,10 +18,6 @@ ChFmuComponent* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmu
     return new FmuInstance(instanceName, fmuType, fmuGUID);
 }
 
-void exportModelDescription(std::string path){
-
-}
-
 
 std::array<double, 4> operator*(double lhs, const std::array<double, 4>& rhs)
 {

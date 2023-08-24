@@ -1,4 +1,5 @@
 
+#pragma once
 //#define FMI2_FUNCTION_PREFIX MyModel_
 #include "fmu_entity.h"
 #include "fmi2_headers/fmi2Functions.h"

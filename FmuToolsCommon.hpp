@@ -20,6 +20,7 @@ public:
     bool operator==(const FmuScalarVariable& other) const {
         // there can exist two different variables with same type and same valueReference;
         // they are called "alias" thus they should be allowed but not considered equal
+        //return this->type == other.type && this->valueReference == other.valueReference;
         return this->name == other.name;
     }
 

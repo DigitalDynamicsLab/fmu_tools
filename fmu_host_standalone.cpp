@@ -47,7 +47,6 @@ int main(int argc, char* argv[]) {
     std::cout << "FMU version:  " << my_fmu._fmi2GetVersion() << "\n";
     std::cout << "FMU platform: " << my_fmu._fmi2GetTypesPlatform() << "\n";
 
-
     my_fmu.Instantiate("fmu_instance");
     std::vector<std::string> categoriesVector = {"logAll"};
 

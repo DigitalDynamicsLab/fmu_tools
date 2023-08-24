@@ -1,4 +1,5 @@
 
+#pragma once
 #include "fmi2_headers/fmi2Functions.h"
 #include "FmuToolsCommon.hpp"
 #include <cassert>
@@ -9,7 +10,7 @@
 #include <string>
 #include <set>
 
-
+void FMI2_Export createModelDescription(const std::string& path);
 
 class ChFmuComponent{
 public:
@@ -71,19 +72,22 @@ protected:
             throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
 
         // assign value reference
-        fmi2ValueReference valref = fmi2Real_map.empty() ? 0 : fmi2Real_map.crbegin()->first+1;
+        fmi2ValueReference valref = fmi2Real_map.empty() ? 1 : fmi2Real_map.crbegin()->first+1;
         fmi2Real_map[valref] = var_ptr; //TODO: check if needed or the scalarVariables set is enough
 
         // create new variable
         FmuScalarVariable newvar;
-        newvar.ptr.fmi2Real_ptr = var_ptr;
         newvar.name = name;
+        newvar.valueReference = valref;
+        newvar.ptr.fmi2Real_ptr = var_ptr;
         newvar.description = description;
         newvar.causality = causality;
         newvar.variability = variability;
         newvar.initial = initial;
 
-        scalarVariables.insert(newvar);
+        auto ret = scalarVariables.insert(newvar);
+
+        return valref;
 
     }
 
@@ -98,7 +102,8 @@ protected:
 
 };
 
-extern ChFmuComponent* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID);
-extern void createModelDescription(std::string path);
+ChFmuComponent* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID);
+
+
 
 

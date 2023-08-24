@@ -80,11 +80,18 @@ void ChFmuComponent::ExportModelDescription(std::string path){
 
     // Add ModelVariables node
     rapidxml::xml_node<>* modelVarsNode = doc.allocate_node(rapidxml::node_element, "ModelVariables");
+    // WARNING: rapidxml does not copy the strings that we pass to print, but it just keeps the addresses until it's time to print them
+    // so we cannot use a temporary string to convert the number to string and then recycle it
+    std::vector<std::string> valueref_str;
+    valueref_str.reserve(scalarVariables.size());
     for (auto& vs: scalarVariables){
         // Create a ScalarVariable node
         rapidxml::xml_node<>* scalarVarNode = doc.allocate_node(rapidxml::node_element, "ScalarVariable");
         scalarVarNode->append_attribute(doc.allocate_attribute("name", vs.name.c_str()));
-        scalarVarNode->append_attribute(doc.allocate_attribute("valueReference", std::to_string(vs.valueReference).c_str() ));
+
+        valueref_str.push_back(std::to_string(vs.valueReference));
+        scalarVarNode->append_attribute(doc.allocate_attribute("valueReference", valueref_str.back().c_str()));
+
         if (!vs.description.empty()) scalarVarNode->append_attribute(doc.allocate_attribute("description", vs.description.c_str()));
         if (!vs.causality.empty())   scalarVarNode->append_attribute(doc.allocate_attribute("causality",   vs.causality.c_str()));
         if (!vs.variability.empty()) scalarVarNode->append_attribute(doc.allocate_attribute("variability", vs.variability.c_str()));
@@ -126,7 +133,7 @@ void ChFmuComponent::ExportModelDescription(std::string path){
     rootNode->append_node(modelStructNode);
 
     // Save the XML document to a file
-    std::ofstream outFile(path + "/modelDescription.xml");
+    std::ofstream outFile(path + "/modelDescriptionTEST.xml");
     outFile << doc;
     outFile.close();
 
@@ -143,6 +150,12 @@ fmi2Component fmi2Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2Str
     fmu->loggingOn = loggingOn;
     
     return reinterpret_cast<void*>(fmu);
+}
+
+void createModelDescription(const std::string& path){
+    ChFmuComponent* fmu = fmi2Instantiate_getPointer("", fmi2Type::fmi2CoSimulation, "");
+    fmu->ExportModelDescription(path);
+    delete fmu;
 }
 
 const char* fmi2GetTypesPlatform(void){
