@@ -23,24 +23,9 @@ std::array<double, 4> operator+(const std::array<double, 4>& lhs, const std::arr
 
 class FmuInstance: public ChFmuComponent{
 public:
-    FmuInstance(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID): g(9.81), ChFmuComponent(_instanceName, _fmuType, _fmuGUID){
-
-        switch (_fmuType)
-        {
-        case fmi2Type::fmi2CoSimulation:
-            if (!fmi2Type_CoSimulation_available)
-                throw std::runtime_error("Requested CoSimulation fmu mode but it is not available.");
-            fmuType = fmi2Type::fmi2CoSimulation;
-            break;
-        case fmi2Type::fmi2ModelExchange:
-            if (!fmi2Type_ModelExchange_available)
-                throw std::runtime_error("Requested ModelExchange fmu mode but it is not available.");
-            fmuType = fmi2Type::fmi2ModelExchange;
-            break;
-        default:
-            throw std::runtime_error("Requested unrecognized fmu type.");
-            break;
-        }
+    FmuInstance(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
+        ChFmuComponent(_instanceName, _fmuType, _fmuGUID, cosim_available, modelexchange_available)
+    {
 
         /// FMU_ACTION: bind internal variables to fmi maps
 
@@ -124,12 +109,6 @@ public:
 
 
 private:
-    /// FMU_ACTION: set flags accordingly to available model
-    const bool fmi2Type_CoSimulation_available = true;
-    const bool fmi2Type_ModelExchange_available = false;
-
-
-    fmi2Type fmuType;
 
     /// FMU_ACTION: declare all variables used by the fmu
     
@@ -138,16 +117,18 @@ private:
     double len = 0.5;
     double m = 1.0;
     double M = 1.0;
-    const double g;
+    const double g = 9.81;
 
     fmi2Boolean approximateOn = fmi2False;
 
-
+    /// FMU_ACTION: set flags accordingly to available model
+    const bool cosim_available = true;
+    const bool modelexchange_available = false;
 
     // TEMP
-    std::array<double, 4> k1;
-    std::array<double, 4> k2;
-    std::array<double, 4> k3;
-    std::array<double, 4> k4;
+    std::array<double, 4> k1 = {0,0,0,0};
+    std::array<double, 4> k2 = {0,0,0,0};
+    std::array<double, 4> k3 = {0,0,0,0};
+    std::array<double, 4> k4 = {0,0,0,0};
 };
 

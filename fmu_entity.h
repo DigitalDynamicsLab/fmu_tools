@@ -14,8 +14,34 @@ void FMI2_Export createModelDescription(const std::string& path);
 
 class ChFmuComponent{
 public:
-    ChFmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID): instanceName(_instanceName), fmuGUID(_fmuGUID){}
+    ChFmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID, bool cosim_available, bool modelexchange_available):
+        callbackFunctions({nullptr, nullptr, nullptr, nullptr, nullptr}),
+        instanceName(_instanceName),
+        fmuGUID(_fmuGUID),
+        fmi2Type_CoSimulation_available(cosim_available),
+        fmi2Type_ModelExchange_available(modelexchange_available)
+    {
+        switch (_fmuType)
+        {
+        case fmi2Type::fmi2CoSimulation:
+            if (!fmi2Type_CoSimulation_available)
+                throw std::runtime_error("Requested CoSimulation fmu mode but it is not available.");
+            fmuType = fmi2Type::fmi2CoSimulation;
+            break;
+        case fmi2Type::fmi2ModelExchange:
+            if (!fmi2Type_ModelExchange_available)
+                throw std::runtime_error("Requested ModelExchange fmu mode but it is not available.");
+            fmuType = fmi2Type::fmi2ModelExchange;
+            break;
+        default:
+            throw std::runtime_error("Requested unrecognized fmu type.");
+            break;
+        }
+    
+    }
+
     virtual ~ChFmuComponent(){}
+
 protected:
     std::string instanceName;
     fmi2String fmuGUID;
@@ -31,6 +57,14 @@ public:
     double stepSize = 1e-3;
     double time = 0;
 
+    const bool fmi2Type_CoSimulation_available;
+    const bool fmi2Type_ModelExchange_available;
+
+
+    fmi2Type fmuType;
+
+    //TODO: check if fmi2XXX_map are needed or if scalarVariables is enough
+    // or if simply they can be generated afterwards
     std::map<fmi2ValueReference, fmi2Real*> fmi2Real_map;
     std::map<fmi2ValueReference, fmi2Integer*> fmi2Integer_map;
     std::map<fmi2ValueReference, fmi2Boolean*> fmi2Boolean_map;
@@ -56,7 +90,7 @@ protected:
 
 
 
-    fmi2ValueReference addFmuVariableReal(
+    std::pair<std::set<FmuScalarVariable>::iterator, bool> addFmuVariableReal(
         fmi2Real* var_ptr,
         std::string name,
         std::string description = "",
@@ -65,15 +99,15 @@ protected:
         std::string initial = ""){
 
 
-        // check if same-name variable exists
-        auto predicate_samename = [name](const FmuScalarVariable& var) { return var.name == name; };
-        auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
-        if (it!=scalarVariables.end())
-            throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
+        //// check if same-name variable exists
+        //auto predicate_samename = [name](const FmuScalarVariable& var) { return var.name == name; };
+        //auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
+        //if (it!=scalarVariables.end())
+        //    throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
 
         // assign value reference
         fmi2ValueReference valref = fmi2Real_map.empty() ? 1 : fmi2Real_map.crbegin()->first+1;
-        fmi2Real_map[valref] = var_ptr; //TODO: check if needed or the scalarVariables set is enough
+        fmi2Real_map[valref] = var_ptr; //TODO: check if fmi2XXX_map are needed or if scalarVariables is enough
 
         // create new variable
         FmuScalarVariable newvar;
@@ -85,9 +119,15 @@ protected:
         newvar.variability = variability;
         newvar.initial = initial;
 
-        auto ret = scalarVariables.insert(newvar);
+        std::pair<std::set<FmuScalarVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
 
-        return valref;
+        if (!ret.second){
+            fmi2Real_map.erase(valref);
+            throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
+        }
+
+
+        return ret;
 
     }
 

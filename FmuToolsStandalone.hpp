@@ -12,41 +12,8 @@
 #include <cstdarg>
 #include <iostream>
 
-// 
-// AUXILIARY CALLBACKS FOR FMU
-// 
 
-//typedef void      (*fmi2CallbackLogger)        (fmi2ComponentEnvironment, fmi2String, fmi2Status, fmi2String, fmi2String, ...);
-//typedef void*     (*fmi2CallbackAllocateMemory)(size_t, size_t);
-//typedef void      (*fmi2CallbackFreeMemory)    (void*);
-//typedef void      (*fmi2StepFinished)          (fmi2ComponentEnvironment, fmi2Status);
 
-std::string fmi2Status_toString(fmi2Status status){
-    switch (status)
-    {
-    case fmi2Status::fmi2Discard:
-        return "Discard";
-        break;
-    case fmi2Status::fmi2Error:
-        return "Error";
-        break;
-    case fmi2Status::fmi2Fatal:
-        return "Fatal";
-        break;
-    case fmi2Status::fmi2OK:
-        return "OK";
-        break;
-    case fmi2Status::fmi2Pending:
-        return "Pending";
-        break;
-    case fmi2Status::fmi2Warning:
-        return "Warning";
-        break;
-    default:
-        throw std::exception("Wrong fmi2Status");
-        break;
-    }
-}
 
 
 void logger_default(fmi2ComponentEnvironment c, fmi2String instanceName, fmi2Status status, fmi2String category, fmi2String message, ...)
@@ -106,20 +73,19 @@ public:
 /// system of a visualizer in the FMU. 
 /// The visualizer could be a cylinder, a sphere, a mesh, etc.
 
-class FmuVisualShape {
-public:
-    FmuVariableTreeNode * visualizer_node;
+struct FmuVisualShape {
+    FmuVariableTreeNode* visualizer_node = nullptr;
 
-    unsigned int pos_references[3];
-    unsigned int rot_references[9];
-    unsigned int pos_shape_references[3];
-    unsigned int shapetype_reference;
-    unsigned int l_references[3];
-    unsigned int w_references[3];
-    unsigned int color_references[3];
-    unsigned int width_reference;
-    unsigned int height_reference;
-    unsigned int length_reference;
+    unsigned int pos_references[3] = {0,0,0};
+    unsigned int rot_references[9] = {0,0,0};
+    unsigned int pos_shape_references[3] = {0,0,0};
+    unsigned int shapetype_reference = 0;
+    unsigned int l_references[3] = {0,0,0};
+    unsigned int w_references[3] = {0,0,0};
+    unsigned int color_references[3] = {0,0,0};
+    unsigned int width_reference = 0;
+    unsigned int height_reference = 0;
+    unsigned int length_reference = 0;
 
     std::string type;
     std::string filename;
@@ -131,8 +97,7 @@ public:
 /// Class holding a set of scalar variables (3xposition, 9xrotation) for the coordinate
 /// system of a visualizer in the FMU. 
 
-class FmuBody {
-public:
+struct FmuBody {
 
     unsigned int pos_references[3];
     unsigned int rot_references[9];
@@ -235,7 +200,8 @@ public:
 
         std::string xml_filename = this->directory + "/modelDescription.xml";
 
-        rapidxml::xml_document<> doc;
+        rapidxml::xml_document<>* doc_ptr = new rapidxml::xml_document<>();
+
         // Read the xml file into a vector
         std::ifstream theFile(xml_filename);
 
@@ -245,10 +211,10 @@ public:
         std::vector<char> buffer((std::istreambuf_iterator<char>(theFile)), std::istreambuf_iterator<char>());
         buffer.push_back('\0');
         // Parse the buffer using the xml file parsing library into doc 
-        doc.parse<0>(&buffer[0]);
+        doc_ptr->parse<0>(&buffer[0]);
 
         // Find our root node
-        auto root_node = doc.first_node("fmiModelDescription");
+        auto root_node = doc_ptr->first_node("fmiModelDescription");
         if (!root_node)
             throw std::runtime_error("Not a valid FMU. Missing <fmiModelDescription> in XML. \n");
 
@@ -349,20 +315,22 @@ public:
             // fetch type from sub node
 
             if (auto variables_type = variable_node->first_node("Real"))
-                mvar.type = FmuScalarVariable::e_fmu_variable_type::FMU_REAL;
+                mvar.type = FmuScalarVariable::FmuScalarVariableType::FMU_REAL;
 
             if (auto variables_type = variable_node->first_node("String"))
-                mvar.type = FmuScalarVariable::e_fmu_variable_type::FMU_STRING;
+                mvar.type = FmuScalarVariable::FmuScalarVariableType::FMU_STRING;
 
             if (auto variables_type = variable_node->first_node("Integer"))
-                mvar.type = FmuScalarVariable::e_fmu_variable_type::FMU_INTEGER;
+                mvar.type = FmuScalarVariable::FmuScalarVariableType::FMU_INTEGER;
 
             if (auto variables_type = variable_node->first_node("Boolean"))
-                mvar.type = FmuScalarVariable::e_fmu_variable_type::FMU_BOOLEAN;
+                mvar.type = FmuScalarVariable::FmuScalarVariableType::FMU_BOOLEAN;
 
             flat_variables[mvar.name] = mvar;
 
         }
+
+        delete doc_ptr;
     }
 
     /// Load the DLL in run-time and do the dynamic linking to 

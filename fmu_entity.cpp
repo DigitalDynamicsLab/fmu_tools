@@ -31,92 +31,93 @@ const std::set<std::string> ChFmuComponent::logCategories_available = {
 
 void ChFmuComponent::ExportModelDescription(std::string path){
     // Create the XML document
-    rapidxml::xml_document<> doc; // setting this as pointer does not remove the stack problem
+    rapidxml::xml_document<>* doc_ptr = new rapidxml::xml_document<>();
+
 
     // Add the XML declaration
-    rapidxml::xml_node<>* declaration = doc.allocate_node(rapidxml::node_declaration);
-    declaration->append_attribute(doc.allocate_attribute("version", "1.0"));
-    declaration->append_attribute(doc.allocate_attribute("encoding", "UTF-8"));
-    doc.append_node(declaration);
+    rapidxml::xml_node<>* declaration = doc_ptr->allocate_node(rapidxml::node_declaration);
+    declaration->append_attribute(doc_ptr->allocate_attribute("version", "1.0"));
+    declaration->append_attribute(doc_ptr->allocate_attribute("encoding", "UTF-8"));
+    doc_ptr->append_node(declaration);
 
     // Create the root node
-    rapidxml::xml_node<>* rootNode = doc.allocate_node(rapidxml::node_element, "fmiModelDescription");
-    rootNode->append_attribute(doc.allocate_attribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"));
-    rootNode->append_attribute(doc.allocate_attribute("fmiVersion", "2.0"));
-    rootNode->append_attribute(doc.allocate_attribute("modelName", "fmu_instance"));
-    rootNode->append_attribute(doc.allocate_attribute("guid", "{16ce9076-4f15-4484-9e18-fefd58f15f51}"));
-    rootNode->append_attribute(doc.allocate_attribute("generationTool", "fmu_generator_standalone"));
-    rootNode->append_attribute(doc.allocate_attribute("variableNamingConvention", "structured"));
-    rootNode->append_attribute(doc.allocate_attribute("numberOfEventIndicators", "0"));
-    doc.append_node(rootNode);
+    rapidxml::xml_node<>* rootNode = doc_ptr->allocate_node(rapidxml::node_element, "fmiModelDescription");
+    rootNode->append_attribute(doc_ptr->allocate_attribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("fmiVersion", "2.0"));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("modelName", "fmu_instance"));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("guid", "{16ce9076-4f15-4484-9e18-fefd58f15f51}"));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("generationTool", "fmu_generator_standalone"));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("variableNamingConvention", "structured"));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("numberOfEventIndicators", "0"));
+    doc_ptr->append_node(rootNode);
 
     // Add CoSimulation node
-    rapidxml::xml_node<>* coSimNode = doc.allocate_node(rapidxml::node_element, "CoSimulation");
-    coSimNode->append_attribute(doc.allocate_attribute("modelIdentifier", "fmu_instance"));
-    coSimNode->append_attribute(doc.allocate_attribute("canHandleVariableCommunicationStepSize", "true"));
-    coSimNode->append_attribute(doc.allocate_attribute("canInterpolateInputs", "true"));
-    coSimNode->append_attribute(doc.allocate_attribute("maxOutputDerivativeOrder", "1"));
-    coSimNode->append_attribute(doc.allocate_attribute("canGetAndSetFMUstate", "false"));
-    coSimNode->append_attribute(doc.allocate_attribute("canSerializeFMUstate", "false"));
-    coSimNode->append_attribute(doc.allocate_attribute("providesDirectionalDerivative", "false"));
+    rapidxml::xml_node<>* coSimNode = doc_ptr->allocate_node(rapidxml::node_element, "CoSimulation");
+    coSimNode->append_attribute(doc_ptr->allocate_attribute("modelIdentifier", "fmu_instance"));
+    coSimNode->append_attribute(doc_ptr->allocate_attribute("canHandleVariableCommunicationStepSize", "true"));
+    coSimNode->append_attribute(doc_ptr->allocate_attribute("canInterpolateInputs", "true"));
+    coSimNode->append_attribute(doc_ptr->allocate_attribute("maxOutputDerivativeOrder", "1"));
+    coSimNode->append_attribute(doc_ptr->allocate_attribute("canGetAndSetFMUstate", "false"));
+    coSimNode->append_attribute(doc_ptr->allocate_attribute("canSerializeFMUstate", "false"));
+    coSimNode->append_attribute(doc_ptr->allocate_attribute("providesDirectionalDerivative", "false"));
     rootNode->append_node(coSimNode);
 
     // Add UnitDefinitions node
-    rapidxml::xml_node<>* unitDefsNode = doc.allocate_node(rapidxml::node_element, "UnitDefinitions");
+    rapidxml::xml_node<>* unitDefsNode = doc_ptr->allocate_node(rapidxml::node_element, "UnitDefinitions");
     // Add Unit nodes and attributes here...
     rootNode->append_node(unitDefsNode);
 
     // Add LogCategories node
-    rapidxml::xml_node<>* logCatNode = doc.allocate_node(rapidxml::node_element, "LogCategories");
+    rapidxml::xml_node<>* logCatNode = doc_ptr->allocate_node(rapidxml::node_element, "LogCategories");
     // Add Category nodes and attributes here...
     rootNode->append_node(logCatNode);
 
     // Add DefaultExperiment node
-    rapidxml::xml_node<>* defaultExpNode = doc.allocate_node(rapidxml::node_element, "DefaultExperiment");
-    defaultExpNode->append_attribute(doc.allocate_attribute("startTime", "0.0"));
-    defaultExpNode->append_attribute(doc.allocate_attribute("stopTime", "10.0"));
-    defaultExpNode->append_attribute(doc.allocate_attribute("tolerance", "1E-06"));
+    rapidxml::xml_node<>* defaultExpNode = doc_ptr->allocate_node(rapidxml::node_element, "DefaultExperiment");
+    defaultExpNode->append_attribute(doc_ptr->allocate_attribute("startTime", "0.0"));
+    defaultExpNode->append_attribute(doc_ptr->allocate_attribute("stopTime", "10.0"));
+    defaultExpNode->append_attribute(doc_ptr->allocate_attribute("tolerance", "1E-06"));
     rootNode->append_node(defaultExpNode);
 
     // Add ModelVariables node
-    rapidxml::xml_node<>* modelVarsNode = doc.allocate_node(rapidxml::node_element, "ModelVariables");
+    rapidxml::xml_node<>* modelVarsNode = doc_ptr->allocate_node(rapidxml::node_element, "ModelVariables");
     // WARNING: rapidxml does not copy the strings that we pass to print, but it just keeps the addresses until it's time to print them
     // so we cannot use a temporary string to convert the number to string and then recycle it
     std::vector<std::string> valueref_str;
     valueref_str.reserve(scalarVariables.size());
     for (auto& vs: scalarVariables){
         // Create a ScalarVariable node
-        rapidxml::xml_node<>* scalarVarNode = doc.allocate_node(rapidxml::node_element, "ScalarVariable");
-        scalarVarNode->append_attribute(doc.allocate_attribute("name", vs.name.c_str()));
+        rapidxml::xml_node<>* scalarVarNode = doc_ptr->allocate_node(rapidxml::node_element, "ScalarVariable");
+        scalarVarNode->append_attribute(doc_ptr->allocate_attribute("name", vs.name.c_str()));
 
         valueref_str.push_back(std::to_string(vs.valueReference));
-        scalarVarNode->append_attribute(doc.allocate_attribute("valueReference", valueref_str.back().c_str()));
+        scalarVarNode->append_attribute(doc_ptr->allocate_attribute("valueReference", valueref_str.back().c_str()));
 
-        if (!vs.description.empty()) scalarVarNode->append_attribute(doc.allocate_attribute("description", vs.description.c_str()));
-        if (!vs.causality.empty())   scalarVarNode->append_attribute(doc.allocate_attribute("causality",   vs.causality.c_str()));
-        if (!vs.variability.empty()) scalarVarNode->append_attribute(doc.allocate_attribute("variability", vs.variability.c_str()));
-        if (!vs.initial.empty())     scalarVarNode->append_attribute(doc.allocate_attribute("initial",     vs.initial.c_str()));
+        if (!vs.description.empty()) scalarVarNode->append_attribute(doc_ptr->allocate_attribute("description", vs.description.c_str()));
+        if (!vs.causality.empty())   scalarVarNode->append_attribute(doc_ptr->allocate_attribute("causality",   vs.causality.c_str()));
+        if (!vs.variability.empty()) scalarVarNode->append_attribute(doc_ptr->allocate_attribute("variability", vs.variability.c_str()));
+        if (!vs.initial.empty())     scalarVarNode->append_attribute(doc_ptr->allocate_attribute("initial",     vs.initial.c_str()));
         modelVarsNode->append_node(scalarVarNode);
 
         // TODO
         //switch (vs.type)
         //{
-        //case FmuScalarVariable::e_fmu_variable_type::FMU_REAL:
+        //case FmuScalarVariable::FmuScalarVariableType::FMU_REAL:
         //    // Add a Real node as a child of ScalarVariable
-        //    rapidxml::xml_node<>* realNode = doc.allocate_node(rapidxml::node_element, "Real");
-        //    realNode->append_attribute(doc.allocate_attribute("unit", "m/s2"));
+        //    rapidxml::xml_node<>* realNode = doc_ptr->allocate_node(rapidxml::node_element, "Real");
+        //    realNode->append_attribute(doc_ptr->allocate_attribute("unit", "m/s2"));
         //    scalarVarNode->append_node(realNode);
         //    break;
-        //case FmuScalarVariable::e_fmu_variable_type::FMU_INTEGER:
+        //case FmuScalarVariable::FmuScalarVariableType::FMU_INTEGER:
         //    // Add a Real node as a child of ScalarVariable
-        //    rapidxml::xml_node<>* realNode = doc.allocate_node(rapidxml::node_element, "Integer");
-        //    realNode->append_attribute(doc.allocate_attribute("unit", "m/s2"));
+        //    rapidxml::xml_node<>* realNode = doc_ptr->allocate_node(rapidxml::node_element, "Integer");
+        //    realNode->append_attribute(doc_ptr->allocate_attribute("unit", "m/s2"));
         //    scalarVarNode->append_node(realNode);
         //    break;
-        //case FmuScalarVariable::e_fmu_variable_type::FMU_REAL:
+        //case FmuScalarVariable::FmuScalarVariableType::FMU_REAL:
         //    // Add a Real node as a child of ScalarVariable
-        //    rapidxml::xml_node<>* realNode = doc.allocate_node(rapidxml::node_element, "Real");
-        //    realNode->append_attribute(doc.allocate_attribute("unit", "m/s2"));
+        //    rapidxml::xml_node<>* realNode = doc_ptr->allocate_node(rapidxml::node_element, "Real");
+        //    realNode->append_attribute(doc_ptr->allocate_attribute("unit", "m/s2"));
         //    scalarVarNode->append_node(realNode);
         //    break;
         //default:
@@ -128,14 +129,16 @@ void ChFmuComponent::ExportModelDescription(std::string path){
     rootNode->append_node(modelVarsNode);
 
     // Add ModelStructure node
-    rapidxml::xml_node<>* modelStructNode = doc.allocate_node(rapidxml::node_element, "ModelStructure");
+    rapidxml::xml_node<>* modelStructNode = doc_ptr->allocate_node(rapidxml::node_element, "ModelStructure");
     // Add Outputs, Derivatives, and InitialUnknowns nodes and attributes here...
     rootNode->append_node(modelStructNode);
 
     // Save the XML document to a file
     std::ofstream outFile(path + "/modelDescriptionTEST.xml");
-    outFile << doc;
+    outFile << *doc_ptr;
     outFile.close();
+
+    delete doc_ptr;
 
 }
 
@@ -221,7 +224,7 @@ fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nv
         double valref = vr[s];
         auto predicate_samevalreftype = [vr, s](const FmuScalarVariable& var) {
             return var.valueReference == vr[s];
-            return var.type == FmuScalarVariable::e_fmu_variable_type::FMU_REAL;
+            return var.type == FmuScalarVariable::FmuScalarVariableType::FMU_REAL;
         };
         auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
         if (it != scalarVariables.end())
