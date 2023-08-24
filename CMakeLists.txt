@@ -72,6 +72,7 @@ target_compile_definitions(fmu_modeldescription_generator PUBLIC FMU_RUNTIME_OUT
 target_compile_definitions(fmu_modeldescription_generator PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
 target_link_libraries(fmu_modeldescription_generator PUBLIC fmu_instance)
 
+
 set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
@@ -85,10 +86,9 @@ set_target_properties(fmu_modeldescription_generator PROPERTIES ARCHIVE_OUTPUT_D
 # Create the FMU post-build command
 # -------------------------------------------------
 add_custom_target(PACK_FMU
-    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target fmu_modeldescription_generator
 	COMMAND $<TARGET_FILE:fmu_modeldescription_generator>
     COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_MODEL_IDENTIFIER}.fmu" "modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    WORKING_DIRECTORY ${FMU_MAIN_DIRECTORY}
     COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
 )
 
