@@ -7,7 +7,7 @@ project(fmu_generator_standalone)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
-set(FMU_MODEL_IDENTIFIER "fmu_instance" CACHE STRING "FMU Model Identifier")
+set(FMU_MODEL_IDENTIFIER "fmu_instance" CACHE STRING "FMU Model Identifier; should fulfill operating system and C-function naming standards.")
 
 # -------------------------------------------------
 # Set Architecture and Operating System Flags
@@ -42,16 +42,17 @@ else()
     MARK_AS_ADVANCED(FORCE TARGET_SYSTEM)
 endif()
 
-SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/binaries/${OS_SUFFIX}/$<0:>")
+SET(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
+SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${OS_SUFFIX}/$<0:>")
 
 
 # -------------------------------------------------
 # Target: compiles FMU source code
 # -------------------------------------------------
-add_library(fmu_instance SHARED FmuToolsCommon.hpp fmu_entity.h fmu_entity.cpp fmu_instance.h fmu_instance.cpp)
+add_library(fmu_instance SHARED FmuToolsCommon.h FmuToolsCommon.cpp fmu_entity.h fmu_entity.cpp fmu_instance.h fmu_instance.cpp)
 target_include_directories(fmu_instance PUBLIC "fmi2_headers")
 target_include_directories(fmu_instance PUBLIC "rapidxml")
-target_compile_definitions(fmu_instance PUBLIC ${FMU_MODEL_IDENTIFIER})
+target_compile_definitions(fmu_instance PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
 set_target_properties(fmu_instance PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
 # set_property(TARGET fmu_instance PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
@@ -67,8 +68,8 @@ set_target_properties(fmu_instance PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${F
 # Target: generates modelDescription.xml
 # -------------------------------------------------
 add_executable(fmu_modeldescription_generator fmu_modeldescription_generator.cpp)
-target_compile_definitions(fmu_modeldescription_generator PUBLIC FMU_PATH_DEFAULT="${FMU_RUNTIME_OUTPUT_DIRECTORY}")
-target_compile_definitions(fmu_modeldescription_generator PUBLIC ${FMU_MODEL_IDENTIFIER})
+target_compile_definitions(fmu_modeldescription_generator PUBLIC FMU_RUNTIME_OUTPUT_DIRECTORY="${FMU_RUNTIME_OUTPUT_DIRECTORY}")
+target_compile_definitions(fmu_modeldescription_generator PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
 target_link_libraries(fmu_modeldescription_generator PUBLIC fmu_instance)
 
 set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
@@ -85,10 +86,8 @@ set_target_properties(fmu_modeldescription_generator PROPERTIES ARCHIVE_OUTPUT_D
 # -------------------------------------------------
 add_custom_target(PACK_FMU
     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target fmu_modeldescription_generator
-	# COMMAND $<TARGET_FILE:fmu_modeldescription_generator>
-    COMMAND "D:/workspace/DigitalDynamicsLab/fmu_generator_build/binaries/win64/fmu_modeldescription_generator.exe"
-    # COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/modelDescription.xml" "${CMAKE_BINARY_DIR}"
-    # COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_MODEL_IDENTIFIER}.fmu" "modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
+	COMMAND $<TARGET_FILE:fmu_modeldescription_generator>
+    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_MODEL_IDENTIFIER}.fmu" "modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
 )
@@ -97,32 +96,19 @@ add_dependencies(PACK_FMU fmu_modeldescription_generator)
 add_dependencies(PACK_FMU fmu_instance)
 
 
-# add_custom_command(
-#     TARGET fmu_instance
-#     POST_BUILD
-#     COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target fmu_modeldescription_generator
-#     COMMAND $<TARGET_FILE:fmu_modeldescription_generator>
-#     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/modelDescription.xml" "${CMAKE_BINARY_DIR}"
-#     COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_MODEL_IDENTIFIER}.fmu" "modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
-#     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-#     COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
-# )
-
-
 # -------------------------------------------------
 # Target that runs the compiled fmu
 # -------------------------------------------------
-add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsCommon.hpp FmuToolsStandalone.hpp)
+add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsStandalone.hpp)
 target_include_directories(fmu_host_standalone PUBLIC "fmi2_headers")
 target_include_directories(fmu_host_standalone PUBLIC "rapidxml")
-target_compile_definitions(fmu_host_standalone PUBLIC FMU_PATH_DEFAULT="${CMAKE_BINARY_DIR}")
 set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 add_dependencies(fmu_host_standalone fmu_instance)
 
 # -------------------------------------------------
 # Target that runs the fmu project, but skips the modelDescription.xml loading and other auxiliary things
 # -------------------------------------------------
-add_executable(nonfmu_host nonfmu_host.cpp FmuToolsCommon.hpp FmuToolsStandalone.hpp)
+add_executable(nonfmu_host nonfmu_host.cpp FmuToolsCommon.h FmuToolsStandalone.hpp)
 target_include_directories(nonfmu_host PUBLIC "fmi2_headers")
 target_link_libraries(nonfmu_host PUBLIC fmu_instance)
 # target_include_directories(nonfmu_host PUBLIC "rapidxml")

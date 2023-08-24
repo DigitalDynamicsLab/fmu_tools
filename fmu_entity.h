@@ -1,7 +1,7 @@
 
 #pragma once
 #include "fmi2_headers/fmi2Functions.h"
-#include "FmuToolsCommon.hpp"
+#include "FmuToolsCommon.h"
 #include <cassert>
 #include <vector>
 #include <array>
@@ -9,8 +9,28 @@
 #include <iostream>
 #include <string>
 #include <set>
+#include <unordered_map>
+
+//static const std::set<std::string> baseUnits;
 
 void FMI2_Export createModelDescription(const std::string& path);
+
+//                                      |name|kg, m, s, A, K,mol,cd,rad
+static const UnitDefinitionType UD_kg  ("kg",  1, 0, 0, 0, 0, 0, 0, 0 );
+static const UnitDefinitionType UD_m   ("m",   0, 1, 0, 0, 0, 0, 0, 0 );
+static const UnitDefinitionType UD_s   ("s",   0, 0, 1, 0, 0, 0, 0, 0 );
+static const UnitDefinitionType UD_A   ("A",   0, 0, 0, 1, 0, 0, 0, 0 );
+static const UnitDefinitionType UD_K   ("K",   0, 0, 0, 0, 1, 0, 0, 0 );
+static const UnitDefinitionType UD_mol ("mol", 0, 0, 0, 0, 0, 1, 0, 0 );
+static const UnitDefinitionType UD_cd  ("cd",  0, 0, 0, 0, 0, 0, 1, 0 );
+static const UnitDefinitionType UD_rad ("rad", 0, 0, 0, 0, 0, 0, 0, 1 );
+
+static const UnitDefinitionType UD_m_s    ("m/s",    0, 1, -1, 0, 0, 0, 0, 0 );
+static const UnitDefinitionType UD_m_s2   ("m/s2",   0, 1, -2, 0, 0, 0, 0, 0 );
+static const UnitDefinitionType UD_rad_s  ("rad/s",  0, 0, -1, 0, 0, 0, 0, 1 );
+static const UnitDefinitionType UD_rad_s2 ("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1 );
+
+
 
 class ChFmuComponent{
 public:
@@ -19,7 +39,8 @@ public:
         instanceName(_instanceName),
         fmuGUID(_fmuGUID),
         fmi2Type_CoSimulation_available(cosim_available),
-        fmi2Type_ModelExchange_available(modelexchange_available)
+        fmi2Type_ModelExchange_available(modelexchange_available),
+        modelIdentifier(FMU_MODEL_IDENTIFIER)
     {
         switch (_fmuType)
         {
@@ -37,18 +58,31 @@ public:
             throw std::runtime_error("Requested unrecognized fmu type.");
             break;
         }
-    
+
+        UnitDefinitionType ud_kg("kg");   ud_kg.kg = 1;
+        UnitDefinitionType ud_m("m");     ud_m.m = 1;
+        UnitDefinitionType ud_s("s");     ud_s.s = 1;
+        UnitDefinitionType ud_A("A");     ud_A.A = 1;
+        UnitDefinitionType ud_K("K");     ud_K.K = 1;
+        UnitDefinitionType ud_mol("mol"); ud_mol.mol = 1;
+        UnitDefinitionType ud_cd("cd");   ud_cd.cd = 1;
+        UnitDefinitionType ud_rad("rad"); ud_rad.rad = 1;
+
+        unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence default unit
+
+
     }
 
     virtual ~ChFmuComponent(){}
+
 
 protected:
     std::string instanceName;
     fmi2String fmuGUID;
 
     static const std::set<std::string> logCategories_available;
-
     std::set<std::string> logCategories;
+
 
 public:
     bool initializationMode = false;
@@ -60,8 +94,10 @@ public:
     const bool fmi2Type_CoSimulation_available;
     const bool fmi2Type_ModelExchange_available;
 
+    const std::string modelIdentifier;
 
     fmi2Type fmuType;
+
 
     //TODO: check if fmi2XXX_map are needed or if scalarVariables is enough
     // or if simply they can be generated afterwards
@@ -71,6 +107,7 @@ public:
     std::map<fmi2ValueReference, fmi2String*> fmi2String_map;
 
     std::set<FmuScalarVariable> scalarVariables;
+    std::unordered_map<std::string, UnitDefinitionType> unitDefinitions;
 
     fmi2CallbackFunctions callbackFunctions;
 
@@ -88,48 +125,22 @@ public:
 
 protected:
 
+    void AddUnitDefinition(const UnitDefinitionType& newunitdefinition){
+        unitDefinitions[newunitdefinition.name] = newunitdefinition;
+    }
 
+    void ClearUnitDefinitions(){
+        unitDefinitions.clear();
+    }
 
     std::pair<std::set<FmuScalarVariable>::iterator, bool> addFmuVariableReal(
         fmi2Real* var_ptr,
         std::string name,
+        std::string unitname = "",
         std::string description = "",
         std::string causality = "",
         std::string variability = "",
-        std::string initial = ""){
-
-
-        //// check if same-name variable exists
-        //auto predicate_samename = [name](const FmuScalarVariable& var) { return var.name == name; };
-        //auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
-        //if (it!=scalarVariables.end())
-        //    throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
-
-        // assign value reference
-        fmi2ValueReference valref = fmi2Real_map.empty() ? 1 : fmi2Real_map.crbegin()->first+1;
-        fmi2Real_map[valref] = var_ptr; //TODO: check if fmi2XXX_map are needed or if scalarVariables is enough
-
-        // create new variable
-        FmuScalarVariable newvar;
-        newvar.name = name;
-        newvar.valueReference = valref;
-        newvar.ptr.fmi2Real_ptr = var_ptr;
-        newvar.description = description;
-        newvar.causality = causality;
-        newvar.variability = variability;
-        newvar.initial = initial;
-
-        std::pair<std::set<FmuScalarVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
-
-        if (!ret.second){
-            fmi2Real_map.erase(valref);
-            throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
-        }
-
-
-        return ret;
-
-    }
+        std::string initial = "");
 
     void sendToLog(std::string msg, fmi2Status status, std::string msg_cat){
         if (logCategories_available.find(msg_cat) == logCategories_available.end())

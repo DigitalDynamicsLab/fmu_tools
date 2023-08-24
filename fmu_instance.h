@@ -27,32 +27,24 @@ public:
         ChFmuComponent(_instanceName, _fmuType, _fmuGUID, cosim_available, modelexchange_available)
     {
 
-        /// FMU_ACTION: bind internal variables to fmi maps
+        /// FMU_ACTION: define new units if needed
+        //UnitDefinitionType UD_rad_s4 ("rad/s4"); UD_rad_s4.s = -4; UD_rad_s4.rad = 1;
+        //AddUnitDefinition(UD_rad_s4);
 
-        //fmi2Real_map[0] = &q_t[0];
-        //fmi2Real_map[1] = &q[0];
-        //fmi2Real_map[2] = &q[1];
-        //fmi2Real_map[3] = &q_t[2];
-        //fmi2Real_map[4] = &q[2];
-        //fmi2Real_map[5] = &q[3];
-        //fmi2Real_map[6] = &len;
-        //fmi2Real_map[7] = &m;
-        //fmi2Real_map[8] = &M;
+        /// FMU_ACTION: declare relevant variables
+        addFmuVariableReal(&q_t[0], "x_tt",     "m/s2",   "cart acceleration");
+        addFmuVariableReal(&q[0],   "x_t",      "m/s",    "cart velocity");
+        addFmuVariableReal(&q[1],   "x",        "m",      "cart position");
+        addFmuVariableReal(&q_t[2], "theta_tt", "rad/s2", "pendulum ang acceleration");
+        addFmuVariableReal(&q[2],   "theta_t",  "rad/s",  "pendulum ang velocity");
+        addFmuVariableReal(&q[3],   "theta",    "rad",    "pendulum angle");
+        addFmuVariableReal(&len,    "len",      "m",      "pendulum length", "parameter", "fixed");
+        addFmuVariableReal(&m,      "m",        "kg",     "pendulum mass",   "parameter", "fixed");
+        addFmuVariableReal(&M,      "M",        "kg",     "cart mass",       "parameter", "fixed");
 
-        addFmuVariableReal(&q_t[0], "x_tt");
-        addFmuVariableReal(&q[0], "x_t");
-        addFmuVariableReal(&q[1], "x");
-        addFmuVariableReal(&q_t[2], "theta_tt");
-        addFmuVariableReal(&q[2], "theta_t");
-        addFmuVariableReal(&q[3], "theta");
-        addFmuVariableReal(&len, "len");
-        addFmuVariableReal(&m, "m");
-        addFmuVariableReal(&M, "M");
-
-        fmi2Boolean_map[0] = &approximateOn;
+        fmi2Boolean_map[0] = &approximateOn; // TODO: same approach as for Real
 
         // Additional commands
-
         q = {0, 0, 0, M_PI/4};
     }
 

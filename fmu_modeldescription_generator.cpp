@@ -3,6 +3,6 @@
 
 int main(){
 
-    createModelDescription(FMU_PATH_DEFAULT);
+    createModelDescription(FMU_MAIN_DIRECTORY);
     
 }

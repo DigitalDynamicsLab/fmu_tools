@@ -1,5 +1,5 @@
 #pragma once
-#include "FmuToolsCommon.hpp"
+#include "FmuToolsCommon.h"
 #include <string>
 #include "rapidxml/rapidxml.hpp"
 #include <vector>
