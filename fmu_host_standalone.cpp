@@ -18,14 +18,10 @@
 
 #include <iostream>
 
-std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
+//std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
+std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY; // for debug
 int main(int argc, char* argv[]) {
     
-
-    //
-    // PARSE THE XML of fmu
-    //
-
     FmuUnit my_fmu;
 
     try {
@@ -72,6 +68,14 @@ int main(int argc, char* argv[]) {
      //unsigned int sref = 1;
      //my_fmu._fmi2GetString(my_fmu.component, &sref, 1, &m_str);
      //std::cout << "FMU variable 1 has value: "   << m_str << "\n";
+    fmi2ValueReference valref = 8;
+    fmi2Real m_in = 15;
+    my_fmu._fmi2SetReal(my_fmu.component, &valref, 1, &m_in);
+
+    fmi2Real m_out = 15;
+    my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &m_out);
+    std::cout << "m_out_: " << m_out << std::endl;
+
 
     my_fmu._fmi2ExitInitializationMode(my_fmu.component);
 

@@ -32,11 +32,11 @@ public:
         addFmuVariable(&q_t[2], "theta_tt", FmuVariable::Type::FMU_REAL, "rad/s2", "pendulum ang acceleration");
         addFmuVariable(&q[2],   "theta_t",  FmuVariable::Type::FMU_REAL, "rad/s",  "pendulum ang velocity");
         addFmuVariable(&q[3],   "theta",    FmuVariable::Type::FMU_REAL, "rad",    "pendulum angle");
-        addFmuVariable(&len,    "len",      FmuVariable::Type::FMU_REAL, "m",      "pendulum length", "parameter", "fixed");
-        addFmuVariable(&m,      "m",        FmuVariable::Type::FMU_REAL, "kg",     "pendulum mass",   "parameter", "fixed");
-        addFmuVariable(&M,      "M",        FmuVariable::Type::FMU_REAL, "kg",     "cart mass",       "parameter", "fixed");
+        addFmuVariable(&len,    "len",      FmuVariable::Type::FMU_REAL, "m",      "pendulum length", "parameter", "fixed", len);
+        addFmuVariable(&m,      "m",        FmuVariable::Type::FMU_REAL, "kg",     "pendulum mass",   "parameter", "fixed", m);
+        addFmuVariable(&M,      "M",        FmuVariable::Type::FMU_REAL, "kg",     "cart mass",       "parameter", "fixed", M);
 
-        addFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::FMU_BOOLEAN, "1", "use approximated model", "parameter", "fixed");
+        addFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::FMU_BOOLEAN, "1", "use approximated model", "parameter", "fixed", fmi2False);
 
         // Additional commands
         q = {0, 0, 0, M_PI/4};

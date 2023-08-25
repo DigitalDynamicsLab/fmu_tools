@@ -108,7 +108,7 @@ add_custom_target(UNPACK_FMU
     WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY}
     COMMENT "Unpacking FMU file: \"${FMU_MODEL_IDENTIFIER}.fmu\" into \"${FMU_UNPACK_DIRECTORY}\"."
 )
-add_dependencies(UNPACK_FMU fmu_instance)
+add_dependencies(UNPACK_FMU PACK_FMU)
 
 # takes care of creating the unpacking folder
 add_custom_command(
@@ -125,6 +125,7 @@ add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsStandalone.hp
 target_include_directories(fmu_host_standalone PUBLIC "fmi2_headers")
 target_include_directories(fmu_host_standalone PUBLIC "rapidxml")
 target_compile_definitions(fmu_host_standalone PUBLIC FMU_UNPACK_DIRECTORY="${FMU_UNPACK_DIRECTORY}")
+target_compile_definitions(fmu_host_standalone PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
 set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY})
 add_dependencies(fmu_host_standalone UNPACK_FMU)
 

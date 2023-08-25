@@ -144,24 +144,27 @@ void ChFmuComponent::ExportModelDescription(std::string path){
         {FmuVariable::Type::FMU_STRING, "String"}
     };
 
-    for (auto& vs: scalarVariables){
+
+    // TODO: std::set::iterator breaks unions!!!
+    for (std::set<FmuVariable>::const_iterator it = scalarVariables.begin(); it!=scalarVariables.end(); ++it){
         // Create a ScalarVariable node
         rapidxml::xml_node<>* scalarVarNode = doc_ptr->allocate_node(rapidxml::node_element, "ScalarVariable");
-        scalarVarNode->append_attribute(doc_ptr->allocate_attribute("name", vs.name.c_str()));
+        scalarVarNode->append_attribute(doc_ptr->allocate_attribute("name", it->GetName().c_str()));
 
-        valueref_str.push_back(std::to_string(vs.valueReference));
+        valueref_str.push_back(std::to_string(it->GetValueReference()));
         scalarVarNode->append_attribute(doc_ptr->allocate_attribute("valueReference", valueref_str.back().c_str()));
 
-        if (!vs.description.empty()) scalarVarNode->append_attribute(doc_ptr->allocate_attribute("description", vs.description.c_str()));
-        if (!vs.causality.empty())   scalarVarNode->append_attribute(doc_ptr->allocate_attribute("causality",   vs.causality.c_str()));
-        if (!vs.variability.empty()) scalarVarNode->append_attribute(doc_ptr->allocate_attribute("variability", vs.variability.c_str()));
-        if (!vs.initial.empty())     scalarVarNode->append_attribute(doc_ptr->allocate_attribute("initial",     vs.initial.c_str()));
+        if (!it->GetDescription().empty()) scalarVarNode->append_attribute(doc_ptr->allocate_attribute("description", it->GetDescription().c_str()));
+        if (!it->GetCausality().empty())   scalarVarNode->append_attribute(doc_ptr->allocate_attribute("causality",   it->GetCausality().c_str()));
+        if (!it->GetVariability().empty()) scalarVarNode->append_attribute(doc_ptr->allocate_attribute("variability", it->GetVariability().c_str()));
+        if (!it->GetInitial().empty())     scalarVarNode->append_attribute(doc_ptr->allocate_attribute("initial",     it->GetInitial().c_str()));
         modelVarsNode->append_node(scalarVarNode);
 
-        stringbuf.push_back(FmuVariable::Type_toString(vs.type));
-        rapidxml::xml_node<>* realNode = doc_ptr->allocate_node(rapidxml::node_element, Type_strings.at(vs.type).c_str());
-        realNode->append_attribute(doc_ptr->allocate_attribute("unit", vs.unitname.c_str()));
-        scalarVarNode->append_node(realNode);       
+        rapidxml::xml_node<>* unitNode = doc_ptr->allocate_node(rapidxml::node_element, Type_strings.at(it->GetType()).c_str());
+        unitNode->append_attribute(doc_ptr->allocate_attribute("unit", it->GetUnitName().c_str()));
+        stringbuf.push_back(it->GetStartVal());
+        unitNode->append_attribute(doc_ptr->allocate_attribute("start", stringbuf.back().c_str()));
+        scalarVarNode->append_node(unitNode);       
 
     }
 
@@ -242,8 +245,8 @@ fmi2Status fmi2Reset(fmi2Component c){ return fmi2Status::fmi2OK; }
 
 std::set<FmuVariable>::iterator ChFmuComponent::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){
     auto predicate_samevalreftype = [vr, vartype](const FmuVariable& var) {
-        return var.valueReference == vr;
-        return var.type == vartype;
+        return var.GetValueReference() == vr;
+        return var.GetType() == vartype;
     };
     return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
 }
@@ -255,7 +258,7 @@ fmi2Status fmi2GetVariable(fmi2Component c, const fmi2ValueReference vr[], size_
         auto it = reinterpret_cast<ChFmuComponent*>(c)->findByValrefType(vr[s], vartype);
         if (it != scalarVariables.end()){
             T* val_ptr;
-            it->GetPtr(vartype, &val_ptr);
+            it->GetPtr(&val_ptr);
             value[s] = *val_ptr;
         }
         else
@@ -288,7 +291,7 @@ fmi2Status fmi2SetVariable(fmi2Component c, const fmi2ValueReference vr[], size_
         auto it = reinterpret_cast<ChFmuComponent*>(c)->findByValrefType(vr[s], vartype);
         if (it != scalarVariables.end()){
             T* val_ptr;
-            it->GetPtr(vartype, &val_ptr);
+            it->GetPtr(&val_ptr);
             *val_ptr = value[s];
         }
         else

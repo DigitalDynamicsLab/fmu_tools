@@ -11,7 +11,7 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
-
+#include <limits>
 
 extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
 
@@ -149,6 +149,7 @@ protected:
             std::string description = "",
             std::string causality = "",
             std::string variability = "",
+            T startval = std::numeric_limits<T>::quiet_NaN(),
             std::string initial = "")
     {
 
@@ -168,25 +169,24 @@ protected:
 
         // create new variable
         // check if same-name variable exists
-        auto predicate_samename = [name](const FmuVariable& var) { return var.name == name; };
+        auto predicate_samename = [name](const FmuVariable& var) { return var.GetName() == name; };
         auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
         if (it!=scalarVariables.end())
             throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
 
 
-        FmuVariable newvar;
-        newvar.name = name;
-        newvar.unitname = unitname;
-        newvar.SetPtr(scalartype, var_ptr);
-        newvar.description = description;
-        newvar.causality = causality;
-        newvar.variability = variability;
-        newvar.initial = initial;
-        newvar.type = scalartype;
-        newvar.valueReference = ++valueReferenceCounter[scalartype];
+        FmuVariable newvar(name, scalartype);
+        newvar.SetUnitName(unitname);
+        newvar.SetValueReference(++valueReferenceCounter[scalartype]);
+        newvar.SetPtr(var_ptr);
+        newvar.SetDescription(description);
+        newvar.SetCausalityVariabilityInitial(causality, variability, initial);
+        newvar.SetStartVal(startval);
+
 
 
         std::pair<std::set<FmuVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
+        assert(ret.second && "Cannot insert new variable into FMU.");
 
         return *(ret.first);
     }

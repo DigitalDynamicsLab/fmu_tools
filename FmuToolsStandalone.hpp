@@ -311,47 +311,57 @@ public:
         // Iterate over the variables
         for (auto variable_node = variables_node->first_node("ScalarVariable"); variable_node; variable_node = variable_node->next_sibling())
         {
-            FmuVariable mvar;
+
+            FmuVariable::Type mvar_type;
+            std::string mvar_name;
 
             // fetch properties
-
             if (auto attr = variable_node->first_attribute("name"))
-                mvar.name = attr->value();
+                mvar_name = attr->value();
             else
-                throw std::runtime_error("cannot find 'name' property in variable \n");
-
-            if (auto attr = variable_node->first_attribute("valueReference"))
-                mvar.valueReference = std::stoul(attr->value());
-            else
-                throw std::runtime_error("cannot find 'reference' property in variable \n");
-
-            if (auto attr = variable_node->first_attribute("description"))
-                mvar.description = attr->value();
-
-            if (auto attr = variable_node->first_attribute("variability"))
-                mvar.variability = attr->value();
-
-            if (auto attr = variable_node->first_attribute("causality"))
-                mvar.causality = attr->value();
-
-            if (auto attr = variable_node->first_attribute("initial"))
-                mvar.initial = attr->value();
-
-            // fetch type from sub node
+                throw std::runtime_error("Cannot find 'name' property in variable.\n");
 
             if (auto variables_type = variable_node->first_node("Real"))
-                mvar.type = FmuVariable::Type::FMU_REAL;
+                mvar_type = FmuVariable::Type::FMU_REAL;
+            else if (auto variables_type = variable_node->first_node("String"))
+                mvar_type = FmuVariable::Type::FMU_STRING;
+            else if (auto variables_type = variable_node->first_node("Integer"))
+                mvar_type = FmuVariable::Type::FMU_INTEGER;
+            else if (auto variables_type = variable_node->first_node("Boolean"))
+                mvar_type = FmuVariable::Type::FMU_BOOLEAN;
+            else
+                mvar_type = FmuVariable::Type::FMU_REAL;
 
-            if (auto variables_type = variable_node->first_node("String"))
-                mvar.type = FmuVariable::Type::FMU_STRING;
 
-            if (auto variables_type = variable_node->first_node("Integer"))
-                mvar.type = FmuVariable::Type::FMU_INTEGER;
 
-            if (auto variables_type = variable_node->first_node("Boolean"))
-                mvar.type = FmuVariable::Type::FMU_BOOLEAN;
+            FmuVariable mvar(mvar_name, mvar_type);
 
-            flat_variables[mvar.name] = mvar;
+            if (auto attr = variable_node->first_attribute("valueReference"))
+                mvar.SetValueReference(std::stoul(attr->value()));
+            else
+                throw std::runtime_error("Cannot find 'valueReference' property in variable.\n");
+
+            if (auto attr = variable_node->first_attribute("description"))
+                mvar.SetDescription(attr->value());
+
+            std::string variability = "";
+            std::string causality = "";
+            std::string initial = "";
+
+            if (auto attr = variable_node->first_attribute("variability"))
+                variability = attr->value();
+
+            if (auto attr = variable_node->first_attribute("causality"))
+                causality = attr->value();
+
+            if (auto attr = variable_node->first_attribute("initial"))
+                initial = attr->value();
+
+            mvar.SetCausalityVariabilityInitial(causality, variability, initial);
+
+
+
+            flat_variables[mvar.GetName()] = mvar;
 
         }
 
@@ -460,7 +470,7 @@ public:
     void BuildVariablesTree() {
         for (auto& iv : this->flat_variables) {
             std::string token;
-            std::istringstream ss(iv.second.name);
+            std::istringstream ss(iv.second.GetName());
 
             // scan all tokens delimited by "."
             int ntokens = 0;
@@ -496,7 +506,7 @@ public:
             std::cout << in.first;
             // level is a FMU variable (tree leaf)
             if (in.second.leaf) {
-                std::cout << " -> FMU reference:" << in.second.leaf->valueReference;
+                std::cout << " -> FMU reference:" << in.second.leaf->GetValueReference();
             }
 
             std::cout << "\n";
@@ -561,34 +571,34 @@ public:
                 found_T33 != found_R->second.children.end()) {
 
                 FmuVisualShape my_v;
-                my_v.pos_references[0] = found_r1->second.leaf->valueReference;
-                my_v.pos_references[1] = found_r2->second.leaf->valueReference;
-                my_v.pos_references[2] = found_r3->second.leaf->valueReference;
-                my_v.pos_shape_references[0] = found_rshape1->second.leaf->valueReference;
-                my_v.pos_shape_references[1] = found_rshape2->second.leaf->valueReference;
-                my_v.pos_shape_references[2] = found_rshape3->second.leaf->valueReference;
-                my_v.rot_references[0] = found_T11->second.leaf->valueReference;
-                my_v.rot_references[1] = found_T12->second.leaf->valueReference;
-                my_v.rot_references[2] = found_T13->second.leaf->valueReference;
-                my_v.rot_references[3] = found_T21->second.leaf->valueReference;
-                my_v.rot_references[4] = found_T22->second.leaf->valueReference;
-                my_v.rot_references[5] = found_T23->second.leaf->valueReference;
-                my_v.rot_references[6] = found_T31->second.leaf->valueReference;
-                my_v.rot_references[7] = found_T32->second.leaf->valueReference;
-                my_v.rot_references[8] = found_T33->second.leaf->valueReference;
-                my_v.shapetype_reference = found_shtype->second.leaf->valueReference;
-                my_v.l_references[0] = found_l1->second.leaf->valueReference;
-                my_v.l_references[1] = found_l2->second.leaf->valueReference;
-                my_v.l_references[2] = found_l3->second.leaf->valueReference;
-                my_v.w_references[0] = found_w1->second.leaf->valueReference;
-                my_v.w_references[1] = found_w2->second.leaf->valueReference;
-                my_v.w_references[2] = found_w3->second.leaf->valueReference;
-                my_v.color_references[0] = found_color1->second.leaf->valueReference;
-                my_v.color_references[1] = found_color2->second.leaf->valueReference;
-                my_v.color_references[2] = found_color3->second.leaf->valueReference;
-                my_v.width_reference = found_width->second.leaf->valueReference;
-                my_v.length_reference = found_length->second.leaf->valueReference;
-                my_v.height_reference = found_height->second.leaf->valueReference;
+                my_v.pos_references[0] = found_r1->second.leaf->GetValueReference();
+                my_v.pos_references[1] = found_r2->second.leaf->GetValueReference();
+                my_v.pos_references[2] = found_r3->second.leaf->GetValueReference();
+                my_v.pos_shape_references[0] = found_rshape1->second.leaf->GetValueReference();
+                my_v.pos_shape_references[1] = found_rshape2->second.leaf->GetValueReference();
+                my_v.pos_shape_references[2] = found_rshape3->second.leaf->GetValueReference();
+                my_v.rot_references[0] = found_T11->second.leaf->GetValueReference();
+                my_v.rot_references[1] = found_T12->second.leaf->GetValueReference();
+                my_v.rot_references[2] = found_T13->second.leaf->GetValueReference();
+                my_v.rot_references[3] = found_T21->second.leaf->GetValueReference();
+                my_v.rot_references[4] = found_T22->second.leaf->GetValueReference();
+                my_v.rot_references[5] = found_T23->second.leaf->GetValueReference();
+                my_v.rot_references[6] = found_T31->second.leaf->GetValueReference();
+                my_v.rot_references[7] = found_T32->second.leaf->GetValueReference();
+                my_v.rot_references[8] = found_T33->second.leaf->GetValueReference();
+                my_v.shapetype_reference = found_shtype->second.leaf->GetValueReference();
+                my_v.l_references[0] = found_l1->second.leaf->GetValueReference();
+                my_v.l_references[1] = found_l2->second.leaf->GetValueReference();
+                my_v.l_references[2] = found_l3->second.leaf->GetValueReference();
+                my_v.w_references[0] = found_w1->second.leaf->GetValueReference();
+                my_v.w_references[1] = found_w2->second.leaf->GetValueReference();
+                my_v.w_references[2] = found_w3->second.leaf->GetValueReference();
+                my_v.color_references[0] = found_color1->second.leaf->GetValueReference();
+                my_v.color_references[1] = found_color2->second.leaf->GetValueReference();
+                my_v.color_references[2] = found_color3->second.leaf->GetValueReference();
+                my_v.width_reference = found_width->second.leaf->GetValueReference();
+                my_v.length_reference = found_length->second.leaf->GetValueReference();
+                my_v.height_reference = found_height->second.leaf->GetValueReference();
                 my_v.visualizer_node = mynode;
                 this->visualizers.push_back(my_v);
             }
