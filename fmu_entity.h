@@ -88,9 +88,12 @@ protected:
 
 public:
     bool initializationMode = false;
+
+    // DefaultExperiment
     double startTime = 0;
     double stopTime = 1;
     double stepSize = 1e-3;
+    double tolerance = -1;
     double time = 0;
 
     const bool fmi2Type_CoSimulation_available;
@@ -100,18 +103,13 @@ public:
 
     fmi2Type fmuType;
 
+    std::map<FmuVariable::Type, unsigned int> valueReferenceCounter;
 
-    //TODO: check if fmi2XXX_map are needed or if scalarVariables is enough
-    // or if simply they can be generated afterwards
-    std::map<fmi2ValueReference, fmi2Real*> fmi2Real_map;
-    std::map<fmi2ValueReference, fmi2Integer*> fmi2Integer_map;
-    std::map<fmi2ValueReference, fmi2Boolean*> fmi2Boolean_map;
-    std::map<fmi2ValueReference, fmi2String*> fmi2String_map;
-
-    std::map<FmuScalarVariable::Type, unsigned int> valueReferenceCounter;
-
-    std::set<FmuScalarVariable> scalarVariables;
+    std::set<FmuVariable> scalarVariables;
     std::unordered_map<std::string, UnitDefinitionType> unitDefinitions;
+
+    std::set<FmuVariable>::iterator ChFmuComponent::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype);
+
 
     fmi2CallbackFunctions callbackFunctions;
 
@@ -143,10 +141,10 @@ protected:
     // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
     // At least, in this way, we do not have any redundant code at least
     template <class T>
-    const FmuScalarVariable& addFmuVariable(
+    const FmuVariable& addFmuVariable(
             T* var_ptr,
             std::string name,
-            FmuScalarVariable::Type scalartype = FmuScalarVariable::Type::FMU_REAL,
+            FmuVariable::Type scalartype = FmuVariable::Type::FMU_REAL,
             std::string unitname = "",
             std::string description = "",
             std::string causality = "",
@@ -170,16 +168,16 @@ protected:
 
         // create new variable
         // check if same-name variable exists
-        auto predicate_samename = [name](const FmuScalarVariable& var) { return var.name == name; };
+        auto predicate_samename = [name](const FmuVariable& var) { return var.name == name; };
         auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
         if (it!=scalarVariables.end())
             throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
 
 
-        FmuScalarVariable newvar;
+        FmuVariable newvar;
         newvar.name = name;
         newvar.unitname = unitname;
-        newvar.AssignPtr(scalartype, var_ptr);
+        newvar.SetPtr(scalartype, var_ptr);
         newvar.description = description;
         newvar.causality = causality;
         newvar.variability = variability;
@@ -188,7 +186,7 @@ protected:
         newvar.valueReference = ++valueReferenceCounter[scalartype];
 
 
-        std::pair<std::set<FmuScalarVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
+        std::pair<std::set<FmuVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
 
         return *(ret.first);
     }

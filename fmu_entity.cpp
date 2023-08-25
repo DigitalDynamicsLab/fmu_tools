@@ -107,15 +107,24 @@ void ChFmuComponent::ExportModelDescription(std::string path){
     rootNode->append_node(unitDefsNode);
 
     // Add LogCategories node
-    rapidxml::xml_node<>* logCatNode = doc_ptr->allocate_node(rapidxml::node_element, "LogCategories");
-    // Add Category nodes and attributes here...
-    rootNode->append_node(logCatNode);
+    rapidxml::xml_node<>* logCategoriesNode = doc_ptr->allocate_node(rapidxml::node_element, "LogCategories");
+    for (auto& lc: logCategories){
+        rapidxml::xml_node<>* logCategoryNode = doc_ptr->allocate_node(rapidxml::node_element, "Category");
+        logCategoryNode->append_attribute(doc_ptr->allocate_attribute("name", lc.c_str()));
+        logCategoriesNode->append_node(logCategoryNode);
+    }
+    rootNode->append_node(logCategoriesNode);
 
     // Add DefaultExperiment node
+    std::string startTime_str = std::to_string(startTime);
+    std::string stopTime_str = std::to_string(stopTime);
+    std::string stepSize_str = std::to_string(stepSize);
+    std::string tolerance_str = std::to_string(tolerance);
     rapidxml::xml_node<>* defaultExpNode = doc_ptr->allocate_node(rapidxml::node_element, "DefaultExperiment");
-    defaultExpNode->append_attribute(doc_ptr->allocate_attribute("startTime", "0.0"));
-    defaultExpNode->append_attribute(doc_ptr->allocate_attribute("stopTime", "10.0"));
-    defaultExpNode->append_attribute(doc_ptr->allocate_attribute("tolerance", "1E-06"));
+    defaultExpNode->append_attribute(doc_ptr->allocate_attribute("startTime", startTime_str.c_str()));
+    defaultExpNode->append_attribute(doc_ptr->allocate_attribute("stopTime", stopTime_str.c_str()));
+    if(stepSize>0) defaultExpNode->append_attribute(doc_ptr->allocate_attribute("stepSize", stepSize_str.c_str()));
+    if(tolerance>0) defaultExpNode->append_attribute(doc_ptr->allocate_attribute("tolerance", tolerance_str.c_str()));
     rootNode->append_node(defaultExpNode);
 
     // Add ModelVariables node
@@ -127,12 +136,12 @@ void ChFmuComponent::ExportModelDescription(std::string path){
     std::list<std::string> valueref_str;
 
     //TODO: move elsewhere
-    const std::unordered_map<FmuScalarVariable::Type, std::string> Type_strings = {
-        {FmuScalarVariable::Type::FMU_REAL, "Real"},
-        {FmuScalarVariable::Type::FMU_INTEGER, "Integer"},
-        {FmuScalarVariable::Type::FMU_BOOLEAN, "Boolean"},
-        {FmuScalarVariable::Type::FMU_UNKNOWN, "Unknown"},
-        {FmuScalarVariable::Type::FMU_STRING, "String"}
+    const std::unordered_map<FmuVariable::Type, std::string> Type_strings = {
+        {FmuVariable::Type::FMU_REAL, "Real"},
+        {FmuVariable::Type::FMU_INTEGER, "Integer"},
+        {FmuVariable::Type::FMU_BOOLEAN, "Boolean"},
+        {FmuVariable::Type::FMU_UNKNOWN, "Unknown"},
+        {FmuVariable::Type::FMU_STRING, "String"}
     };
 
     for (auto& vs: scalarVariables){
@@ -149,7 +158,7 @@ void ChFmuComponent::ExportModelDescription(std::string path){
         if (!vs.initial.empty())     scalarVarNode->append_attribute(doc_ptr->allocate_attribute("initial",     vs.initial.c_str()));
         modelVarsNode->append_node(scalarVarNode);
 
-        stringbuf.push_back(FmuScalarVariable::Type_toString(vs.type));
+        stringbuf.push_back(FmuVariable::Type_toString(vs.type));
         rapidxml::xml_node<>* realNode = doc_ptr->allocate_node(rapidxml::node_element, Type_strings.at(vs.type).c_str());
         realNode->append_attribute(doc_ptr->allocate_attribute("unit", vs.unitname.c_str()));
         scalarVarNode->append_node(realNode);       
@@ -172,9 +181,13 @@ void ChFmuComponent::ExportModelDescription(std::string path){
 }
 
 
+void createModelDescription(const std::string& path){
+    ChFmuComponent* fmu = fmi2Instantiate_getPointer("", fmi2Type::fmi2CoSimulation, "");
+    fmu->ExportModelDescription(path);
+    delete fmu;
+}
             
 //////////////// FMU FUNCTIONS /////////////////
-
 
 fmi2Component fmi2Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn){
     ChFmuComponent* fmu = fmi2Instantiate_getPointer(instanceName, fmuType, fmuGUID);
@@ -182,12 +195,6 @@ fmi2Component fmi2Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2Str
     fmu->loggingOn = loggingOn;
     
     return reinterpret_cast<void*>(fmu);
-}
-
-void createModelDescription(const std::string& path){
-    ChFmuComponent* fmu = fmi2Instantiate_getPointer("", fmi2Type::fmi2CoSimulation, "");
-    fmu->ExportModelDescription(path);
-    delete fmu;
 }
 
 const char* fmi2GetTypesPlatform(void){
@@ -233,112 +240,79 @@ fmi2Status fmi2ExitInitializationMode(fmi2Component c){
 fmi2Status fmi2Terminate(fmi2Component c){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2Reset(fmi2Component c){ return fmi2Status::fmi2OK; }
 
-
-// TODO: profile this piece of code: IT IS SLOWER THAN the scalarVariables version. Incredible!
-//fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){
-//    auto& fmi2Real_map = reinterpret_cast<ChFmuComponent*>(c)->fmi2Real_map;
-//    for (size_t s = 0; s<nvr; ++s){
-//        auto it = fmi2Real_map.find(vr[s]);
-//        if (it != fmi2Real_map.end())
-//            value[s] = *it->second;
-//        else return fmi2Status::fmi2Error;
-//    }
-//    return fmi2Status::fmi2OK;
-//}
+std::set<FmuVariable>::iterator ChFmuComponent::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){
+    auto predicate_samevalreftype = [vr, vartype](const FmuVariable& var) {
+        return var.valueReference == vr;
+        return var.type == vartype;
+    };
+    return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
+}
 
 template <class T>
-fmi2Status fmi2GetVariable(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, T value[]){
+fmi2Status fmi2GetVariable(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, T value[], FmuVariable::Type vartype){
     auto& scalarVariables = reinterpret_cast<ChFmuComponent*>(c)->scalarVariables;
-
-
     for (size_t s = 0; s<nvr; ++s){
-        double valref = vr[s];
-        auto predicate_samevalreftype = [vr, s](const FmuScalarVariable& var) {
-            return var.valueReference == vr[s];
-            return var.type == FmuScalarVariable::Type::FMU_REAL;
-        };
-        auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
-        if (it != scalarVariables.end())
-            value[s] = *it->ptr.fmi2Real_ptr;
-        else return fmi2Status::fmi2Error;
+        auto it = reinterpret_cast<ChFmuComponent*>(c)->findByValrefType(vr[s], vartype);
+        if (it != scalarVariables.end()){
+            T* val_ptr;
+            it->GetPtr(vartype, &val_ptr);
+            value[s] = *val_ptr;
+        }
+        else
+            return fmi2Status::fmi2Error; // requested a variable that does not exist
     }
     return fmi2Status::fmi2OK;
 }
 
-fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){
-    auto& scalarVariables = reinterpret_cast<ChFmuComponent*>(c)->scalarVariables;
 
-    for (size_t s = 0; s<nvr; ++s){
-        double valref = vr[s];
-        auto predicate_samevalreftype = [vr, s](const FmuScalarVariable& var) {
-            return var.valueReference == vr[s];
-            return var.type == FmuScalarVariable::Type::FMU_REAL;
-        };
-        auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
-        if (it != scalarVariables.end())
-            value[s] = *it->ptr.fmi2Real_ptr;
-        else return fmi2Status::fmi2Error;
-    }
-    return fmi2Status::fmi2OK;
+fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){
+    return fmi2GetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_REAL);
 }
 
 fmi2Status fmi2GetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[]){
-    auto& fmi2Integer_map = reinterpret_cast<ChFmuComponent*>(c)->fmi2Integer_map;
-    for (size_t s = 0; s<nvr; ++s){
-        auto it = fmi2Integer_map.find(vr[s]);
-        if (it != fmi2Integer_map.end())
-            value[s] = *it->second;
-        else return fmi2Status::fmi2Error;
-    }
-    return fmi2Status::fmi2OK;
+    return fmi2GetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
 }
 
 fmi2Status fmi2GetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[]){
-    auto& fmi2Boolean_map = reinterpret_cast<ChFmuComponent*>(c)->fmi2Boolean_map;
-    for (size_t s = 0; s<nvr; ++s){
-        auto it = fmi2Boolean_map.find(vr[s]);
-        if (it != fmi2Boolean_map.end())
-            value[s] = *it->second;
-        else return fmi2Status::fmi2Error;
-    }
-    return fmi2Status::fmi2OK;
+    return fmi2GetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
 }
 
 fmi2Status fmi2GetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2String value[]){
-    auto& fmi2String_map = reinterpret_cast<ChFmuComponent*>(c)->fmi2String_map;
+    return fmi2GetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_STRING);
+}
+
+template <class T>
+fmi2Status fmi2SetVariable(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const T value[], FmuVariable::Type vartype){
+    auto& scalarVariables = reinterpret_cast<ChFmuComponent*>(c)->scalarVariables;
     for (size_t s = 0; s<nvr; ++s){
-        auto it = fmi2String_map.find(vr[s]);
-        if (it != fmi2String_map.end())
-            value[s] = *it->second;
-        else return fmi2Status::fmi2Error;
+        auto it = reinterpret_cast<ChFmuComponent*>(c)->findByValrefType(vr[s], vartype);
+        if (it != scalarVariables.end()){
+            T* val_ptr;
+            it->GetPtr(vartype, &val_ptr);
+            *val_ptr = value[s];
+        }
+        else
+            return fmi2Status::fmi2Error; // requested a variable that does not exist
     }
     return fmi2Status::fmi2OK;
 }
-
 
 fmi2Status fmi2SetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[]){
-    auto& fmi2Real_map = reinterpret_cast<ChFmuComponent*>(c)->fmi2Real_map;
-    for (size_t s = 0; s<nvr; ++s){
-        auto it = fmi2Real_map.find(vr[s]);
-        if (it != fmi2Real_map.end())
-            *it->second = value[s];
-        else return fmi2Status::fmi2Error;
-    }
-    return fmi2Status::fmi2OK;
+    return fmi2SetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_REAL);
 }
 
-fmi2Status fmi2SetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[]){ return fmi2Status::fmi2OK; }
-fmi2Status fmi2SetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[]){
-    auto& fmi2Boolean_map = reinterpret_cast<ChFmuComponent*>(c)->fmi2Boolean_map;
-    for (size_t s = 0; s<nvr; ++s){
-        auto it = fmi2Boolean_map.find(vr[s]);
-        if (it != fmi2Boolean_map.end())
-            *it->second = value[s];
-        else return fmi2Status::fmi2Error;
-    }
-    return fmi2Status::fmi2OK;
+fmi2Status fmi2SetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[]){
+    return fmi2SetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
 }
-fmi2Status fmi2SetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2String value[]){ return fmi2Status::fmi2OK; }
+
+fmi2Status fmi2SetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[]){
+    return fmi2SetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
+}
+
+fmi2Status fmi2SetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2String value[]){
+    return fmi2SetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_STRING);
+}
+
 fmi2Status fmi2GetFMUstate(fmi2Component c, fmi2FMUstate* FMUstate){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2SetFMUstate(fmi2Component c, fmi2FMUstate FMUstate){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2FreeFMUstate(fmi2Component c, fmi2FMUstate* FMUstate){ return fmi2Status::fmi2OK; }
@@ -362,6 +336,7 @@ fmi2Status fmi2GetDirectionalDerivative(fmi2Component c, const fmi2ValueReferenc
 // Co-Simulation
 fmi2Status fmi2SetRealInputDerivatives(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer order[], const fmi2Real value[]){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2GetRealOutputDerivatives(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer order[], fmi2Real value[]){ return fmi2Status::fmi2OK; }
+
 fmi2Status fmi2DoStep(fmi2Component c, fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint){ 
     fmi2Status fmi2DoStep_status = fmi2Status::fmi2OK;
     while (true){

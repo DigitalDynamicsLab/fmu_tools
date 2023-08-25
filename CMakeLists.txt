@@ -2,12 +2,15 @@
 cmake_minimum_required(VERSION 3.15)
 
 
-project(fmu_generator_standalone)
+project(fmu_generator)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
+SET(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
+
 set(FMU_MODEL_IDENTIFIER "fmu_instance" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
+MESSAGE(STATUS "FMU to be created: \"${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu\"")
 
 # -------------------------------------------------
 # Set Architecture and Operating System Flags
@@ -38,11 +41,10 @@ if(UNKNOWN_TARGET_SYSTEM)
     set(TARGET_SYSTEM "win64" CACHE STRING "Target operating system and architecture (e.g. win64, linux32, ...)")
     MARK_AS_ADVANCED(CLEAR TARGET_SYSTEM)
 else()
-    MESSAGE(STATUS "Dedicated FMU folder: ${OS_SUFFIX}")
+    MESSAGE(STATUS "Architecture: ${OS_SUFFIX}")
     MARK_AS_ADVANCED(FORCE TARGET_SYSTEM)
 endif()
 
-SET(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
 SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${OS_SUFFIX}/$<0:>")
 
 
@@ -97,14 +99,35 @@ add_dependencies(PACK_FMU fmu_instance)
 
 
 # -------------------------------------------------
-# Target that runs the compiled fmu
+# Target that extracts back the created FMU
+# -------------------------------------------------
+SET(FMU_UNPACK_DIRECTORY "${FMU_MAIN_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
+add_custom_target(UNPACK_FMU
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${FMU_UNPACK_DIRECTORY}
+    COMMAND ${CMAKE_COMMAND} -E tar "xzf" "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
+    WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY}
+    COMMENT "Unpacking FMU file: \"${FMU_MODEL_IDENTIFIER}.fmu\" into \"${FMU_UNPACK_DIRECTORY}\"."
+)
+add_dependencies(UNPACK_FMU fmu_instance)
+
+# takes care of creating the unpacking folder
+add_custom_command(
+    TARGET UNPACK_FMU PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${FMU_UNPACK_DIRECTORY}
+    COMMENT "Creating unpacking folder ${FMU_UNPACK_DIRECTORY}."
+)
+
+
+# -------------------------------------------------
+# Target that runs the compiled and extracted fmu
 # -------------------------------------------------
 add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsStandalone.hpp)
 target_include_directories(fmu_host_standalone PUBLIC "fmi2_headers")
 target_include_directories(fmu_host_standalone PUBLIC "rapidxml")
-target_compile_definitions(fmu_host_standalone PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
-set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-add_dependencies(fmu_host_standalone fmu_instance)
+target_compile_definitions(fmu_host_standalone PUBLIC FMU_UNPACK_DIRECTORY="${FMU_UNPACK_DIRECTORY}")
+set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY})
+add_dependencies(fmu_host_standalone UNPACK_FMU)
+
 
 # -------------------------------------------------
 # Target that runs the fmu project, but skips the modelDescription.xml loading and other auxiliary things
@@ -114,17 +137,3 @@ target_include_directories(nonfmu_host PUBLIC "fmi2_headers")
 target_link_libraries(nonfmu_host PUBLIC fmu_instance)
 # target_include_directories(nonfmu_host PUBLIC "rapidxml")
 set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-
-
-
-# # Create a custom command to perform the copy
-# add_custom_command(
-#     OUTPUT "${CMAKE_BINARY_DIR}/include"
-#     COMMAND ${CMAKE_COMMAND} -E copy_directory "${source_dir}" "${destination_dir}"
-#     COMMENT "Copying folder from ${source_dir} to ${destination_dir}"
-# )
-
-# # Create a custom target that depends on the custom command
-# add_custom_target(copy_target ALL
-#     DEPENDS "${destination_dir}"
-# )

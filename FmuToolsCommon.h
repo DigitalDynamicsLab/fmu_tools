@@ -54,18 +54,18 @@ struct UnitDefinitionType{
 /// Class holding a reference to a single FMU variable
 /// Note that this is retrieved from the information from the XML
 
-class FmuScalarVariable {
+class FmuVariable {
 public:
-    FmuScalarVariable(){
+    FmuVariable(){
         ptr.fmi2Real_ptr = nullptr; // just to provide a pre-initialization and avoid warnings
     }
 
 
-    bool operator<(const FmuScalarVariable& other) const {
+    bool operator<(const FmuVariable& other) const {
         return this->type != other.type ? this->type < other.type : this->valueReference < other.valueReference;
     }
 
-    bool operator==(const FmuScalarVariable& other) const {
+    bool operator==(const FmuVariable& other) const {
         // according to FMI Reference there can exist two different variables with same type and same valueReference;
         // they are called "alias" thus they should be allowed but not considered equal
         return this->name == other.name;
@@ -80,7 +80,7 @@ public:
     std::string initial = "";
 
     enum class Type{
-        FMU_REAL = 0, // number gives the order in which each type is printed in the modelDescription.xml
+        FMU_REAL = 0, // numbering gives the order in which each type is printed in the modelDescription.xml
         FMU_INTEGER = 1,
         FMU_BOOLEAN = 2,
         FMU_STRING = 3,
@@ -92,29 +92,60 @@ public:
         fmi2Real* fmi2Real_ptr;
         fmi2Integer* fmi2Integer_ptr;
         fmi2Boolean* fmi2Boolean_ptr;
+        fmi2String* fmi2String_ptr;
     } ptr;
 
     template <typename T>
-    void AssignPtr(FmuScalarVariable::Type scalartype, T* ptr) {
-        // DEV: the reinterpret cast is actuallly doing nothing since the T* should already be of the same type
+    void SetPtr(FmuVariable::Type scalartype, T* ptr) {
+        // DEV: the reinterpret cast is actually doing nothing since the T* should already be of the same type
         switch (scalartype)
         {
-        case FmuScalarVariable::Type::FMU_REAL:
+        case FmuVariable::Type::FMU_REAL:
             assert(typeid(this->ptr.fmi2Real_ptr) == typeid(ptr));
             this->ptr.fmi2Real_ptr = reinterpret_cast<fmi2Real*>(ptr);
             break;
-        case FmuScalarVariable::Type::FMU_INTEGER:
+        case FmuVariable::Type::FMU_INTEGER:
             assert(typeid(this->ptr.fmi2Integer_ptr) == typeid(ptr));
             this->ptr.fmi2Integer_ptr = reinterpret_cast<fmi2Integer*>(ptr);
             break;
-        case FmuScalarVariable::Type::FMU_BOOLEAN:
+        case FmuVariable::Type::FMU_BOOLEAN:
             assert(typeid(this->ptr.fmi2Boolean_ptr) == typeid(ptr));
             this->ptr.fmi2Boolean_ptr = reinterpret_cast<fmi2Boolean*>(ptr);
             break;
-        case FmuScalarVariable::Type::FMU_STRING:
-            throw std::runtime_error("FMU_STRING not implemented yet.");
+        case FmuVariable::Type::FMU_STRING:
+            assert(typeid(this->ptr.fmi2String_ptr) == typeid(ptr));
+            this->ptr.fmi2String_ptr = reinterpret_cast<fmi2String*>(ptr);
             break;
-        case FmuScalarVariable::Type::FMU_UNKNOWN:
+        case FmuVariable::Type::FMU_UNKNOWN:
+            throw std::runtime_error("FMU_UNKNOWN not implemented yet.");
+            break;
+        default:
+            break;
+        }
+    }
+
+    template <typename T>
+    void GetPtr(FmuVariable::Type scalartype, T** ptr) const {
+        // DEV: the reinterpret cast is actually doing nothing since the T* should already be of the same type
+        switch (scalartype)
+        {
+        case FmuVariable::Type::FMU_REAL:
+            assert(typeid(this->ptr.fmi2Real_ptr) == typeid(*ptr));
+            *ptr = reinterpret_cast<T*>(this->ptr.fmi2Real_ptr);
+            break;
+        case FmuVariable::Type::FMU_INTEGER:
+            assert(typeid(this->ptr.fmi2Integer_ptr) == typeid(*ptr));
+            *ptr = reinterpret_cast<T*>(this->ptr.fmi2Integer_ptr);
+            break;
+        case FmuVariable::Type::FMU_BOOLEAN:
+            assert(typeid(this->ptr.fmi2Boolean_ptr) == typeid(*ptr));
+            *ptr = reinterpret_cast<T*>(this->ptr.fmi2Boolean_ptr);
+            break;
+        case FmuVariable::Type::FMU_STRING:
+            assert(typeid(this->ptr.fmi2String_ptr) == typeid(*ptr));
+            *ptr = reinterpret_cast<T*>(this->ptr.fmi2String_ptr);
+            break;
+        case FmuVariable::Type::FMU_UNKNOWN:
             throw std::runtime_error("FMU_UNKNOWN not implemented yet.");
             break;
         default:
@@ -130,19 +161,19 @@ public:
     static std::string Type_toString(Type type){
         switch (type)
         {
-        case FmuScalarVariable::Type::FMU_REAL:
+        case FmuVariable::Type::FMU_REAL:
             return "Real";
             break;
-        case FmuScalarVariable::Type::FMU_INTEGER:
+        case FmuVariable::Type::FMU_INTEGER:
             return "Integer";
             break;
-        case FmuScalarVariable::Type::FMU_BOOLEAN:
+        case FmuVariable::Type::FMU_BOOLEAN:
             return "Boolean";
             break;
-        case FmuScalarVariable::Type::FMU_UNKNOWN:
+        case FmuVariable::Type::FMU_UNKNOWN:
             return "Unknown";
             break;
-        case FmuScalarVariable::Type::FMU_STRING:
+        case FmuVariable::Type::FMU_STRING:
             return "String";
             break;
         default:

@@ -86,7 +86,7 @@ public:
     std::string object_name;
 
     std::map<std::string, FmuVariableTreeNode> children;
-    FmuScalarVariable* leaf = nullptr;
+    FmuVariable* leaf = nullptr;
 
     FmuVariableTreeNode() {}
 };
@@ -168,7 +168,7 @@ public:
     std::string info_cosimulation_canGetAndSetFMUstate;
     std::string info_cosimulation_canSerializeFMUstate;
 
-    std::map<std::string, FmuScalarVariable> flat_variables;
+    std::map<std::string, FmuVariable> flat_variables;
 
     FmuVariableTreeNode tree_variables;
 
@@ -311,7 +311,7 @@ public:
         // Iterate over the variables
         for (auto variable_node = variables_node->first_node("ScalarVariable"); variable_node; variable_node = variable_node->next_sibling())
         {
-            FmuScalarVariable mvar;
+            FmuVariable mvar;
 
             // fetch properties
 
@@ -340,16 +340,16 @@ public:
             // fetch type from sub node
 
             if (auto variables_type = variable_node->first_node("Real"))
-                mvar.type = FmuScalarVariable::Type::FMU_REAL;
+                mvar.type = FmuVariable::Type::FMU_REAL;
 
             if (auto variables_type = variable_node->first_node("String"))
-                mvar.type = FmuScalarVariable::Type::FMU_STRING;
+                mvar.type = FmuVariable::Type::FMU_STRING;
 
             if (auto variables_type = variable_node->first_node("Integer"))
-                mvar.type = FmuScalarVariable::Type::FMU_INTEGER;
+                mvar.type = FmuVariable::Type::FMU_INTEGER;
 
             if (auto variables_type = variable_node->first_node("Boolean"))
-                mvar.type = FmuScalarVariable::Type::FMU_BOOLEAN;
+                mvar.type = FmuVariable::Type::FMU_BOOLEAN;
 
             flat_variables[mvar.name] = mvar;
 
