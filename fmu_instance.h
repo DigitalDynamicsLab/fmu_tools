@@ -2,7 +2,6 @@
 #pragma once
 //#define FMI2_FUNCTION_PREFIX MyModel_
 #include "fmu_entity.h"
-#include "fmi2_headers/fmi2Functions.h"
 #include <cassert>
 #include <vector>
 #include <array>
@@ -14,11 +13,6 @@
 #include <math.h>
 
 
-
-std::array<double, 4> operator*(double lhs, const std::array<double, 4>& rhs);
-
-
-std::array<double, 4> operator+(const std::array<double, 4>& lhs, const std::array<double, 4>& rhs);
 
 
 class FmuInstance: public ChFmuComponent{

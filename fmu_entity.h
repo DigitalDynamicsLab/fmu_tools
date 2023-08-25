@@ -1,7 +1,7 @@
 
 #pragma once
-#include "fmi2_headers/fmi2Functions.h"
 #include "FmuToolsCommon.h"
+#include "fmi2_headers/fmi2Functions.h"
 #include <cassert>
 #include <vector>
 #include <array>
@@ -68,7 +68,7 @@ public:
         UnitDefinitionType ud_cd("cd");   ud_cd.cd = 1;
         UnitDefinitionType ud_rad("rad"); ud_rad.rad = 1;
 
-        unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence default unit
+        unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
 
 
     }

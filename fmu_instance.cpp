@@ -1,7 +1,6 @@
 
 //#define FMI2_FUNCTION_PREFIX MyModel_
 #include "fmu_instance.h"
-#include "fmi2_headers/fmi2Functions.h"
 #include <cassert>
 #include <vector>
 #include <array>
@@ -17,8 +16,6 @@
 ChFmuComponent* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID){
     return new FmuInstance(instanceName, fmuType, fmuGUID);
 }
-
-
 
 
 std::array<double, 4> operator*(double lhs, const std::array<double, 4>& rhs)

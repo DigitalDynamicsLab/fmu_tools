@@ -36,4 +36,4 @@ While adding new FMU variables, the user can associate a measurement unit to it 
 
 Measurement units are defined through the `UnitDefinitionType` class, that stores the name of the unit (e.g. "rad/s2") together with the exponents of each SI base unit (e.g. rad=1, s=-2). The user should create its own object of type `UnitDefinitionType` and then pass it to `ChFmuComponent` through its method `AddUnitDefinition`. After this step, the user can then use the unit name in any following call to `addFmuVariableXXX`.
 
-When everything is set up, it is possible to trigger the creation of the FMU by building the **PACK_FMU** target.
+When everything is set up, build the **PACK_FMU** target to generate the FMU file.

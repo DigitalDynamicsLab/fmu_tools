@@ -102,6 +102,7 @@ add_dependencies(PACK_FMU fmu_instance)
 add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsStandalone.hpp)
 target_include_directories(fmu_host_standalone PUBLIC "fmi2_headers")
 target_include_directories(fmu_host_standalone PUBLIC "rapidxml")
+target_compile_definitions(fmu_host_standalone PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
 set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 add_dependencies(fmu_host_standalone fmu_instance)
 

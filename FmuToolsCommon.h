@@ -1,17 +1,17 @@
 #pragma once
-#include <string>
 #include "fmi2_headers/fmi2FunctionTypes.h"
 #include "fmi2_headers/fmi2Functions.h"
 #include <stdexcept>
+#include <string>
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-std::string FMI2_Export fmi2Status_toString(fmi2Status status);
 
 
 struct UnitDefinitionType{
 
     UnitDefinitionType(const std::string& _name = "1"): name(_name){}
+
     UnitDefinitionType(const std::string& _name, int _kg, int _m, int _s, int _A, int _K, int _mol, int _cd, int _rad):
         name(_name),
         kg(_kg),
@@ -22,6 +22,7 @@ struct UnitDefinitionType{
         mol(_mol),
         cd(_cd),
         rad(_rad){}
+
     virtual ~UnitDefinitionType(){}
 
     std::string name;
@@ -97,7 +98,7 @@ public:
         FMU_UNKNOWN = 4
     };
 
-    std::string unitType = "1";
+    std::string unitname = "1";
 
 
     FmuScalarVariableType type = FmuScalarVariableType::FMU_UNKNOWN;

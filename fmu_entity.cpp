@@ -84,7 +84,7 @@ std::pair<std::set<FmuScalarVariable>::iterator, bool> ChFmuComponent::addFmuVar
     // create new variable
     FmuScalarVariable newvar;
     newvar.name = name;
-    newvar.unitType = unitname;
+    newvar.unitname = unitname;
     newvar.valueReference = valref;
     newvar.ptr.fmi2Real_ptr = var_ptr;
     newvar.description = description;
@@ -209,7 +209,7 @@ void ChFmuComponent::ExportModelDescription(std::string path){
 
         stringbuf.push_back(FmuScalarVariable::FmuScalarVariableType_toString(vs.type));
         rapidxml::xml_node<>* realNode = doc_ptr->allocate_node(rapidxml::node_element, FmuScalarVariableType_strings.at(vs.type).c_str());
-        realNode->append_attribute(doc_ptr->allocate_attribute("unit", vs.unitType.c_str()));
+        realNode->append_attribute(doc_ptr->allocate_attribute("unit", vs.unitname.c_str()));
         scalarVarNode->append_node(realNode);       
 
     }
