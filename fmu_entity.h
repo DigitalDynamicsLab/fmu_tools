@@ -10,8 +10,10 @@
 #include <string>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 
-//static const std::set<std::string> baseUnits;
+
+extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
 
 void FMI2_Export createModelDescription(const std::string& path);
 
@@ -106,6 +108,8 @@ public:
     std::map<fmi2ValueReference, fmi2Boolean*> fmi2Boolean_map;
     std::map<fmi2ValueReference, fmi2String*> fmi2String_map;
 
+    std::map<FmuScalarVariable::Type, unsigned int> valueReferenceCounter;
+
     std::set<FmuScalarVariable> scalarVariables;
     std::unordered_map<std::string, UnitDefinitionType> unitDefinitions;
 
@@ -133,15 +137,63 @@ protected:
         unitDefinitions.clear();
     }
 
-    std::pair<std::set<FmuScalarVariable>::iterator, bool> addFmuVariableReal(
-        fmi2Real* var_ptr,
-        std::string name,
-        std::string unitname = "",
-        std::string description = "",
-        std::string causality = "",
-        std::string variability = "",
-        std::string initial = "");
+    // DEV: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the reason is that :
+    // e.g. both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any possible splitting depending on type
+    // if we accept to have both fmi2Integer and fmi2Boolean considered as the same type we can drop the 'scalartype' argument
+    // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
+    // At least, in this way, we do not have any redundant code at least
+    template <class T>
+    const FmuScalarVariable& addFmuVariable(
+            T* var_ptr,
+            std::string name,
+            FmuScalarVariable::Type scalartype = FmuScalarVariable::Type::FMU_REAL,
+            std::string unitname = "",
+            std::string description = "",
+            std::string causality = "",
+            std::string variability = "",
+            std::string initial = "")
+    {
 
+        // check if unit definition exists
+        auto match_unit = unitDefinitions.find(unitname);
+        if (match_unit == unitDefinitions.end()){
+            auto predicate_samename = [unitname](const UnitDefinitionType& var) { return var.name == unitname; };
+            auto match_commonunit = std::find_if(common_unitdefinitions.begin(), common_unitdefinitions.end(), predicate_samename);
+            if (match_commonunit == common_unitdefinitions.end()){
+                throw std::runtime_error("Variable unit is not registered within this ChFmuComponent. Call AddUnitDefinition first.");
+            }
+            else{
+                AddUnitDefinition(*match_commonunit);
+            }
+        }
+
+
+        // create new variable
+        // check if same-name variable exists
+        auto predicate_samename = [name](const FmuScalarVariable& var) { return var.name == name; };
+        auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
+        if (it!=scalarVariables.end())
+            throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
+
+
+        FmuScalarVariable newvar;
+        newvar.name = name;
+        newvar.unitname = unitname;
+        newvar.AssignPtr(scalartype, var_ptr);
+        newvar.description = description;
+        newvar.causality = causality;
+        newvar.variability = variability;
+        newvar.initial = initial;
+        newvar.type = scalartype;
+        newvar.valueReference = ++valueReferenceCounter[scalartype];
+
+
+        std::pair<std::set<FmuScalarVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
+
+        return *(ret.first);
+    }
+
+    
     void sendToLog(std::string msg, fmi2Status status, std::string msg_cat){
         if (logCategories_available.find(msg_cat) == logCategories_available.end())
             throw std::runtime_error(std::string("Log category \"") + msg_cat + std::string("\" is not valid."));

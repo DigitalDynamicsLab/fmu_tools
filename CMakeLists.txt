@@ -7,7 +7,7 @@ project(fmu_generator_standalone)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
-set(FMU_MODEL_IDENTIFIER "fmu_instance" CACHE STRING "FMU Model Identifier; should fulfill operating system and C-function naming standards.")
+set(FMU_MODEL_IDENTIFIER "fmu_instance" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
 
 # -------------------------------------------------
 # Set Architecture and Operating System Flags

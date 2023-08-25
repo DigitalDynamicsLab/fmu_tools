@@ -8,7 +8,7 @@
 #include <fstream>
 #include <string>
 #include <set>
-#include <unordered_set>
+#include <typeindex>
 
 #include "rapidxml.hpp"
 #include "rapidxml_print.hpp"
@@ -31,8 +31,7 @@
 //static const UnitDefinitionType UD_rad_s  ("rad/s",  0, 0, -1, 0, 0, 0, 0, 1 );
 //static const UnitDefinitionType UD_rad_s2 ("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1 );
 
-std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = {UD_kg, UD_m, UD_s, UD_A, UD_K, UD_mol, UD_cd, UD_rad, UD_m_s, UD_m_s2, UD_rad_s, UD_rad_s2};
-
+const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = {UD_kg, UD_m, UD_s, UD_A, UD_K, UD_mol, UD_cd, UD_rad, UD_m_s, UD_m_s2, UD_rad_s, UD_rad_s2};
 
 const std::set<std::string> ChFmuComponent::logCategories_available = {
     "logEvents",
@@ -46,63 +45,6 @@ const std::set<std::string> ChFmuComponent::logCategories_available = {
     "logStatusPending",
     "logAll"
 };
-
-std::pair<std::set<FmuScalarVariable>::iterator, bool> ChFmuComponent::addFmuVariableReal(
-        fmi2Real* var_ptr,
-        std::string name,
-        std::string unitname,
-        std::string description,
-        std::string causality,
-        std::string variability,
-        std::string initial)
-{
-
-    //// check if same-name variable exists
-    //auto predicate_samename = [name](const FmuScalarVariable& var) { return var.name == name; };
-    //auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
-    //if (it!=scalarVariables.end())
-    //    throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
-
-
-    // check if unit definition exists
-    auto match_unit = unitDefinitions.find(unitname);
-    if (match_unit == unitDefinitions.end()){
-        auto predicate_samename = [unitname](const UnitDefinitionType& var) { return var.name == unitname; };
-        auto match_commonunit = std::find_if(common_unitdefinitions.begin(), common_unitdefinitions.end(), predicate_samename);
-        if (match_commonunit == common_unitdefinitions.end()){
-            throw std::runtime_error("Variable unit is not registered within this ChFmuComponent. Call AddUnitDefinition first.");
-        }
-        else{
-            AddUnitDefinition(*match_commonunit);
-        }
-    }
-
-    // assign value reference
-    fmi2ValueReference valref = fmi2Real_map.empty() ? 1 : fmi2Real_map.crbegin()->first+1;
-    fmi2Real_map[valref] = var_ptr; //TODO: check if fmi2XXX_map are needed or if scalarVariables is enough
-
-    // create new variable
-    FmuScalarVariable newvar;
-    newvar.name = name;
-    newvar.unitname = unitname;
-    newvar.valueReference = valref;
-    newvar.ptr.fmi2Real_ptr = var_ptr;
-    newvar.description = description;
-    newvar.causality = causality;
-    newvar.variability = variability;
-    newvar.initial = initial;
-    newvar.type = FmuScalarVariable::FmuScalarVariableType::FMU_REAL;
-
-    std::pair<std::set<FmuScalarVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
-
-    if (!ret.second){
-        fmi2Real_map.erase(valref);
-        throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
-    }
-
-
-    return ret;
-}
 
 
 
@@ -185,12 +127,12 @@ void ChFmuComponent::ExportModelDescription(std::string path){
     std::list<std::string> valueref_str;
 
     //TODO: move elsewhere
-    const std::unordered_map<FmuScalarVariable::FmuScalarVariableType, std::string> FmuScalarVariableType_strings = {
-        {FmuScalarVariable::FmuScalarVariableType::FMU_REAL, "Real"},
-        {FmuScalarVariable::FmuScalarVariableType::FMU_INTEGER, "Integer"},
-        {FmuScalarVariable::FmuScalarVariableType::FMU_BOOLEAN, "Boolean"},
-        {FmuScalarVariable::FmuScalarVariableType::FMU_UNKNOWN, "Unknown"},
-        {FmuScalarVariable::FmuScalarVariableType::FMU_STRING, "String"}
+    const std::unordered_map<FmuScalarVariable::Type, std::string> Type_strings = {
+        {FmuScalarVariable::Type::FMU_REAL, "Real"},
+        {FmuScalarVariable::Type::FMU_INTEGER, "Integer"},
+        {FmuScalarVariable::Type::FMU_BOOLEAN, "Boolean"},
+        {FmuScalarVariable::Type::FMU_UNKNOWN, "Unknown"},
+        {FmuScalarVariable::Type::FMU_STRING, "String"}
     };
 
     for (auto& vs: scalarVariables){
@@ -207,8 +149,8 @@ void ChFmuComponent::ExportModelDescription(std::string path){
         if (!vs.initial.empty())     scalarVarNode->append_attribute(doc_ptr->allocate_attribute("initial",     vs.initial.c_str()));
         modelVarsNode->append_node(scalarVarNode);
 
-        stringbuf.push_back(FmuScalarVariable::FmuScalarVariableType_toString(vs.type));
-        rapidxml::xml_node<>* realNode = doc_ptr->allocate_node(rapidxml::node_element, FmuScalarVariableType_strings.at(vs.type).c_str());
+        stringbuf.push_back(FmuScalarVariable::Type_toString(vs.type));
+        rapidxml::xml_node<>* realNode = doc_ptr->allocate_node(rapidxml::node_element, Type_strings.at(vs.type).c_str());
         realNode->append_attribute(doc_ptr->allocate_attribute("unit", vs.unitname.c_str()));
         scalarVarNode->append_node(realNode);       
 
@@ -292,7 +234,7 @@ fmi2Status fmi2Terminate(fmi2Component c){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2Reset(fmi2Component c){ return fmi2Status::fmi2OK; }
 
 
-// TODO: profile this piece of code
+// TODO: profile this piece of code: IT IS SLOWER THAN the scalarVariables version. Incredible!
 //fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){
 //    auto& fmi2Real_map = reinterpret_cast<ChFmuComponent*>(c)->fmi2Real_map;
 //    for (size_t s = 0; s<nvr; ++s){
@@ -304,6 +246,25 @@ fmi2Status fmi2Reset(fmi2Component c){ return fmi2Status::fmi2OK; }
 //    return fmi2Status::fmi2OK;
 //}
 
+template <class T>
+fmi2Status fmi2GetVariable(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, T value[]){
+    auto& scalarVariables = reinterpret_cast<ChFmuComponent*>(c)->scalarVariables;
+
+
+    for (size_t s = 0; s<nvr; ++s){
+        double valref = vr[s];
+        auto predicate_samevalreftype = [vr, s](const FmuScalarVariable& var) {
+            return var.valueReference == vr[s];
+            return var.type == FmuScalarVariable::Type::FMU_REAL;
+        };
+        auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
+        if (it != scalarVariables.end())
+            value[s] = *it->ptr.fmi2Real_ptr;
+        else return fmi2Status::fmi2Error;
+    }
+    return fmi2Status::fmi2OK;
+}
+
 fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){
     auto& scalarVariables = reinterpret_cast<ChFmuComponent*>(c)->scalarVariables;
 
@@ -311,7 +272,7 @@ fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nv
         double valref = vr[s];
         auto predicate_samevalreftype = [vr, s](const FmuScalarVariable& var) {
             return var.valueReference == vr[s];
-            return var.type == FmuScalarVariable::FmuScalarVariableType::FMU_REAL;
+            return var.type == FmuScalarVariable::Type::FMU_REAL;
         };
         auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
         if (it != scalarVariables.end())

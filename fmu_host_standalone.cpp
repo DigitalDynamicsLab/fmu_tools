@@ -17,6 +17,7 @@
 #include "FmuToolsStandalone.hpp"
 
 #include <iostream>
+#include <chrono>
 
 //std::string unzipped_fmu_folder = "D:/workspace/DigitalDynamicsLab/fmu_generator_standalone_build";
 std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY;
@@ -81,12 +82,32 @@ int main(int argc, char* argv[]) {
     double time = 0;
     double dt = 0.001;
     
-    for (int i= 0; i< 1000; ++i) {
+    std::chrono::high_resolution_clock::time_point startTime, endTime;
 
-        my_fmu._fmi2DoStep(my_fmu.component, time, dt, fmi2True); 
+    std::chrono::duration<double> duration_average;
+    for (int i = 0; i<1000; ++i) {
+
+        my_fmu._fmi2DoStep(my_fmu.component, time, dt, fmi2True);
+
+        fmi2ValueReference valref[1] = {1};
+        fmi2Real val;
+        startTime = std::chrono::high_resolution_clock::now();
+        for (int j = 0; j<100000; ++j) {
+            my_fmu._fmi2GetReal(my_fmu.component, valref, 1, &val); 
+        }
+        endTime = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = std::chrono::duration_cast<std::chrono::duration<double>>(endTime - startTime);
+        duration_average += duration;
+        std::cout << "Time taken: " << duration.count() << " seconds." << std::endl;
+
+
 
         time +=dt;
     }
+
+    duration_average /= 1000;
+    std::cout << "Time taken average: " << duration_average.count() << " seconds." << std::endl;
+
     
 
     // Just some dumps for checking:

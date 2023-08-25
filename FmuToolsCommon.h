@@ -3,6 +3,9 @@
 #include "fmi2_headers/fmi2Functions.h"
 #include <stdexcept>
 #include <string>
+#include <typeindex>
+#include <unordered_map>
+#include <cassert>
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -37,15 +40,7 @@ struct UnitDefinitionType{
 
     struct Hash {
         size_t operator()(const UnitDefinitionType& p) const {
-            return std::hash<std::string>()(p.name)
-            ^ std::hash<int>()(p.kg)
-            ^ std::hash<int>()(p.m)
-            ^ std::hash<int>()(p.s)
-            ^ std::hash<int>()(p.A)
-            ^ std::hash<int>()(p.K)
-            ^ std::hash<int>()(p.mol)
-            ^ std::hash<int>()(p.cd)
-            ^ std::hash<int>()(p.rad);
+            return std::hash<std::string>()(p.name);
         }
     };
 
@@ -84,45 +79,74 @@ public:
     std::string variability = "";
     std::string initial = "";
 
+    enum class Type{
+        FMU_REAL = 0, // number gives the order in which each type is printed in the modelDescription.xml
+        FMU_INTEGER = 1,
+        FMU_BOOLEAN = 2,
+        FMU_STRING = 3,
+        FMU_UNKNOWN = 4
+    } type = Type::FMU_UNKNOWN;
+;
+
     union ptr_type{
         fmi2Real* fmi2Real_ptr;
         fmi2Integer* fmi2Integer_ptr;
         fmi2Boolean* fmi2Boolean_ptr;
     } ptr;
 
-    enum class FmuScalarVariableType {
-        FMU_REAL = 0, // number gives the order in which each type is printed in the modelDescription.xml
-        FMU_INTEGER = 1,
-        FMU_BOOLEAN = 2,
-        FMU_STRING = 3,
-        FMU_UNKNOWN = 4
-    };
+    template <typename T>
+    void AssignPtr(FmuScalarVariable::Type scalartype, T* ptr) {
+        // DEV: the reinterpret cast is actuallly doing nothing since the T* should already be of the same type
+        switch (scalartype)
+        {
+        case FmuScalarVariable::Type::FMU_REAL:
+            assert(typeid(this->ptr.fmi2Real_ptr) == typeid(ptr));
+            this->ptr.fmi2Real_ptr = reinterpret_cast<fmi2Real*>(ptr);
+            break;
+        case FmuScalarVariable::Type::FMU_INTEGER:
+            assert(typeid(this->ptr.fmi2Integer_ptr) == typeid(ptr));
+            this->ptr.fmi2Integer_ptr = reinterpret_cast<fmi2Integer*>(ptr);
+            break;
+        case FmuScalarVariable::Type::FMU_BOOLEAN:
+            assert(typeid(this->ptr.fmi2Boolean_ptr) == typeid(ptr));
+            this->ptr.fmi2Boolean_ptr = reinterpret_cast<fmi2Boolean*>(ptr);
+            break;
+        case FmuScalarVariable::Type::FMU_STRING:
+            throw std::runtime_error("FMU_STRING not implemented yet.");
+            break;
+        case FmuScalarVariable::Type::FMU_UNKNOWN:
+            throw std::runtime_error("FMU_UNKNOWN not implemented yet.");
+            break;
+        default:
+            break;
+        }
+    }
+
 
     std::string unitname = "1";
 
 
-    FmuScalarVariableType type = FmuScalarVariableType::FMU_UNKNOWN;
 
-    static std::string FmuScalarVariableType_toString(FmuScalarVariableType type){
+    static std::string Type_toString(Type type){
         switch (type)
         {
-        case FmuScalarVariable::FmuScalarVariableType::FMU_REAL:
+        case FmuScalarVariable::Type::FMU_REAL:
             return "Real";
             break;
-        case FmuScalarVariable::FmuScalarVariableType::FMU_INTEGER:
+        case FmuScalarVariable::Type::FMU_INTEGER:
             return "Integer";
             break;
-        case FmuScalarVariable::FmuScalarVariableType::FMU_BOOLEAN:
+        case FmuScalarVariable::Type::FMU_BOOLEAN:
             return "Boolean";
             break;
-        case FmuScalarVariable::FmuScalarVariableType::FMU_UNKNOWN:
+        case FmuScalarVariable::Type::FMU_UNKNOWN:
             return "Unknown";
             break;
-        case FmuScalarVariable::FmuScalarVariableType::FMU_STRING:
+        case FmuScalarVariable::Type::FMU_STRING:
             return "String";
             break;
         default:
-            throw std::runtime_error("FmuScalarVariableType_toString: received bad type.");
+            throw std::runtime_error("Type_toString: received bad type.");
             
             break;  
         }

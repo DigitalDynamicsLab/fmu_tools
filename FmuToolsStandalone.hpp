@@ -53,7 +53,7 @@ void logger_default(fmi2ComponentEnvironment c, fmi2String instanceName, fmi2Sta
 
     if (!instanceName) instanceName = "?";
     if (!category) category = "?";
-    std::cout << "[" << instanceName << "|" << fmi2Status_toString(status) << "] " << ": " << message;
+    std::cout << "[" << instanceName << "|" << fmi2Status_toString(status) << "] " << message;
 }
 
 static fmi2CallbackFunctions callbackFunctions_default = {
@@ -340,16 +340,16 @@ public:
             // fetch type from sub node
 
             if (auto variables_type = variable_node->first_node("Real"))
-                mvar.type = FmuScalarVariable::FmuScalarVariableType::FMU_REAL;
+                mvar.type = FmuScalarVariable::Type::FMU_REAL;
 
             if (auto variables_type = variable_node->first_node("String"))
-                mvar.type = FmuScalarVariable::FmuScalarVariableType::FMU_STRING;
+                mvar.type = FmuScalarVariable::Type::FMU_STRING;
 
             if (auto variables_type = variable_node->first_node("Integer"))
-                mvar.type = FmuScalarVariable::FmuScalarVariableType::FMU_INTEGER;
+                mvar.type = FmuScalarVariable::Type::FMU_INTEGER;
 
             if (auto variables_type = variable_node->first_node("Boolean"))
-                mvar.type = FmuScalarVariable::FmuScalarVariableType::FMU_BOOLEAN;
+                mvar.type = FmuScalarVariable::Type::FMU_BOOLEAN;
 
             flat_variables[mvar.name] = mvar;
 

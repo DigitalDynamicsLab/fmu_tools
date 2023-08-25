@@ -26,17 +26,17 @@ public:
         //AddUnitDefinition(UD_rad_s4);
 
         /// FMU_ACTION: declare relevant variables
-        addFmuVariableReal(&q_t[0], "x_tt",     "m/s2",   "cart acceleration");
-        addFmuVariableReal(&q[0],   "x_t",      "m/s",    "cart velocity");
-        addFmuVariableReal(&q[1],   "x",        "m",      "cart position");
-        addFmuVariableReal(&q_t[2], "theta_tt", "rad/s2", "pendulum ang acceleration");
-        addFmuVariableReal(&q[2],   "theta_t",  "rad/s",  "pendulum ang velocity");
-        addFmuVariableReal(&q[3],   "theta",    "rad",    "pendulum angle");
-        addFmuVariableReal(&len,    "len",      "m",      "pendulum length", "parameter", "fixed");
-        addFmuVariableReal(&m,      "m",        "kg",     "pendulum mass",   "parameter", "fixed");
-        addFmuVariableReal(&M,      "M",        "kg",     "cart mass",       "parameter", "fixed");
+        addFmuVariable(&q_t[0], "x_tt",     FmuScalarVariable::Type::FMU_REAL, "m/s2",   "cart acceleration");
+        addFmuVariable(&q[0],   "x_t",      FmuScalarVariable::Type::FMU_REAL, "m/s",    "cart velocity");
+        addFmuVariable(&q[1],   "x",        FmuScalarVariable::Type::FMU_REAL, "m",      "cart position");
+        addFmuVariable(&q_t[2], "theta_tt", FmuScalarVariable::Type::FMU_REAL, "rad/s2", "pendulum ang acceleration");
+        addFmuVariable(&q[2],   "theta_t",  FmuScalarVariable::Type::FMU_REAL, "rad/s",  "pendulum ang velocity");
+        addFmuVariable(&q[3],   "theta",    FmuScalarVariable::Type::FMU_REAL, "rad",    "pendulum angle");
+        addFmuVariable(&len,    "len",      FmuScalarVariable::Type::FMU_REAL, "m",      "pendulum length", "parameter", "fixed");
+        addFmuVariable(&m,      "m",        FmuScalarVariable::Type::FMU_REAL, "kg",     "pendulum mass",   "parameter", "fixed");
+        addFmuVariable(&M,      "M",        FmuScalarVariable::Type::FMU_REAL, "kg",     "cart mass",       "parameter", "fixed");
 
-        fmi2Boolean_map[0] = &approximateOn; // TODO: same approach as for Real
+        addFmuVariable(&approximateOn, "approximateOn", FmuScalarVariable::Type::FMU_BOOLEAN, "1", "use approximated model", "parameter", "fixed");
 
         // Additional commands
         q = {0, 0, 0, M_PI/4};
