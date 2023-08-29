@@ -6,11 +6,23 @@
 #include <map>
 #include <fstream>
 #include <sstream>
+#ifdef WIN32
 #include <windows.h>
 #include <libloaderapi.h>
 #include <winbase.h>
+#else
+#endif
 #include <cstdarg>
 #include <iostream>
+#include "dynamic_loading.hpp"
+#include "miniz-cpp/zip_file.hpp"
+
+#if _HAS_CXX17
+#  include <filesystem>
+#else
+#  include <experimental/filesystem>
+#endif
+
 
 
 std::string fmi2Status_toString(fmi2Status status){
@@ -143,7 +155,7 @@ public:
     /// Construction
     FmuUnit() {
         // default binaries directory in FMU unzipped directory
-        binaries_dir = "/binaries/win64";
+        binaries_dir = "/binaries/" + std::string(FMU_OS_SUFFIX);
     };
 
     std::string directory;
@@ -213,14 +225,28 @@ public:
 public:
     //private:
     /// Load the FMU from the directory, assuming it has been unzipped
-    void Load(const std::string& mdirectory) {
+    void LoadUnzipped(const std::string& mdirectory) {
         this->directory = mdirectory;
+
+    }
+
+    void Load(const std::string& file, const std::string& unzipdir) {
+        #if _HAS_CXX17
+        std::filesystem::remove_all(unzipdir);
+        std::filesystem::create_directory(unzipdir);
+        #else
+        std::experimental::filesystem::remove_all(unzipdir);
+        std::experimental::filesystem::create_directories(unzipdir);
+        #endif
+        miniz_cpp::zip_file fmufile(file);
+        fmufile.extractall(unzipdir);
+        this->directory = unzipdir;
 
     }
 
 
     /// Parse XML and create the list of variables.
-    /// If something fails, throws and exception.
+    /// If something fails, throws an exception.
     void LoadXML() {
 
         std::string xml_filename = this->directory + "/modelDescription.xml";
