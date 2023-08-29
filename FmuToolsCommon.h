@@ -7,6 +7,11 @@
 #include <unordered_map>
 #include <cassert>
 
+#if _HAS_CXX17
+#else
+#include "variant/variant.hpp"
+#endif
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -50,11 +55,14 @@ struct UnitDefinitionType{
 
 };
 
+using ptr_type = mpark::variant<fmi2Real*, fmi2Integer*, fmi2String*>;
+using start_type = mpark::variant<fmi2Real, fmi2Integer, std::string>;
 
 /// Class holding a reference to a single FMU variable
 /// Note that this is retrieved from the information from the XML
 
 class FmuVariable {
+
 
 public:
     enum class Type{
@@ -79,35 +87,35 @@ public:
         initial = other.initial;
         description = other.description;
         // TODO: check if it is not enough the two below
-        //ptr = other.ptr;
-        //start = other.start;
+        ptr = other.ptr;
+        start = other.start;
 
-        switch (this->type)
-        {
-        case FmuVariable::Type::FMU_REAL:
-            this->ptr.fmi2Real_ptr = other.ptr.fmi2Real_ptr;
-            this->start.fmi2Real_start = other.start.fmi2Real_start;
-            break;
-        case FmuVariable::Type::FMU_INTEGER:
-            this->ptr.fmi2Integer_ptr = other.ptr.fmi2Integer_ptr;
-            this->start.fmi2Integer_start = other.start.fmi2Integer_start;
-            break;
-        case FmuVariable::Type::FMU_BOOLEAN:
-            this->ptr.fmi2Boolean_ptr = other.ptr.fmi2Boolean_ptr;
-            this->start.fmi2Boolean_start = other.start.fmi2Boolean_start;
-            break;
-        case FmuVariable::Type::FMU_STRING:
-            this->fmi2String_start_buf = other.fmi2String_start_buf;
-            this->ptr.fmi2String_ptr = other.ptr.fmi2String_ptr; //TODO: check
-            this->start.fmi2String_start = this->fmi2String_start_buf.c_str();
-            break;
-        case FmuVariable::Type::FMU_UNKNOWN:
-            throw std::runtime_error("Cannot set FmuVariable::type to FMU_UNKNOWN.");
-            break;
-        default:
-            throw std::runtime_error("Developer error: passed a not registered FmuVariable::Type.");
-            break;
-        }
+        //switch (this->type)
+        //{
+        //case FmuVariable::Type::FMU_REAL:
+        //    this->ptr = other.ptr;
+        //    this->start = other.start;
+        //    break;
+        //case FmuVariable::Type::FMU_INTEGER:
+        //    this->ptr = other.ptr;
+        //    this->start = other.start;
+        //    break;
+        //case FmuVariable::Type::FMU_BOOLEAN:
+        //    this->ptr = other.ptr;
+        //    this->start = other.start;
+        //    break;
+        //case FmuVariable::Type::FMU_STRING:
+        //    this->fmi2String_start_buf = other_buf;
+        //    this->ptr = other.ptr; //TODO: check
+        //    this->start = this->fmi2String_start_buf.c_str();
+        //    break;
+        //case FmuVariable::Type::FMU_UNKNOWN:
+        //    throw std::runtime_error("Cannot set FmuVariable::type to FMU_UNKNOWN.");
+        //    break;
+        //default:
+        //    throw std::runtime_error("Developer error: passed a not registered FmuVariable::Type.");
+        //    break;
+        //}
 
         allowed_start = other.allowed_start;
         required_start = other.required_start;
@@ -117,31 +125,31 @@ public:
 
     FmuVariable(const std::string& _name, FmuVariable::Type _type): name(_name), type(_type)
     {
-        switch (this->type)
-        {
-        case FmuVariable::Type::FMU_REAL:
-            this->ptr.fmi2Real_ptr = nullptr;
-            this->start.fmi2Real_start = 0.0;
-            break;
-        case FmuVariable::Type::FMU_INTEGER:
-            this->ptr.fmi2Integer_ptr = nullptr;
-            this->start.fmi2Integer_start = 0;
-            break;
-        case FmuVariable::Type::FMU_BOOLEAN:
-            this->ptr.fmi2Boolean_ptr = nullptr;
-            this->start.fmi2Boolean_start = 0;
-            break;
-        case FmuVariable::Type::FMU_STRING:
-            this->ptr.fmi2String_ptr = nullptr;
-            this->start.fmi2String_start = 0;
-            break;
-        case FmuVariable::Type::FMU_UNKNOWN:
-            throw std::runtime_error("Cannot set FmuVariable::type to FMU_UNKNOWN.");
-            break;
-        default:
-            throw std::runtime_error("Developer error: passed a not registered FmuVariable::Type.");
-            break;
-        }
+        //switch (this->type)
+        //{
+        //case FmuVariable::Type::FMU_REAL:
+        //    this->ptr = nullptr;
+        //    this->start = 0.0;
+        //    break;
+        //case FmuVariable::Type::FMU_INTEGER:
+        //    this->ptr = nullptr;
+        //    this->start = 0;
+        //    break;
+        //case FmuVariable::Type::FMU_BOOLEAN:
+        //    this->ptr = nullptr;
+        //    this->start = 0;
+        //    break;
+        //case FmuVariable::Type::FMU_STRING:
+        //    this->ptr = nullptr;
+        //    this->start = 0;
+        //    break;
+        //case FmuVariable::Type::FMU_UNKNOWN:
+        //    throw std::runtime_error("Cannot set FmuVariable::type to FMU_UNKNOWN.");
+        //    break;
+        //default:
+        //    throw std::runtime_error("Developer error: passed a not registered FmuVariable::Type.");
+        //    break;
+        //}
 
     }
 
@@ -172,36 +180,8 @@ public:
         initial = other.initial;
         description = other.description;
         // TODO: check if it is not enough the two below
-        //ptr = other.ptr;
-        //start = other.start;
-
-        switch (this->type)
-        {
-        case FmuVariable::Type::FMU_REAL:
-            this->ptr.fmi2Real_ptr = other.ptr.fmi2Real_ptr;
-            this->start.fmi2Real_start = other.start.fmi2Real_start;
-            break;
-        case FmuVariable::Type::FMU_INTEGER:
-            this->ptr.fmi2Integer_ptr = other.ptr.fmi2Integer_ptr;
-            this->start.fmi2Integer_start = other.start.fmi2Integer_start;
-            break;
-        case FmuVariable::Type::FMU_BOOLEAN:
-            this->ptr.fmi2Boolean_ptr = other.ptr.fmi2Boolean_ptr;
-            this->start.fmi2Boolean_start = other.start.fmi2Boolean_start;
-            break;
-        case FmuVariable::Type::FMU_STRING:
-            this->fmi2String_start_buf = other.fmi2String_start_buf;
-            this->ptr.fmi2String_ptr = other.ptr.fmi2String_ptr; //TODO: check
-            this->start.fmi2String_start = this->fmi2String_start_buf.c_str();
-            break;
-        case FmuVariable::Type::FMU_UNKNOWN:
-            throw std::runtime_error("Cannot set FmuVariable::type to FMU_UNKNOWN.");
-            break;
-        default:
-            throw std::runtime_error("Developer error: passed a not registered FmuVariable::Type.");
-            break;
-        }
-
+        ptr = other.ptr;
+        start = other.start;
         allowed_start = other.allowed_start;
         required_start = other.required_start;
         has_start = other.has_start;
@@ -209,129 +189,45 @@ public:
         return *this;
     }
 
+    void SetPtr(const ptr_type& ptr) {
+        this->ptr = ptr;
+    }
 
-
-    template <typename T>
-    void SetPtr(T* ptr) {
-        // DEV: the reinterpret cast is actually doing nothing since the T* should already be of the same type
-        switch (this->type)
-        {
-        case FmuVariable::Type::FMU_REAL:
-            assert(typeid(this->ptr.fmi2Real_ptr) == typeid(ptr));
-            this->ptr.fmi2Real_ptr = reinterpret_cast<fmi2Real*>(ptr);
-            break;
-        case FmuVariable::Type::FMU_INTEGER:
-            assert(typeid(this->ptr.fmi2Integer_ptr) == typeid(ptr));
-            this->ptr.fmi2Integer_ptr = reinterpret_cast<fmi2Integer*>(ptr);
-            break;
-        case FmuVariable::Type::FMU_BOOLEAN:
-            assert(typeid(this->ptr.fmi2Boolean_ptr) == typeid(ptr));
-            this->ptr.fmi2Boolean_ptr = reinterpret_cast<fmi2Boolean*>(ptr);
-            break;
-        case FmuVariable::Type::FMU_STRING:
-            assert(typeid(this->ptr.fmi2String_ptr) == typeid(ptr));
-            this->ptr.fmi2String_ptr = reinterpret_cast<fmi2String*>(ptr);
-            break;
-        case FmuVariable::Type::FMU_UNKNOWN:
-            throw std::runtime_error("Need to set FmuVariable::type before calling this command.");
-            break;
-        default:
-            break;
-        }
+    template <class T>
+    void GetPtr(T** ptr_address) const {
+        *ptr_address = mpark::get<T*>(this->ptr);
     }
 
     template <typename T>
-    void GetPtr(T** ptr) const {
-        // DEV: the reinterpret cast is actually doing nothing since the T* should already be of the same type
-        switch (this->type)
-        {
-        case FmuVariable::Type::FMU_REAL:
-            assert(typeid(this->ptr.fmi2Real_ptr) == typeid(*ptr));
-            *ptr = reinterpret_cast<T*>(this->ptr.fmi2Real_ptr);
-            break;
-        case FmuVariable::Type::FMU_INTEGER:
-            assert(typeid(this->ptr.fmi2Integer_ptr) == typeid(*ptr));
-            *ptr = reinterpret_cast<T*>(this->ptr.fmi2Integer_ptr);
-            break;
-        case FmuVariable::Type::FMU_BOOLEAN:
-            assert(typeid(this->ptr.fmi2Boolean_ptr) == typeid(*ptr));
-            *ptr = reinterpret_cast<T*>(this->ptr.fmi2Boolean_ptr);
-            break;
-        case FmuVariable::Type::FMU_STRING:
-            assert(typeid(this->ptr.fmi2String_ptr) == typeid(*ptr));
-            *ptr = reinterpret_cast<T*>(this->ptr.fmi2String_ptr);
-            break;
-        case FmuVariable::Type::FMU_UNKNOWN:
-            throw std::runtime_error("Need to set FmuVariable::type before calling this command.");
-            break;
-        default:
-            break;
-        }
-    }
-
-    template <typename T>
-    void SetStartVal(T startval) {
-
+    void SetStartVal(T startval){
         if (allowed_start)
             has_start = true;
         else
             return;
-
-        // DEV: the reinterpret cast is actually doing nothing since the T* should already be of the same type
-        switch (this->type)
-        {
-        case FmuVariable::Type::FMU_REAL:
-            assert(typeid(this->start.fmi2Real_start) == typeid(startval));
-            this->start.fmi2Real_start = static_cast<fmi2Real>(startval);
-            break;
-        case FmuVariable::Type::FMU_INTEGER:
-            assert(typeid(this->start.fmi2Integer_start) == typeid(startval));
-            this->start.fmi2Integer_start = static_cast<fmi2Integer>(startval);
-            break;
-        case FmuVariable::Type::FMU_BOOLEAN:
-            assert(typeid(this->start.fmi2Boolean_start) == typeid(startval));
-            this->start.fmi2Boolean_start = static_cast<fmi2Boolean>(startval);
-            break;
-        case FmuVariable::Type::FMU_STRING:
-            assert(typeid(this->start.fmi2String_start) == typeid(startval));
-            this->fmi2String_start_buf = std::string(*reinterpret_cast<fmi2String*>(&startval));
-            this->start.fmi2String_start = fmi2String_start_buf.c_str();
-            break;
-        case FmuVariable::Type::FMU_UNKNOWN:
-            throw std::runtime_error("Need to set FmuVariable::type before calling this command.");
-            break;
-        default:
-            break;
-        }
+        this->start = startval;
     }
+
+    template <>
+    void SetStartVal<fmi2String>(fmi2String startval){
+        if (allowed_start)
+            has_start = true;
+        else
+            return;
+        this->start = std::string(startval);
+    }
+
 
     std::string GetStartVal() const {
-        std::string ret;
-        switch (this->type)
-        {
-        case FmuVariable::Type::FMU_REAL:
-            ret = std::to_string(this->start.fmi2Real_start);
-            return std::to_string(this->start.fmi2Real_start);
-            break;
-        case FmuVariable::Type::FMU_INTEGER:
-            return std::to_string(this->start.fmi2Integer_start);
-            break;
-        case FmuVariable::Type::FMU_BOOLEAN:
-            return std::to_string(this->start.fmi2Boolean_start);
-            break;
-        case FmuVariable::Type::FMU_STRING:
-            return this->fmi2String_start_buf;
-            break;
-        case FmuVariable::Type::FMU_UNKNOWN:
-            throw std::runtime_error("Need to set FmuVariable::type before calling this command.");
-            break;
-        default:
-            throw std::runtime_error("Need to set FmuVariable::type before calling this command.");
-            break;
-        }
+        if (const fmi2Real* start_ptr = mpark::get_if<fmi2Real>(&this->start))
+            return std::to_string(*start_ptr);
+        if (const fmi2Integer* start_ptr = mpark::get_if<fmi2Integer>(&this->start))
+            return std::to_string(*start_ptr);
+        if (const fmi2Boolean* start_ptr = mpark::get_if<fmi2Boolean>(&this->start))
+            return std::to_string(*start_ptr);
+        if (const std::string* start_ptr = mpark::get_if<std::string>(&this->start))
+            return *start_ptr;
+        return "";
     }
-
-
 
     static std::string Type_toString(Type type){
         switch (type)
@@ -435,21 +331,22 @@ protected:
 
     // TODO: replace with std::variant as soon as C++17 becomes available
 
-    union ptr_type{
-        fmi2Real* fmi2Real_ptr;
-        fmi2Integer* fmi2Integer_ptr;
-        fmi2Boolean* fmi2Boolean_ptr;
-        fmi2String* fmi2String_ptr;
-    } ptr;
+    //union ptr_type{
+    //    fmi2Real* fmi2Real_ptr;
+    //    fmi2Integer* fmi2Integer_ptr;
+    //    fmi2Boolean* fmi2Boolean_ptr;
+    //    fmi2String* fmi2String_ptr;
+    //} ptr;
 
-    union start_type{
-        fmi2Real fmi2Real_start;
-        fmi2Integer fmi2Integer_start;
-        fmi2Boolean fmi2Boolean_start;
-        fmi2String fmi2String_start;
-    } start;
+    //union start_type{
+    //    fmi2Real fmi2Real_start;
+    //    fmi2Integer fmi2Integer_start;
+    //    fmi2Boolean fmi2Boolean_start;
+    //    fmi2String fmi2String_start;
+    //} start;
 
-    std::string fmi2String_start_buf;
+    ptr_type ptr;
+    start_type start;
 
 };
 

@@ -52,11 +52,11 @@ SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${OS_SUFFIX}/$<
 # Target: compiles FMU source code
 # -------------------------------------------------
 add_library(fmu_instance SHARED FmuToolsCommon.h FmuToolsCommon.cpp fmu_entity.h fmu_entity.cpp fmu_instance.h fmu_instance.cpp)
+target_include_directories(fmu_instance PUBLIC "variant")
 target_include_directories(fmu_instance PUBLIC "fmi2_headers")
 target_include_directories(fmu_instance PUBLIC "rapidxml")
 target_compile_definitions(fmu_instance PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
 set_target_properties(fmu_instance PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
-# set_property(TARGET fmu_instance PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 
 set_target_properties(fmu_instance PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
