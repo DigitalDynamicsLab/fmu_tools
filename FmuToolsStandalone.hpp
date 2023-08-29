@@ -22,10 +22,17 @@
 
 #include "miniz-cpp/zip_file.hpp"
 
-#if _HAS_CXX17
-#  include <filesystem>
+#ifdef __cpp_lib_filesystem
+#include <filesystem>
+namespace fs = std::filesystem;
+#elif __cpp_lib_experimental_filesystem
+#  ifdef WIN32
+#    define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
+#  endif
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
 #else
-#  include <experimental/filesystem>
+    #error "No std::experimental::fileystem nor std::filesystem available in the system."
 #endif
 
 
@@ -232,13 +239,8 @@ public:
     }
 
     void Load(const std::string& file, const std::string& unzipdir) {
-        #if _HAS_CXX17
-        std::filesystem::remove_all(unzipdir);
-        std::filesystem::create_directory(unzipdir);
-        #else
-        std::experimental::filesystem::remove_all(unzipdir);
-        std::experimental::filesystem::create_directories(unzipdir);
-        #endif
+        fs::remove_all(unzipdir);
+        fs::create_directories(unzipdir);
         miniz_cpp::zip_file fmufile(file);
         fmufile.extractall(unzipdir);
         this->directory = unzipdir;

@@ -24,13 +24,17 @@
 #undef min
 #undef max
 
-#if _HAS_CXX17
+#ifdef __cpp_lib_filesystem
 #include <filesystem>
-#else
+namespace fs = std::filesystem;
+#elif __cpp_lib_experimental_filesystem
 #  ifdef WIN32
 #    define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
 #  endif
 #include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#else
+    #error "No std::experimental::fileystem nor std::filesystem available in the system."
 #endif
 
 #include <algorithm>
@@ -5383,15 +5387,11 @@ public:
         //std::fstream stream(detail::join_path({path, member.filename}), std::ios::binary | std::ios::out);
         //stream << open(member).rdbuf();
         auto file=detail::join_path({path, member.filename});
-#if _HAS_CXX17
-		auto target=std::filesystem::path(file).parent_path();
-        if (!std::filesystem::exists(target))
-            std::filesystem::create_directories(target);
-#else
-        auto target=std::experimental::filesystem::path(file).parent_path();
-        if (!std::experimental::filesystem::exists(target))
-            std::experimental::filesystem::create_directories(target);
-#endif
+
+        auto target=fs::path(file).parent_path();
+        if (!fs::exists(target))
+            fs::create_directories(target);
+
         std::fstream stream(file, std::ios::binary | std::ios::out);
         stream << open(member).rdbuf();
     }
