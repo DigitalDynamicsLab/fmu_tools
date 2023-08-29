@@ -29,7 +29,8 @@ int main(int argc, char* argv[]) {
 
         //my_fmu.LoadUnzipped(unzipped_fmu_folder);
         //my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY);
-        my_fmu.Load(FMU_FILENAME);
+        my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY);
+        my_fmu.Load(FMU_FILENAME); // will go in TEMP/_fmu_temp
         my_fmu.LoadXML();
         my_fmu.LoadDLL();
         my_fmu.BuildVariablesTree();
@@ -85,10 +86,13 @@ int main(int argc, char* argv[]) {
     double time = 0;
     double dt = 0.001;
     
-
+    fmi2Real fmu_time;
+    valref = 1;
     for (int i = 0; i<1000; ++i) {
 
         my_fmu._fmi2DoStep(my_fmu.component, time, dt, fmi2True);
+        my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &fmu_time);
+        std::cout << "fmu_time: " << fmu_time << std::endl;
         time +=dt;
     }
 

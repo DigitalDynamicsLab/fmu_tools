@@ -69,11 +69,6 @@ public:
     using PtrType = varns::variant<fmi2Real*, fmi2Integer*, fmi2String*>;
     using StartType = varns::variant<fmi2Real, fmi2Integer, std::string>;
 
-    template <class T>
-    static T getQuietNaN(T* ptr){
-        std::
-    }
-
     enum class Type{
         FMU_REAL = 0, // numbering gives the order in which each type is printed in the modelDescription.xml
         FMU_INTEGER = 1,
@@ -159,16 +154,6 @@ public:
         this->start = startval;
     }
 
-    template <>
-    void SetStartVal<fmi2String>(fmi2String startval){
-        if (allowed_start)
-            has_start = true;
-        else
-            return;
-        this->start = std::string(startval);
-    }
-
-
     std::string GetStartVal() const {
         if (const fmi2Real* start_ptr = varns::get_if<fmi2Real>(&this->start))
             return std::to_string(*start_ptr);
@@ -179,6 +164,20 @@ public:
         if (const std::string* start_ptr = varns::get_if<std::string>(&this->start))
             return *start_ptr;
         return "";
+    }
+
+    template <>
+    void SetStartVal<fmi2String>(fmi2String startval){
+        if (allowed_start)
+            has_start = true;
+        else
+            return;
+        this->start = std::string(startval);
+    }
+
+
+    bool HasStartVal() const {
+        return has_start;
     }
 
     static std::string Type_toString(Type type){

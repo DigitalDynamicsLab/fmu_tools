@@ -6,29 +6,9 @@
 #include <map>
 #include <iostream>
 #include <fstream>
-#include <string>
-#include <set>
-#include <typeindex>
+#include "rapidxml.hpp"
+#include "rapidxml_print.hpp"
 
-
-
-#define _USE_MATH_DEFINES
-#include <math.h>
-
-////                                      |name|kg, m, s, A, K,mol,cd,rad
-//static const UnitDefinitionType UD_kg  ("kg",  1, 0, 0, 0, 0, 0, 0, 0 );
-//static const UnitDefinitionType UD_m   ("m",   0, 1, 0, 0, 0, 0, 0, 0 );
-//static const UnitDefinitionType UD_s   ("s",   0, 0, 1, 0, 0, 0, 0, 0 );
-//static const UnitDefinitionType UD_A   ("A",   0, 0, 0, 1, 0, 0, 0, 0 );
-//static const UnitDefinitionType UD_K   ("K",   0, 0, 0, 0, 1, 0, 0, 0 );
-//static const UnitDefinitionType UD_mol ("mol", 0, 0, 0, 0, 0, 1, 0, 0 );
-//static const UnitDefinitionType UD_cd  ("cd",  0, 0, 0, 0, 0, 0, 1, 0 );
-//static const UnitDefinitionType UD_rad ("rad", 0, 0, 0, 0, 0, 0, 0, 1 );
-//
-//static const UnitDefinitionType UD_m_s    ("m/s",    0, 1, -1, 0, 0, 0, 0, 0 );
-//static const UnitDefinitionType UD_m_s2   ("m/s2",   0, 1, -2, 0, 0, 0, 0, 0 );
-//static const UnitDefinitionType UD_rad_s  ("rad/s",  0, 0, -1, 0, 0, 0, 0, 1 );
-//static const UnitDefinitionType UD_rad_s2 ("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1 );
 
 const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = {UD_kg, UD_m, UD_s, UD_A, UD_K, UD_mol, UD_cd, UD_rad, UD_m_s, UD_m_s2, UD_rad_s, UD_rad_s2};
 
@@ -44,7 +24,6 @@ const std::set<std::string> ChFmuComponent::logCategories_available = {
     "logStatusPending",
     "logAll"
 };
-
 
 
 void createModelDescription(const std::string& path){
@@ -107,7 +86,7 @@ void ChFmuComponent::ExportModelDescription(std::string path){
         if (ud.rad != 0) {stringbuf.push_back(std::to_string(ud.rad)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("rad", stringbuf.back().c_str())); }
         unitNode->append_node(baseUnitNode);
 
-        rootNode->append_node(unitNode);
+        unitDefsNode->append_node(unitNode);
     }
     rootNode->append_node(unitDefsNode);
 
@@ -167,8 +146,10 @@ void ChFmuComponent::ExportModelDescription(std::string path){
 
         rapidxml::xml_node<>* unitNode = doc_ptr->allocate_node(rapidxml::node_element, Type_strings.at(it->GetType()).c_str());
         unitNode->append_attribute(doc_ptr->allocate_attribute("unit", it->GetUnitName().c_str()));
-        stringbuf.push_back(it->GetStartVal());
-        unitNode->append_attribute(doc_ptr->allocate_attribute("start", stringbuf.back().c_str()));
+        if (it->HasStartVal()){
+            stringbuf.push_back(it->GetStartVal());
+            unitNode->append_attribute(doc_ptr->allocate_attribute("start", stringbuf.back().c_str()));
+        }
         scalarVarNode->append_node(unitNode);       
 
     }
@@ -187,15 +168,21 @@ void ChFmuComponent::ExportModelDescription(std::string path){
 
     delete doc_ptr;
 }
+
+void ChFmuComponent::CheckVariables() const
+{
+    for (auto& sv: scalarVariables){
+
+    }
+}
             
 //////////////// FMU FUNCTIONS /////////////////
 
 fmi2Component fmi2Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn){
-    ChFmuComponent* fmu = fmi2Instantiate_getPointer(instanceName, fmuType, fmuGUID);
-    fmu->callbackFunctions = *functions;
-    fmu->loggingOn = loggingOn;
-    
-    return reinterpret_cast<void*>(fmu);
+    ChFmuComponent* fmu_ptr = fmi2Instantiate_getPointer(instanceName, fmuType, fmuGUID);
+    fmu_ptr->SetCallbackFunctions(functions);
+    fmu_ptr->SetLogging(loggingOn==fmi2True ? true : false);    
+    return reinterpret_cast<void*>(fmu_ptr);
 }
 
 const char* fmi2GetTypesPlatform(void){
@@ -208,7 +195,7 @@ const char* fmi2GetVersion(void){
 
 fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn, size_t nCategories, const fmi2String categories[]){
     ChFmuComponent* fmu_ptr = reinterpret_cast<ChFmuComponent*>(c);
-    fmu_ptr->loggingOn = loggingOn==fmi2True ? true : false;
+    fmu_ptr->SetLogging(loggingOn==fmi2True ? true : false);
     for (auto cs = 0; cs < nCategories; ++cs){
         fmu_ptr->AddCallbackLoggerCategory(categories[cs]);
     }
@@ -224,18 +211,17 @@ void fmi2FreeInstance(fmi2Component c){
 fmi2Status fmi2SetupExperiment(fmi2Component c, fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime){
     assert(toleranceDefined==fmi2False);
     assert(stopTimeDefined==fmi2False);
-    reinterpret_cast<ChFmuComponent*>(c)->startTime = startTime;
-    reinterpret_cast<ChFmuComponent*>(c)->stopTime = stopTime;
+    reinterpret_cast<ChFmuComponent*>(c)->SetDefaultExperiment(toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
     return fmi2Status::fmi2OK;
 }
 
 fmi2Status fmi2EnterInitializationMode(fmi2Component c){
-    reinterpret_cast<ChFmuComponent*>(c)->initializationMode = true;
+    reinterpret_cast<ChFmuComponent*>(c)->SetInitializationMode(true);
     return fmi2Status::fmi2OK;
 }
 
 fmi2Status fmi2ExitInitializationMode(fmi2Component c){ 
-    reinterpret_cast<ChFmuComponent*>(c)->initializationMode = false;
+    reinterpret_cast<ChFmuComponent*>(c)->SetInitializationMode(false);
     return fmi2Status::fmi2OK;
 }
 fmi2Status fmi2Terminate(fmi2Component c){ return fmi2Status::fmi2OK; }
@@ -341,7 +327,7 @@ fmi2Status fmi2GetRealOutputDerivatives(fmi2Component c, const fmi2ValueReferenc
 fmi2Status fmi2DoStep(fmi2Component c, fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint){ 
     fmi2Status fmi2DoStep_status = fmi2Status::fmi2OK;
     while (true){
-        double candidateStepSize = currentCommunicationPoint + communicationStepSize - reinterpret_cast<ChFmuComponent*>(c)->time;
+        double candidateStepSize = currentCommunicationPoint + communicationStepSize - reinterpret_cast<ChFmuComponent*>(c)->GetTime();
         if (candidateStepSize < -1e-10)
             return fmi2Status::fmi2Warning;
         else

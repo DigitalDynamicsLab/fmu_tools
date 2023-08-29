@@ -2,17 +2,11 @@
 #pragma once
 //#define FMI2_FUNCTION_PREFIX MyModel_
 #include "fmu_entity.h"
-#include <cassert>
 #include <vector>
 #include <array>
-#include <map>
-#include <iostream>
-#include <string>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
-
-
 
 
 class FmuInstance: public ChFmuComponent{
@@ -21,6 +15,7 @@ public:
         ChFmuComponent(_instanceName, _fmuType, _fmuGUID)
     {
 
+        initializeType(_fmuType);
         /// FMU_ACTION: define new units if needed
         //UnitDefinitionType UD_rad_s4 ("rad/s4"); UD_rad_s4.s = -4; UD_rad_s4.rad = 1;
         //AddUnitDefinition(UD_rad_s4);
@@ -62,7 +57,7 @@ public:
     void get_q_t(const std::array<double, 4>& _q, std::array<double, 4>& q_t);
 
 
-private:
+protected:
 
     virtual bool is_cosimulation_available() const override {return true;}
     virtual bool is_modelexchange_available() const override {return false;}
@@ -86,4 +81,11 @@ private:
 
 
 };
+
+
+// FMU_ACTION:: implement the following functions
+ChFmuComponent* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID){
+    return new FmuInstance(instanceName, fmuType, fmuGUID);
+}
+
 

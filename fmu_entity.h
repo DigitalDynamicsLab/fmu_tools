@@ -5,17 +5,13 @@
 #include <cassert>
 #include <vector>
 #include <array>
-#include <fstream>
-
 #include <map>
 #include <iostream>
 #include <string>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
-#include <limits>
-#include "rapidxml.hpp"
-#include "rapidxml_print.hpp"
+
 
 #include "variant/variant.hpp"
 
@@ -48,22 +44,6 @@ public:
         fmuGUID(_fmuGUID),
         modelIdentifier(FMU_MODEL_IDENTIFIER)
     {
-        switch (_fmuType)
-        {
-        case fmi2Type::fmi2CoSimulation:
-            if (!is_cosimulation_available())
-                throw std::runtime_error("Requested CoSimulation fmu mode but it is not available.");
-            fmuType = fmi2Type::fmi2CoSimulation;
-            break;
-        case fmi2Type::fmi2ModelExchange:
-            if (!is_modelexchange_available())
-                throw std::runtime_error("Requested ModelExchange fmu mode but it is not available.");
-            fmuType = fmi2Type::fmi2ModelExchange;
-            break;
-        default:
-            throw std::runtime_error("Requested unrecognized fmu type.");
-            break;
-        }
 
         UnitDefinitionType ud_kg("kg");   ud_kg.kg = 1;
         UnitDefinitionType ud_m("m");     ud_m.m = 1;
@@ -76,32 +56,81 @@ public:
 
         unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
 
+        addFmuVariable(&time, "time", FmuVariable::Type::FMU_REAL, "s", "time");
 
     }
 
     virtual ~ChFmuComponent(){}
+    
+
+    void SetDefaultExperiment(fmi2Boolean _toleranceDefined, fmi2Real _tolerance, fmi2Real _startTime, fmi2Boolean _stopTimeDefined, fmi2Real _stopTime){
+        startTime = _startTime;
+        stopTime = _stopTime;
+        tolerance = _tolerance;
+        toleranceDefined = _toleranceDefined;
+        stopTimeDefined = _stopTimeDefined;
+    }
+
+    void SetInitializationMode(bool val){ initializationMode = val; }
+
+    void SetCallbackFunctions(const fmi2CallbackFunctions* functions){ callbackFunctions = *functions; }
+
+    void SetLogging(bool val){loggingOn = val; };
+
+    void AddCallbackLoggerCategory(std::string cat){
+        if (logCategories_available.find(cat) == logCategories_available.end())
+            throw std::runtime_error(std::string("Log category \"") + cat + std::string("\" is not valid."));
+        logCategories.insert(cat);
+    }
+
+    virtual fmi2Status DoStep(double stepSize = -1){ return fmi2Status::fmi2Error; };
+
+    void ExportModelDescription(std::string path);
+
+    void CheckVariables() const;
+
+    double GetTime() const {return time;}
 
 
 protected:
+
+    void initializeType(fmi2Type _fmuType){
+        switch (_fmuType)
+        {
+        case fmi2Type::fmi2CoSimulation:
+            if (!is_cosimulation_available())
+                throw std::runtime_error("Requested CoSimulation FMU mode but it is not available.");
+            fmuType = fmi2Type::fmi2CoSimulation;
+            break;
+        case fmi2Type::fmi2ModelExchange:
+            if (!is_modelexchange_available())
+                throw std::runtime_error("Requested ModelExchange FMU mode but it is not available.");
+            fmuType = fmi2Type::fmi2ModelExchange;
+            break;
+        default:
+            throw std::runtime_error("Requested unrecognized FMU type.");
+            break;
+        }
+    }
+
     std::string instanceName;
     fmi2String fmuGUID;
 
     static const std::set<std::string> logCategories_available;
     std::set<std::string> logCategories;
 
-
-public:
     bool initializationMode = false;
 
     // DefaultExperiment
-    double startTime = 0;
-    double stopTime = 1;
-    double stepSize = 1e-3;
-    double tolerance = -1;
-    double time = 0;
+    fmi2Real startTime = 0;
+    fmi2Real stopTime = 1;
+    fmi2Real tolerance = -1;
+    fmi2Boolean toleranceDefined = 0;
+    fmi2Boolean stopTimeDefined = 0;
 
-    virtual bool is_cosimulation_available() const = 0;
-    virtual bool is_modelexchange_available() const = 0;
+    fmi2Real stepSize = 1e-3;
+    fmi2Real time = 0;
+
 
     const std::string modelIdentifier;
 
@@ -116,20 +145,11 @@ public:
 
 
     fmi2CallbackFunctions callbackFunctions;
-
-    void AddCallbackLoggerCategory(std::string cat){
-        if (logCategories_available.find(cat) == logCategories_available.end())
-            throw std::runtime_error(std::string("Log category \"") + cat + std::string("\" is not valid."));
-        logCategories.insert(cat);
-    }
-
     bool loggingOn = true;
 
-    virtual fmi2Status DoStep(double stepSize = -1){ return fmi2Status::fmi2Error; };
-
-    void ExportModelDescription(std::string path);
-
-protected:
+    
+    virtual bool is_cosimulation_available() const = 0;
+    virtual bool is_modelexchange_available() const = 0;
 
     void AddUnitDefinition(const UnitDefinitionType& newunitdefinition){
         unitDefinitions[newunitdefinition.name] = newunitdefinition;
@@ -138,6 +158,7 @@ protected:
     void ClearUnitDefinitions(){
         unitDefinitions.clear();
     }
+
 
     // DEV: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the reason is that :
     // e.g. both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any possible splitting depending on type

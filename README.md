@@ -18,10 +18,11 @@ More in detail:
 0. in CMake, set the `FMU_MODEL_IDENTIFIER` to any valid name (consider your operating system and C-function naming standards);
 1. derive from `ChFmuComponent` your own class; please refer to `FmuInstance` for an example;
 2. the derived class should:
+   - in the constructor, remember to call `ChFmuComponent::instantiateType(_fmuType)`;
+   - in the constructor, add all the relevant variables of the model to the FMU through `addFmuVariableXXX` functions; variable units are supported and some default units are already declared;
    - override `ChFmuComponent::is_cosimulation_available()` and `ChFmuComponent::is_modelexchange_available()` so that they would return the proper answer;
-   - in the constructor definition, add all the relevant variables of the model to the FMU through `addFmuVariableXXX` functions; variable units are supported and some default units are already declared;
    - override `DoStep` method of the base class with the problem-specific implementation.
-3. implement in a source file (not in the header!) the `fmi2Instantiate_getPointer` similarly to:
+3. provide the implementation of `fmi2Instantiate_getPointer` similarly to:
    ```
    ChFmuComponent* fmi2Instantiate_getPointer(
      fmi2String instanceName,

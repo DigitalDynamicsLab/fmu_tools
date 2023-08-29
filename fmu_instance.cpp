@@ -5,17 +5,9 @@
 #include <vector>
 #include <array>
 #include <map>
-#include <iostream>
-#include <string>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
-
-
-// FMU_ACTION:: implement the following functions
-ChFmuComponent* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID){
-    return new FmuInstance(instanceName, fmuType, fmuGUID);
-}
 
 
 std::array<double, 4> operator*(double lhs, const std::array<double, 4>& rhs)
