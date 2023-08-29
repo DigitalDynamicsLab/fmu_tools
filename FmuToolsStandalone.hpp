@@ -1,20 +1,25 @@
 #pragma once
 #include "FmuToolsCommon.h"
-#include <string>
 #include "rapidxml/rapidxml.hpp"
+#include <string>
 #include <vector>
 #include <map>
 #include <fstream>
 #include <sstream>
-#ifdef WIN32
-#include <windows.h>
-#include <libloaderapi.h>
-#include <winbase.h>
-#else
-#endif
 #include <cstdarg>
 #include <iostream>
-#include "dynamic_loading.hpp"
+
+#if defined(_MSC_VER) || defined(WIN32) || defined(__MINGW32__)
+#    define WIN32_LEAN_AND_MEAN
+#    include <windows.h>
+#    define DYNLIB_HANDLE HINSTANCE
+#    define get_function_ptr GetProcAddress
+#else
+#    include <dlfcn.h>
+#    define DYNLIB_HANDLE void*
+#    define get_function_ptr dlsym
+#endif
+
 #include "miniz-cpp/zip_file.hpp"
 
 #if _HAS_CXX17
@@ -190,7 +195,7 @@ public:
 
     // wrappers for runtime dll linking:
 private:
-    HINSTANCE hGetProcIDDLL;
+    DYNLIB_HANDLE dynlib_handle;
 public:
     //private:
     fmi2CallbackFunctions       callbacks;
@@ -398,97 +403,103 @@ public:
     /// the needed FMU functions.
     void LoadDLL() {
 
-        std::string dll_dir = this->directory + this->binaries_dir;
-
-        if (!SetDllDirectory(dll_dir.c_str()))
+        std::string dynlib_dir = this->directory + this->binaries_dir;
+#if WIN32
+        if (!SetDllDirectory(dynlib_dir.c_str()))
             throw std::runtime_error("Could not locate the DLL directory.");
+#endif
 
-        std::string dll_name;
-        dll_name = dll_dir + "/" + this->info_cosimulation_modelIdentifier + ".dll";
+        std::string dynlib_name;
+        dynlib_name = dynlib_dir + "/" + this->info_cosimulation_modelIdentifier + ".dll";
 
+#if WIN32
         // run time loading of dll:
-        this->hGetProcIDDLL = LoadLibrary(dll_name.c_str());
+        this->dynlib_handle = LoadLibrary(dynlib_name.c_str());
+#else
+        this->dynlib_handle = dlopen(dynlib_name.c_str(), RTLD_LAZY);
+#endif
 
-        if (!this->hGetProcIDDLL)
-            throw std::runtime_error("Could not locate the DLL from its file name " + dll_name + "\n");
+
+        if (!this->dynlib_handle)
+            throw std::runtime_error("Could not locate the compiled FMU files: " + dynlib_name + "\n");
 
         // run time binding of functions
 
-        this->_fmi2SetDebugLogging = (fmi2SetDebugLoggingTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2SetDebugLogging");
+        this->_fmi2SetDebugLogging = (fmi2SetDebugLoggingTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetDebugLogging");
         if (!this->_fmi2SetDebugLogging)
-            throw std::runtime_error("Could not find fmi2SetDebugLogging() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2SetDebugLogging() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2Instantiate = (fmi2InstantiateTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2Instantiate");
+        this->_fmi2Instantiate = (fmi2InstantiateTYPE*)get_function_ptr(this->dynlib_handle, "fmi2Instantiate");
         if (!this->_fmi2Instantiate)
-            throw std::runtime_error("Could not find fmi2Instantiate() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2Instantiate() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2FreeInstance = (fmi2FreeInstanceTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2FreeInstance");
+        this->_fmi2FreeInstance = (fmi2FreeInstanceTYPE*)get_function_ptr(this->dynlib_handle, "fmi2FreeInstance");
         if (!this->_fmi2FreeInstance)
-            throw std::runtime_error("Could not find fmi2FreeInstance() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2FreeInstance() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2GetVersion = (fmi2GetVersionTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2GetVersion");
+        this->_fmi2GetVersion = (fmi2GetVersionTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetVersion");
         if (!this->_fmi2GetVersion)
-            throw std::runtime_error("Could not find fmi2GetVersion() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2GetVersion() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2GetTypesPlatform = (fmi2GetTypesPlatformTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2GetTypesPlatform");
+        this->_fmi2GetTypesPlatform = (fmi2GetTypesPlatformTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetTypesPlatform");
         if (!this->_fmi2GetTypesPlatform)
-            throw std::runtime_error("Could not find fmi2GetTypesPlatform() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2GetTypesPlatform() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2SetupExperiment = (fmi2SetupExperimentTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2SetupExperiment");
+        this->_fmi2SetupExperiment = (fmi2SetupExperimentTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetupExperiment");
         if (!this->_fmi2SetupExperiment)
-            throw std::runtime_error("Could not find fmi2SetupExperiment() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2SetupExperiment() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2EnterInitializationMode = (fmi2EnterInitializationModeTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2EnterInitializationMode");
+        this->_fmi2EnterInitializationMode = (fmi2EnterInitializationModeTYPE*)get_function_ptr(this->dynlib_handle, "fmi2EnterInitializationMode");
         if (!this->_fmi2EnterInitializationMode)
-            throw std::runtime_error("Could not find fmi2EnterInitializationMode() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2EnterInitializationMode() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2ExitInitializationMode = (fmi2ExitInitializationModeTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2ExitInitializationMode");
+        this->_fmi2ExitInitializationMode = (fmi2ExitInitializationModeTYPE*)get_function_ptr(this->dynlib_handle, "fmi2ExitInitializationMode");
         if (!this->_fmi2ExitInitializationMode)
-            throw std::runtime_error("Could not find fmi2ExitInitializationMode() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2ExitInitializationMode() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2Terminate = (fmi2TerminateTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2Terminate");
+        this->_fmi2Terminate = (fmi2TerminateTYPE*)get_function_ptr(this->dynlib_handle, "fmi2Terminate");
         if (!this->_fmi2Terminate)
-            throw std::runtime_error("Could not find fmi2Terminate() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2Terminate() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2Reset = (fmi2ResetTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2Reset");
+        this->_fmi2Reset = (fmi2ResetTYPE*)get_function_ptr(this->dynlib_handle, "fmi2Reset");
         if (!this->_fmi2Reset)
-            throw std::runtime_error("Could not find fmi2Reset() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2Reset() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2GetReal = (fmi2GetRealTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2GetReal");
+        this->_fmi2GetReal = (fmi2GetRealTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetReal");
         if (!this->_fmi2GetReal)
-            throw std::runtime_error("Could not find fmi2GetReal() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2GetReal() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2GetInteger = (fmi2GetIntegerTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2GetInteger");
+        this->_fmi2GetInteger = (fmi2GetIntegerTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetInteger");
         if (!this->_fmi2GetInteger)
-            throw std::runtime_error("Could not find fmi2GetInteger() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2GetInteger() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2GetBoolean = (fmi2GetBooleanTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2GetBoolean");
+        this->_fmi2GetBoolean = (fmi2GetBooleanTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetBoolean");
         if (!this->_fmi2GetBoolean)
-            throw std::runtime_error("Could not find fmi2GetBoolean() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2GetBoolean() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2GetString = (fmi2GetStringTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2GetString");
+        this->_fmi2GetString = (fmi2GetStringTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetString");
         if (!this->_fmi2GetString)
-            throw std::runtime_error("Could not find fmi2GetString() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2GetString() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2SetReal = (fmi2SetRealTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2SetReal");
+        this->_fmi2SetReal = (fmi2SetRealTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetReal");
         if (!this->_fmi2SetReal)
-            throw std::runtime_error("Could not find fmi2SetReal() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2SetReal() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2SetInteger = (fmi2SetIntegerTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2SetInteger");
+        this->_fmi2SetInteger = (fmi2SetIntegerTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetInteger");
         if (!this->_fmi2SetInteger)
-            throw std::runtime_error("Could not find fmi2SetInteger() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2SetInteger() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2SetBoolean = (fmi2SetBooleanTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2SetBoolean");
+        this->_fmi2SetBoolean = (fmi2SetBooleanTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetBoolean");
         if (!this->_fmi2SetBoolean)
-            throw std::runtime_error("Could not find fmi2SetBoolean() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2SetBoolean() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2SetString = (fmi2SetStringTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2SetString");
+        this->_fmi2SetString = (fmi2SetStringTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetString");
         if (!this->_fmi2SetString)
-            throw std::runtime_error("Could not find fmi2SetString() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2SetString() in the FMU library. Wrong or outdated FMU?");
 
-        this->_fmi2DoStep = (fmi2DoStepTYPE*)GetProcAddress(this->hGetProcIDDLL, "fmi2DoStep");
+        this->_fmi2DoStep = (fmi2DoStepTYPE*)get_function_ptr(this->dynlib_handle, "fmi2DoStep");
         if (!this->_fmi2DoStep)
-            throw std::runtime_error("Could not find fmi2DoStep() in the DLL. Wrong or outdated FMU dll?");
+            throw std::runtime_error("Could not find fmi2DoStep() in the FMU library. Wrong or outdated FMU?");
 
     }
 

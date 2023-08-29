@@ -5,12 +5,17 @@ cmake_minimum_required(VERSION 3.15)
 project(fmu_generator)
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
 SET(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
 
 set(FMU_MODEL_IDENTIFIER "fmu_instance" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
-MESSAGE(STATUS "FMU to be created: \"${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu\"")
+SET(FMU_FILENAME "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu")
+MESSAGE(STATUS "FMU to be created: \"${FMU_FILENAME}\"")
+
+SET(FMU_UNPACK_DIRECTORY "${FMU_MAIN_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
+
 
 # -------------------------------------------------
 # Set Architecture and Operating System Flags
@@ -48,6 +53,7 @@ endif()
 SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${OS_SUFFIX}/$<0:>")
 
 
+
 # -------------------------------------------------
 # Target: compiles FMU source code
 # -------------------------------------------------
@@ -56,6 +62,7 @@ target_include_directories(fmu_instance PUBLIC "variant")
 target_include_directories(fmu_instance PUBLIC "fmi2_headers")
 target_include_directories(fmu_instance PUBLIC "rapidxml")
 target_compile_definitions(fmu_instance PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
+target_compile_definitions(fmu_instance PUBLIC FMU_OS_SUFFIX="${OS_SUFFIX}")
 set_target_properties(fmu_instance PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
 
 
@@ -98,24 +105,23 @@ add_dependencies(PACK_FMU fmu_modeldescription_generator)
 add_dependencies(PACK_FMU fmu_instance)
 
 
-# -------------------------------------------------
-# Target that extracts back the created FMU
-# -------------------------------------------------
-SET(FMU_UNPACK_DIRECTORY "${FMU_MAIN_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
-add_custom_target(UNPACK_FMU
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${FMU_UNPACK_DIRECTORY}
-    COMMAND ${CMAKE_COMMAND} -E tar "xzf" "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
-    WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY}
-    COMMENT "Unpacking FMU file: \"${FMU_MODEL_IDENTIFIER}.fmu\" into \"${FMU_UNPACK_DIRECTORY}\"."
-)
-add_dependencies(UNPACK_FMU PACK_FMU)
+# # -------------------------------------------------
+# # Target that extracts back the created FMU
+# # -------------------------------------------------
+# add_custom_target(UNPACK_FMU
+#     COMMAND ${CMAKE_COMMAND} -E make_directory ${FMU_UNPACK_DIRECTORY}
+#     COMMAND ${CMAKE_COMMAND} -E tar "xzf" "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
+#     WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY}
+#     COMMENT "Unpacking FMU file: \"${FMU_MODEL_IDENTIFIER}.fmu\" into \"${FMU_UNPACK_DIRECTORY}\"."
+# )
+# add_dependencies(UNPACK_FMU PACK_FMU)
 
-# takes care of creating the unpacking folder
-add_custom_command(
-    TARGET UNPACK_FMU PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${FMU_UNPACK_DIRECTORY}
-    COMMENT "Creating unpacking folder ${FMU_UNPACK_DIRECTORY}."
-)
+# # takes care of creating the unpacking folder
+# add_custom_command(
+#     TARGET UNPACK_FMU PRE_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E make_directory ${FMU_UNPACK_DIRECTORY}
+#     COMMENT "Creating unpacking folder ${FMU_UNPACK_DIRECTORY}."
+# )
 
 
 # -------------------------------------------------
@@ -124,10 +130,14 @@ add_custom_command(
 add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsStandalone.hpp)
 target_include_directories(fmu_host_standalone PUBLIC "fmi2_headers")
 target_include_directories(fmu_host_standalone PUBLIC "rapidxml")
+target_include_directories(fmu_host_standalone PUBLIC "miniz-cpp")
 target_compile_definitions(fmu_host_standalone PUBLIC FMU_UNPACK_DIRECTORY="${FMU_UNPACK_DIRECTORY}")
 target_compile_definitions(fmu_host_standalone PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
+target_compile_definitions(fmu_host_standalone PUBLIC FMU_FILENAME="${FMU_FILENAME}")
+target_compile_definitions(fmu_host_standalone PUBLIC FMU_OS_SUFFIX="${OS_SUFFIX}")
+
 set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY})
-add_dependencies(fmu_host_standalone UNPACK_FMU)
+# add_dependencies(fmu_host_standalone UNPACK_FMU)
 
 
 # -------------------------------------------------

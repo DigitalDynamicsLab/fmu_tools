@@ -18,17 +18,17 @@
 
 #include <iostream>
 
-//std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
-std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY; // for debug
+std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
+//std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY; // for debug
 int main(int argc, char* argv[]) {
     
     FmuUnit my_fmu;
 
     try {
-        my_fmu.Load(unzipped_fmu_folder);
 
-   
 
+        //my_fmu.LoadUnzipped(unzipped_fmu_folder);
+        my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY);
         my_fmu.LoadXML();
         my_fmu.LoadDLL();
         my_fmu.BuildVariablesTree();
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     fmi2Real m_in = 15;
     my_fmu._fmi2SetReal(my_fmu.component, &valref, 1, &m_in);
 
-    fmi2Real m_out = 15;
+    fmi2Real m_out;
     my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &m_out);
     std::cout << "m_out_: " << m_out << std::endl;
 
