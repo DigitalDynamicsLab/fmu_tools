@@ -18,9 +18,9 @@ More in detail:
 0. in CMake, set the `FMU_MODEL_IDENTIFIER` to any valid name (consider your operating system and C-function naming standards);
 1. derive from `ChFmuComponent` your own class; please refer to `FmuInstance` for an example;
 2. the derived class should:
-   - provide a constructor able to consume the standard instantiation arguments `(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID)` and that sets `fmi2Type_CoSimulation_available` and `fmi2Type_ModelExchange_available` of the base class;
-   - add all the relevant variables of the model to the FMU through `addFmuVariableXXX` functions; variable units are supported and some default unit is already declared;
-   - override `DoStep` method of the base class with the problem-specific implementation
+   - override `ChFmuComponent::is_cosimulation_available()` and `ChFmuComponent::is_modelexchange_available()` so that they would return the proper answer;
+   - in the constructor definition, add all the relevant variables of the model to the FMU through `addFmuVariableXXX` functions; variable units are supported and some default units are already declared;
+   - override `DoStep` method of the base class with the problem-specific implementation.
 3. implement in a source file (not in the header!) the `fmi2Instantiate_getPointer` similarly to:
    ```
    ChFmuComponent* fmi2Instantiate_getPointer(
@@ -32,8 +32,8 @@ More in detail:
    }
     ```
 
-While adding new FMU variables, the user can associate a measurement unit to it (otherwise the adimensional unit "1" will be set). However, units needs to be defined before any FMU variable could use them.
+While adding new FMU variables, the user can associate a measurement unit to it (otherwise the adimensional unit "1" will be set). However, units needs to be defined _before_ any FMU variable could use them.
 
-Measurement units are defined through the `UnitDefinitionType` class, that stores the name of the unit (e.g. "rad/s2") together with the exponents of each SI base unit (e.g. rad=1, s=-2). The user should create its own object of type `UnitDefinitionType` and then pass it to `ChFmuComponent` through its method `AddUnitDefinition`. After this step, the user can then use the unit name in any following call to `addFmuVariableXXX`.
+Measurement units are defined through the `UnitDefinitionType` class, that stores the name of the unit (e.g. "rad/s2") together with the exponents of each SI base unit (e.g. rad=1, s=-2). The user should create its own object of type `UnitDefinitionType` and then pass it to `ChFmuComponent` through its method `AddUnitDefinition`. After this step, the user can use the unit name in any following call to `addFmuVariableXXX`.
 
 When everything is set up, build the **PACK_FMU** target to generate the FMU file.

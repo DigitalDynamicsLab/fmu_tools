@@ -18,7 +18,7 @@
 class FmuInstance: public ChFmuComponent{
 public:
     FmuInstance(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
-        ChFmuComponent(_instanceName, _fmuType, _fmuGUID, cosim_available, modelexchange_available)
+        ChFmuComponent(_instanceName, _fmuType, _fmuGUID)
     {
 
         /// FMU_ACTION: define new units if needed
@@ -32,11 +32,17 @@ public:
         addFmuVariable(&q_t[2], "theta_tt", FmuVariable::Type::FMU_REAL, "rad/s2", "pendulum ang acceleration");
         addFmuVariable(&q[2],   "theta_t",  FmuVariable::Type::FMU_REAL, "rad/s",  "pendulum ang velocity");
         addFmuVariable(&q[3],   "theta",    FmuVariable::Type::FMU_REAL, "rad",    "pendulum angle");
-        addFmuVariable(&len,    "len",      FmuVariable::Type::FMU_REAL, "m",      "pendulum length", "parameter", "fixed", len);
-        addFmuVariable(&m,      "m",        FmuVariable::Type::FMU_REAL, "kg",     "pendulum mass",   "parameter", "fixed", m);
-        addFmuVariable(&M,      "M",        FmuVariable::Type::FMU_REAL, "kg",     "cart mass",       "parameter", "fixed", M);
+        auto fmu_len = addFmuVariable(&len,    "len",      FmuVariable::Type::FMU_REAL, "m",      "pendulum length", "parameter", "fixed");
+        auto fmu_m = addFmuVariable(&m,      "m",        FmuVariable::Type::FMU_REAL, "kg",     "pendulum mass",   "parameter", "fixed");
+        auto fmu_M = addFmuVariable(&M,      "M",        FmuVariable::Type::FMU_REAL, "kg",     "cart mass",       "parameter", "fixed");
 
-        addFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::FMU_BOOLEAN, "1", "use approximated model", "parameter", "fixed", fmi2False);
+        fmu_len.SetStartVal(len);
+        fmu_m.SetStartVal(m);
+        fmu_M.SetStartVal(M);
+
+
+        auto fmu_approximateOn = addFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::FMU_BOOLEAN, "1", "use approximated model", "parameter", "fixed");
+        fmu_approximateOn.SetStartVal(fmi2False);
 
         // Additional commands
         q = {0, 0, 0, M_PI/4};
@@ -57,6 +63,9 @@ public:
 
 
 private:
+
+    virtual bool is_cosimulation_available() const override {return true;}
+    virtual bool is_modelexchange_available() const override {return false;}
 
     // Problem-specific data members   
     std::array<double, 4> q;

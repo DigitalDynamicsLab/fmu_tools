@@ -8,8 +8,11 @@
 #include <cassert>
 
 #if _HAS_CXX17
+#include <variant>
+namespace varns = std::variant;
 #else
 #include "variant/variant.hpp"
+namespace varns = mpark;
 #endif
 
 
@@ -55,16 +58,22 @@ struct UnitDefinitionType{
 
 };
 
-using ptr_type = mpark::variant<fmi2Real*, fmi2Integer*, fmi2String*>;
-using start_type = mpark::variant<fmi2Real, fmi2Integer, std::string>;
+
 
 /// Class holding a reference to a single FMU variable
 /// Note that this is retrieved from the information from the XML
 
 class FmuVariable {
-
-
 public:
+
+    using PtrType = varns::variant<fmi2Real*, fmi2Integer*, fmi2String*>;
+    using StartType = varns::variant<fmi2Real, fmi2Integer, std::string>;
+
+    template <class T>
+    static T getQuietNaN(T* ptr){
+        std::
+    }
+
     enum class Type{
         FMU_REAL = 0, // numbering gives the order in which each type is printed in the modelDescription.xml
         FMU_INTEGER = 1,
@@ -89,34 +98,6 @@ public:
         // TODO: check if it is not enough the two below
         ptr = other.ptr;
         start = other.start;
-
-        //switch (this->type)
-        //{
-        //case FmuVariable::Type::FMU_REAL:
-        //    this->ptr = other.ptr;
-        //    this->start = other.start;
-        //    break;
-        //case FmuVariable::Type::FMU_INTEGER:
-        //    this->ptr = other.ptr;
-        //    this->start = other.start;
-        //    break;
-        //case FmuVariable::Type::FMU_BOOLEAN:
-        //    this->ptr = other.ptr;
-        //    this->start = other.start;
-        //    break;
-        //case FmuVariable::Type::FMU_STRING:
-        //    this->fmi2String_start_buf = other_buf;
-        //    this->ptr = other.ptr; //TODO: check
-        //    this->start = this->fmi2String_start_buf.c_str();
-        //    break;
-        //case FmuVariable::Type::FMU_UNKNOWN:
-        //    throw std::runtime_error("Cannot set FmuVariable::type to FMU_UNKNOWN.");
-        //    break;
-        //default:
-        //    throw std::runtime_error("Developer error: passed a not registered FmuVariable::Type.");
-        //    break;
-        //}
-
         allowed_start = other.allowed_start;
         required_start = other.required_start;
         has_start = other.has_start;
@@ -125,32 +106,6 @@ public:
 
     FmuVariable(const std::string& _name, FmuVariable::Type _type): name(_name), type(_type)
     {
-        //switch (this->type)
-        //{
-        //case FmuVariable::Type::FMU_REAL:
-        //    this->ptr = nullptr;
-        //    this->start = 0.0;
-        //    break;
-        //case FmuVariable::Type::FMU_INTEGER:
-        //    this->ptr = nullptr;
-        //    this->start = 0;
-        //    break;
-        //case FmuVariable::Type::FMU_BOOLEAN:
-        //    this->ptr = nullptr;
-        //    this->start = 0;
-        //    break;
-        //case FmuVariable::Type::FMU_STRING:
-        //    this->ptr = nullptr;
-        //    this->start = 0;
-        //    break;
-        //case FmuVariable::Type::FMU_UNKNOWN:
-        //    throw std::runtime_error("Cannot set FmuVariable::type to FMU_UNKNOWN.");
-        //    break;
-        //default:
-        //    throw std::runtime_error("Developer error: passed a not registered FmuVariable::Type.");
-        //    break;
-        //}
-
     }
 
 
@@ -189,13 +144,13 @@ public:
         return *this;
     }
 
-    void SetPtr(const ptr_type& ptr) {
+    void SetPtr(const PtrType& ptr) {
         this->ptr = ptr;
     }
 
     template <class T>
     void GetPtr(T** ptr_address) const {
-        *ptr_address = mpark::get<T*>(this->ptr);
+        *ptr_address = varns::get<T*>(this->ptr);
     }
 
     template <typename T>
@@ -218,13 +173,13 @@ public:
 
 
     std::string GetStartVal() const {
-        if (const fmi2Real* start_ptr = mpark::get_if<fmi2Real>(&this->start))
+        if (const fmi2Real* start_ptr = varns::get_if<fmi2Real>(&this->start))
             return std::to_string(*start_ptr);
-        if (const fmi2Integer* start_ptr = mpark::get_if<fmi2Integer>(&this->start))
+        if (const fmi2Integer* start_ptr = varns::get_if<fmi2Integer>(&this->start))
             return std::to_string(*start_ptr);
-        if (const fmi2Boolean* start_ptr = mpark::get_if<fmi2Boolean>(&this->start))
+        if (const fmi2Boolean* start_ptr = varns::get_if<fmi2Boolean>(&this->start))
             return std::to_string(*start_ptr);
-        if (const std::string* start_ptr = mpark::get_if<std::string>(&this->start))
+        if (const std::string* start_ptr = varns::get_if<std::string>(&this->start))
             return *start_ptr;
         return "";
     }
@@ -328,25 +283,8 @@ protected:
     bool has_start = false;
 
 
-
-    // TODO: replace with std::variant as soon as C++17 becomes available
-
-    //union ptr_type{
-    //    fmi2Real* fmi2Real_ptr;
-    //    fmi2Integer* fmi2Integer_ptr;
-    //    fmi2Boolean* fmi2Boolean_ptr;
-    //    fmi2String* fmi2String_ptr;
-    //} ptr;
-
-    //union start_type{
-    //    fmi2Real fmi2Real_start;
-    //    fmi2Integer fmi2Integer_start;
-    //    fmi2Boolean fmi2Boolean_start;
-    //    fmi2String fmi2String_start;
-    //} start;
-
-    ptr_type ptr;
-    start_type start;
+    PtrType ptr;
+    StartType start;
 
 };
 
