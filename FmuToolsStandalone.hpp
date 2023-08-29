@@ -60,17 +60,13 @@ std::string fmi2Status_toString(fmi2Status status){
 
 void logger_default(fmi2ComponentEnvironment c, fmi2String instanceName, fmi2Status status, fmi2String category, fmi2String message, ...)
 {
-    //char msg[2024];
-    //va_list argp;
-    //va_start(argp, message);
-    //vsprintf(msg, message, argp);
-    //if (!instanceName) instanceName = "?";
-    //if (!category) category = "?";
-    //printf("fmiStatus = %d;  %s (%s): %s\n", status, instanceName, category, msg);
-
+    char msg[2024];
+    va_list argp;
+    va_start(argp, message);
+    vsprintf(msg, message, argp);
     if (!instanceName) instanceName = "?";
     if (!category) category = "?";
-    std::cout << "[" << instanceName << "|" << fmi2Status_toString(status) << "] " << message;
+    printf("[%s|%s] %s: %s", instanceName, fmi2Status_toString(status).c_str(), category, msg);
 }
 
 static fmi2CallbackFunctions callbackFunctions_default = {
