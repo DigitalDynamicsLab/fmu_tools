@@ -8,11 +8,11 @@
 #include <cassert>
 
 #if _HAS_CXX17
-#include <variant>
-namespace varns = std::variant;
+    #include <variant>
+    namespace varns = std::variant;
 #else
-#include "variant/variant.hpp"
-namespace varns = mpark;
+    #include "variant/variant.hpp"
+    namespace varns = mpark;
 #endif
 
 
@@ -95,7 +95,6 @@ public:
         variability = other.variability;
         initial = other.initial;
         description = other.description;
-        // TODO: check if it is not enough the two below
         ptr = other.ptr;
         start = other.start;
         allowed_start = other.allowed_start;
@@ -119,7 +118,6 @@ public:
         return this->name == other.name;
     }
 
-    
     // Copy assignment operator
     FmuVariable& operator=(const FmuVariable& other) {
         if (this == &other) {
@@ -134,7 +132,6 @@ public:
         variability = other.variability;
         initial = other.initial;
         description = other.description;
-        // TODO: check if it is not enough the two below
         ptr = other.ptr;
         start = other.start;
         allowed_start = other.allowed_start;
@@ -242,8 +239,7 @@ public:
             !variability.compare("continuous"))
             && "Requested bad formatted \"variability\"");
 
-        // TODO: set initial to something based on table pag 51
-
+        // TODO: automatically set initial to something based on table pag 51
 
         assert(
             (initial.empty() ||

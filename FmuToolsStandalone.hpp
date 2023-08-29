@@ -8,6 +8,8 @@
 #include <sstream>
 #include <cstdarg>
 #include <iostream>
+#include <system_error>
+
 
 #if defined(_MSC_VER) || defined(WIN32) || defined(__MINGW32__)
 #    define WIN32_LEAN_AND_MEAN
@@ -238,10 +240,11 @@ public:
 
     }
 
-    void Load(const std::string& file, const std::string& unzipdir) {
-        fs::remove_all(unzipdir);
+    void Load(const std::string& filepath, const std::string& unzipdir = fs::temp_directory_path().generic_string() + std::string("_fmu_temp")) {
+        std::error_code ec;
+        fs::remove_all(unzipdir, ec);
         fs::create_directories(unzipdir);
-        miniz_cpp::zip_file fmufile(file);
+        miniz_cpp::zip_file fmufile(filepath);
         fmufile.extractall(unzipdir);
         this->directory = unzipdir;
 

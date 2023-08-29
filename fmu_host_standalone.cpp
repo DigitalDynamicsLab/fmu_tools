@@ -28,7 +28,8 @@ int main(int argc, char* argv[]) {
 
 
         //my_fmu.LoadUnzipped(unzipped_fmu_folder);
-        my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY);
+        //my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY);
+        my_fmu.Load(FMU_FILENAME);
         my_fmu.LoadXML();
         my_fmu.LoadDLL();
         my_fmu.BuildVariablesTree();
