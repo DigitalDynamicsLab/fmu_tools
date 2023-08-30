@@ -19,7 +19,7 @@ More in detail:
 1. derive from `ChFmuComponent` your own class; please refer to `FmuInstance` for an example;
 2. the derived class should:
    - in the constructor, remember to call `ChFmuComponent::instantiateType(_fmuType)`;
-   - in the constructor, add all the relevant variables of the model to the FMU through `addFmuVariableXXX` functions; variable units are supported and some default units are already declared;
+   - in the constructor, add all the relevant variables of the model to the FMU through `addFmuVariable`; variable measurement units are supported and some default units are already declared;
    - override `ChFmuComponent::is_cosimulation_available()` and `ChFmuComponent::is_modelexchange_available()` so that they would return the proper answer;
    - override `DoStep` method of the base class with the problem-specific implementation.
 3. provide the implementation of `fmi2Instantiate_getPointer` similarly to:
@@ -38,3 +38,31 @@ While adding new FMU variables, the user can associate a measurement unit to it 
 Measurement units are defined through the `UnitDefinitionType` class, that stores the name of the unit (e.g. "rad/s2") together with the exponents of each SI base unit (e.g. rad=1, s=-2). The user should create its own object of type `UnitDefinitionType` and then pass it to `ChFmuComponent` through its method `AddUnitDefinition`. After this step, the user can use the unit name in any following call to `addFmuVariableXXX`.
 
 When everything is set up, build the **PACK_FMU** target to generate the FMU file.
+
+## Features and TODOs
+
+- [x] basic import of FMUs
+- [x] basic export of FMUs
+
+### Common Features
+- [x] associate Units to Variables
+- [x] keep C++14 compliance
+
+
+### Export Features
+- [x] register local variables as FMU variables
+- [x] automatic creation of *modelDescription.xml* based on registered variables
+- [x] automatic build and zipping of exported FMU (through CMake post-build)
+
+
+### Import Features
+- [x] unzip the FMUs (cross-platform, header-only)
+
+### Extras and Testing
+- [x] test exported FMUs through the importer
+- [ ] test exported FMUs with fmuChecker
+- [x] test on Win
+- [ ] test on Linux
+- [ ] test on MacOS
+
+
