@@ -145,7 +145,7 @@ struct FmuBody {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Class for managing a FMU.
-/// It contains functions to load the DLL in run-time, to parse the XML,
+/// It contains functions to load the shared library in run-time, to parse the XML,
 /// to set/get variables, etc.
 
 class FmuUnit {
@@ -187,7 +187,7 @@ public:
     std::vector<FmuBody> bodies;
 
 
-    // wrappers for runtime dll linking:
+    // wrappers for runtime library linking:
 private:
     DYNLIB_HANDLE dynlib_handle;
 public:
@@ -238,7 +238,7 @@ public:
         this->directory = unzipdir;
 
         LoadXML();
-        LoadDLL();
+        LoadSharedLibrary();
     }
 
 
@@ -391,21 +391,19 @@ public:
         delete doc_ptr;
     }
 
-    /// Load the DLL in run-time and do the dynamic linking to 
-    /// the needed FMU functions.
-    void LoadDLL() {
+    /// Load the shared library in run-time and do the dynamic linking to the needed FMU functions.
+    void LoadSharedLibrary() {
 
         std::string dynlib_dir = this->directory + this->binaries_dir;
 #if WIN32
         if (!SetDllDirectory(dynlib_dir.c_str()))
-            throw std::runtime_error("Could not locate the DLL directory.");
+            throw std::runtime_error("Could not locate the binaries directory.");
 #endif
 
         std::string dynlib_name;
         dynlib_name = dynlib_dir + "/" + this->info_cosimulation_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
 
 #if WIN32
-        // run time loading of dll:
         this->dynlib_handle = LoadLibrary(dynlib_name.c_str());
 #else
         this->dynlib_handle = dlopen(dynlib_name.c_str(), RTLD_LAZY);

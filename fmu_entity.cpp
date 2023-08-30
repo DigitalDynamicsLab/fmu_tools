@@ -12,7 +12,7 @@
 
 const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = {UD_kg, UD_m, UD_s, UD_A, UD_K, UD_mol, UD_cd, UD_rad, UD_m_s, UD_m_s2, UD_rad_s, UD_rad_s2};
 
-const std::set<std::string> ChFmuComponent::logCategories_available = {
+const std::set<std::string> FmuComponent::logCategories_available = {
     "logEvents",
     "logSingularLinearSystems",
     "logNonlinearSystems",
@@ -27,12 +27,12 @@ const std::set<std::string> ChFmuComponent::logCategories_available = {
 
 
 void createModelDescription(const std::string& path){
-    ChFmuComponent* fmu = fmi2Instantiate_getPointer("", fmi2Type::fmi2CoSimulation, "");
+    FmuComponent* fmu = fmi2Instantiate_getPointer("", fmi2Type::fmi2CoSimulation, "");
     fmu->ExportModelDescription(path);
     delete fmu;
 }
 
-void ChFmuComponent::ExportModelDescription(std::string path){
+void FmuComponent::ExportModelDescription(std::string path){
     // Create the XML document
     rapidxml::xml_document<>* doc_ptr = new rapidxml::xml_document<>();
 
@@ -169,7 +169,7 @@ void ChFmuComponent::ExportModelDescription(std::string path){
     delete doc_ptr;
 }
 
-void ChFmuComponent::CheckVariables() const
+void FmuComponent::CheckVariables() const
 {
     for (auto& sv: scalarVariables){
 
@@ -179,7 +179,7 @@ void ChFmuComponent::CheckVariables() const
 //////////////// FMU FUNCTIONS /////////////////
 
 fmi2Component fmi2Instantiate(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID, fmi2String fmuResourceLocation, const fmi2CallbackFunctions* functions, fmi2Boolean visible, fmi2Boolean loggingOn){
-    ChFmuComponent* fmu_ptr = fmi2Instantiate_getPointer(instanceName, fmuType, fmuGUID);
+    FmuComponent* fmu_ptr = fmi2Instantiate_getPointer(instanceName, fmuType, fmuGUID);
     fmu_ptr->SetCallbackFunctions(functions);
     fmu_ptr->SetLogging(loggingOn==fmi2True ? true : false);    
     return reinterpret_cast<void*>(fmu_ptr);
@@ -194,7 +194,7 @@ const char* fmi2GetVersion(void){
 }
 
 fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn, size_t nCategories, const fmi2String categories[]){
-    ChFmuComponent* fmu_ptr = reinterpret_cast<ChFmuComponent*>(c);
+    FmuComponent* fmu_ptr = reinterpret_cast<FmuComponent*>(c);
     fmu_ptr->SetLogging(loggingOn==fmi2True ? true : false);
     for (auto cs = 0; cs < nCategories; ++cs){
         fmu_ptr->AddCallbackLoggerCategory(categories[cs]);
@@ -205,29 +205,29 @@ fmi2Status fmi2SetDebugLogging(fmi2Component c, fmi2Boolean loggingOn, size_t nC
 
 
 void fmi2FreeInstance(fmi2Component c){
-    delete reinterpret_cast<ChFmuComponent*>(c);
+    delete reinterpret_cast<FmuComponent*>(c);
 }
 
 fmi2Status fmi2SetupExperiment(fmi2Component c, fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime){
     assert(toleranceDefined==fmi2False);
     assert(stopTimeDefined==fmi2False);
-    reinterpret_cast<ChFmuComponent*>(c)->SetDefaultExperiment(toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
+    reinterpret_cast<FmuComponent*>(c)->SetDefaultExperiment(toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
     return fmi2Status::fmi2OK;
 }
 
 fmi2Status fmi2EnterInitializationMode(fmi2Component c){
-    reinterpret_cast<ChFmuComponent*>(c)->SetInitializationMode(true);
+    reinterpret_cast<FmuComponent*>(c)->SetInitializationMode(true);
     return fmi2Status::fmi2OK;
 }
 
 fmi2Status fmi2ExitInitializationMode(fmi2Component c){ 
-    reinterpret_cast<ChFmuComponent*>(c)->SetInitializationMode(false);
+    reinterpret_cast<FmuComponent*>(c)->SetInitializationMode(false);
     return fmi2Status::fmi2OK;
 }
 fmi2Status fmi2Terminate(fmi2Component c){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2Reset(fmi2Component c){ return fmi2Status::fmi2OK; }
 
-std::set<FmuVariable>::iterator ChFmuComponent::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){
+std::set<FmuVariable>::iterator FmuComponent::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){
     auto predicate_samevalreftype = [vr, vartype](const FmuVariable& var) {
         return var.GetValueReference() == vr;
         return var.GetType() == vartype;
@@ -237,37 +237,37 @@ std::set<FmuVariable>::iterator ChFmuComponent::findByValrefType(fmi2ValueRefere
 
 
 fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){
-    return reinterpret_cast<ChFmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_REAL);
+    return reinterpret_cast<FmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_REAL);
 }
 
 fmi2Status fmi2GetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[]){
-    return reinterpret_cast<ChFmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
+    return reinterpret_cast<FmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
 }
 
 fmi2Status fmi2GetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[]){
-    return reinterpret_cast<ChFmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
+    return reinterpret_cast<FmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
 }
 
 fmi2Status fmi2GetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2String value[]){
-    return reinterpret_cast<ChFmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_STRING);
+    return reinterpret_cast<FmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_STRING);
 }
 
 
 
 fmi2Status fmi2SetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[]){
-    return reinterpret_cast<ChFmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_REAL);
+    return reinterpret_cast<FmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_REAL);
 }
 
 fmi2Status fmi2SetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[]){
-    return reinterpret_cast<ChFmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
+    return reinterpret_cast<FmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
 }
 
 fmi2Status fmi2SetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[]){
-    return reinterpret_cast<ChFmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
+    return reinterpret_cast<FmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
 }
 
 fmi2Status fmi2SetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2String value[]){
-    return reinterpret_cast<ChFmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_STRING);
+    return reinterpret_cast<FmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_STRING);
 }
 
 fmi2Status fmi2GetFMUstate(fmi2Component c, fmi2FMUstate* FMUstate){ return fmi2Status::fmi2OK; }
@@ -297,7 +297,7 @@ fmi2Status fmi2GetRealOutputDerivatives(fmi2Component c, const fmi2ValueReferenc
 fmi2Status fmi2DoStep(fmi2Component c, fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint){ 
     fmi2Status fmi2DoStep_status = fmi2Status::fmi2OK;
     while (true){
-        double candidateStepSize = currentCommunicationPoint + communicationStepSize - reinterpret_cast<ChFmuComponent*>(c)->GetTime();
+        double candidateStepSize = currentCommunicationPoint + communicationStepSize - reinterpret_cast<FmuComponent*>(c)->GetTime();
         if (candidateStepSize < -1e-10)
             return fmi2Status::fmi2Warning;
         else
@@ -305,7 +305,7 @@ fmi2Status fmi2DoStep(fmi2Component c, fmi2Real currentCommunicationPoint, fmi2R
             if (candidateStepSize < 1e-10)
                 break;
 
-            fmi2DoStep_status = reinterpret_cast<ChFmuComponent*>(c)->DoStep(candidateStepSize);
+            fmi2DoStep_status = reinterpret_cast<FmuComponent*>(c)->DoStep(candidateStepSize);
         }
     }
     

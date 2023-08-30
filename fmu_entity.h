@@ -38,9 +38,9 @@ static const UnitDefinitionType UD_rad_s2 ("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1 );
 
 
 
-class ChFmuComponent{
+class FmuComponent{
 public:
-    ChFmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
+    FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
         callbackFunctions({nullptr, nullptr, nullptr, nullptr, nullptr}),
         instanceName(_instanceName),
         fmuGUID(_fmuGUID),
@@ -62,7 +62,7 @@ public:
 
     }
 
-    virtual ~ChFmuComponent(){}
+    virtual ~FmuComponent(){}
     
 
     void SetDefaultExperiment(fmi2Boolean _toleranceDefined, fmi2Real _tolerance, fmi2Real _startTime, fmi2Boolean _stopTimeDefined, fmi2Real _stopTime){
@@ -259,7 +259,7 @@ protected:
 
 };
 
-ChFmuComponent* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID);
+FmuComponent* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID);
 
 
 
