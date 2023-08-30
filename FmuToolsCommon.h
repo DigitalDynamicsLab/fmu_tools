@@ -7,13 +7,7 @@
 #include <unordered_map>
 #include <cassert>
 
-#if _HAS_CXX17
-    #include <variant>
-    namespace varns = std::variant;
-#else
-    #include "variant/variant.hpp"
-    namespace varns = mpark;
-#endif
+#include "variant/variant_guard.hpp"
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

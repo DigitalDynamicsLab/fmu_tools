@@ -235,69 +235,39 @@ std::set<FmuVariable>::iterator ChFmuComponent::findByValrefType(fmi2ValueRefere
     return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
 }
 
-template <class T>
-fmi2Status fmi2GetVariable(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, T value[], FmuVariable::Type vartype){
-    auto& scalarVariables = reinterpret_cast<ChFmuComponent*>(c)->scalarVariables;
-    for (size_t s = 0; s<nvr; ++s){
-        auto it = reinterpret_cast<ChFmuComponent*>(c)->findByValrefType(vr[s], vartype);
-        if (it != scalarVariables.end()){
-            T* val_ptr;
-            it->GetPtr(&val_ptr);
-            value[s] = *val_ptr;
-        }
-        else
-            return fmi2Status::fmi2Error; // requested a variable that does not exist
-    }
-    return fmi2Status::fmi2OK;
-}
-
 
 fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){
-    return fmi2GetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_REAL);
+    return reinterpret_cast<ChFmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_REAL);
 }
 
 fmi2Status fmi2GetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[]){
-    return fmi2GetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
+    return reinterpret_cast<ChFmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
 }
 
 fmi2Status fmi2GetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[]){
-    return fmi2GetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
+    return reinterpret_cast<ChFmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
 }
 
 fmi2Status fmi2GetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2String value[]){
-    return fmi2GetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_STRING);
+    return reinterpret_cast<ChFmuComponent*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_STRING);
 }
 
-template <class T>
-fmi2Status fmi2SetVariable(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const T value[], FmuVariable::Type vartype){
-    auto& scalarVariables = reinterpret_cast<ChFmuComponent*>(c)->scalarVariables;
-    for (size_t s = 0; s<nvr; ++s){
-        auto it = reinterpret_cast<ChFmuComponent*>(c)->findByValrefType(vr[s], vartype);
-        if (it != scalarVariables.end()){
-            T* val_ptr;
-            it->GetPtr(&val_ptr);
-            *val_ptr = value[s];
-        }
-        else
-            return fmi2Status::fmi2Error; // requested a variable that does not exist
-    }
-    return fmi2Status::fmi2OK;
-}
+
 
 fmi2Status fmi2SetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[]){
-    return fmi2SetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_REAL);
+    return reinterpret_cast<ChFmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_REAL);
 }
 
 fmi2Status fmi2SetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[]){
-    return fmi2SetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
+    return reinterpret_cast<ChFmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
 }
 
 fmi2Status fmi2SetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[]){
-    return fmi2SetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
+    return reinterpret_cast<ChFmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
 }
 
 fmi2Status fmi2SetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2String value[]){
-    return fmi2SetVariable(c, vr, nvr, value, FmuVariable::Type::FMU_STRING);
+    return reinterpret_cast<ChFmuComponent*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_STRING);
 }
 
 fmi2Status fmi2GetFMUstate(fmi2Component c, fmi2FMUstate* FMUstate){ return fmi2Status::fmi2OK; }

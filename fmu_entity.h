@@ -13,7 +13,8 @@
 #include <unordered_set>
 
 
-#include "variant/variant.hpp"
+#include "variant/variant_guard.hpp"
+
 
 extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
 
@@ -90,6 +91,36 @@ public:
     void CheckVariables() const;
 
     double GetTime() const {return time;}
+
+    template <class T>
+    fmi2Status fmi2GetVariable(const fmi2ValueReference vr[], size_t nvr, T value[], FmuVariable::Type vartype){
+        for (size_t s = 0; s<nvr; ++s){
+            auto it = this->findByValrefType(vr[s], vartype);
+            if (it != this->scalarVariables.end()){
+                T* val_ptr;
+                it->GetPtr(&val_ptr);
+                value[s] = *val_ptr;
+            }
+            else
+                return fmi2Status::fmi2Error; // requested a variable that does not exist
+        }
+        return fmi2Status::fmi2OK;
+    }
+
+    template <class T>
+    fmi2Status fmi2SetVariable(const fmi2ValueReference vr[], size_t nvr, const T value[], FmuVariable::Type vartype){
+    for (size_t s = 0; s<nvr; ++s){
+        auto it = this->findByValrefType(vr[s], vartype);
+        if (it != this->scalarVariables.end()){
+            T* val_ptr;
+            it->GetPtr(&val_ptr);
+            *val_ptr = value[s];
+        }
+        else
+            return fmi2Status::fmi2Error; // requested a variable that does not exist
+    }
+    return fmi2Status::fmi2OK;
+}
 
 
 protected:
@@ -213,6 +244,7 @@ protected:
 
         return *(ret.first);
     }
+
 
     
     void sendToLog(std::string msg, fmi2Status status, std::string msg_cat){
