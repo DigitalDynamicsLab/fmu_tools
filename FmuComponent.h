@@ -1,7 +1,7 @@
 
 #pragma once
 //#define FMI2_FUNCTION_PREFIX MyModel_
-#include "fmu_entity.h"
+#include "FmuToolsExport.h"
 #include <vector>
 #include <array>
 
@@ -9,16 +9,16 @@
 #include <math.h>
 
 
-class FmuInstance: public ChFmuComponent{
+class FmuComponent: public FmuComponentBase{
 public:
-    FmuInstance(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
-        ChFmuComponent(_instanceName, _fmuType, _fmuGUID)
+    FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
+        FmuComponentBase(_instanceName, _fmuType, _fmuGUID)
     {
 
         initializeType(_fmuType);
         /// FMU_ACTION: define new units if needed
         //UnitDefinitionType UD_rad_s4 ("rad/s4"); UD_rad_s4.s = -4; UD_rad_s4.rad = 1;
-        //AddUnitDefinition(UD_rad_s4);
+        //addUnitDefinition(UD_rad_s4);
 
         /// FMU_ACTION: declare relevant variables
         addFmuVariable(&q_t[0], "x_tt",     FmuVariable::Type::FMU_REAL, "m/s2",   "cart acceleration");
@@ -43,7 +43,7 @@ public:
         q = {0, 0, 0, M_PI/4};
     }
 
-    virtual ~FmuInstance(){}
+    virtual ~FmuComponent(){}
 
     /// FMU_ACTION: override DoStep of the base class with the problem-specific implementation
     virtual fmi2Status DoStep(double _stepSize = -1) override;
@@ -84,8 +84,8 @@ protected:
 
 
 // FMU_ACTION:: implement the following functions
-ChFmuComponent* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID){
-    return new FmuInstance(instanceName, fmuType, fmuGUID);
+FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID){
+    return new FmuComponent(instanceName, fmuType, fmuGUID);
 }
 
 

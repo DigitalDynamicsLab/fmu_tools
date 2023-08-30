@@ -1,6 +1,6 @@
 
 //#define FMI2_FUNCTION_PREFIX MyModel_
-#include "fmu_instance.h"
+#include "FmuComponent.h"
 #include <cassert>
 #include <vector>
 #include <array>
@@ -30,30 +30,30 @@ std::array<double, 4> operator+(const std::array<double, 4>& lhs, const std::arr
     return temp;
 }
 
-double FmuInstance::get_x_tt(double th_t, double th) {
+double FmuComponent::get_x_tt(double th_t, double th) {
     return (m*sin(th)*(len*th_t*th_t + g*cos(th)))/(-m*cos(th)*cos(th) + M + m);
 }
 
-double FmuInstance::get_th_tt(double th_t, double th) {
+double FmuComponent::get_th_tt(double th_t, double th) {
     return -(sin(th)*(len*m*cos(th)*th_t*th_t + M*g + g*m))/(len*(-m*cos(th)*cos(th) + M + m));
 }
 
-double FmuInstance::get_x_tt_linear(double th_t, double th) {
+double FmuComponent::get_x_tt_linear(double th_t, double th) {
     return (m*th*(len*th_t*th_t + g))/M;
 }
 
-double FmuInstance::get_th_tt_linear(double th_t, double th) {
+double FmuComponent::get_th_tt_linear(double th_t, double th) {
     return -(th*(len*m*th_t*th_t + M*g + g*m))/(len*M);
 }
 
-void FmuInstance::get_q_t(const std::array<double, 4>& _q, std::array<double, 4>& q_t){
+void FmuComponent::get_q_t(const std::array<double, 4>& _q, std::array<double, 4>& q_t){
     q_t[0] = approximateOn ? get_x_tt_linear(_q[2], _q[3]) : get_x_tt(_q[2], _q[3]);
     q_t[1] = _q[0];
     q_t[2] = approximateOn ? get_th_tt_linear(_q[2], _q[3]) : get_th_tt(_q[2], _q[3]);
     q_t[3] = _q[2];
 }
 
-fmi2Status FmuInstance::DoStep(double _stepSize) {
+fmi2Status FmuComponent::DoStep(double _stepSize) {
     if (_stepSize<0){
         sendToLog("Step at time: " + std::to_string(time) + " succeeded.\n", fmi2Status::fmi2Warning, "logStatusWarning");
         return fmi2Status::fmi2Warning;

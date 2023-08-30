@@ -10,6 +10,10 @@
 #include "variant/variant_guard.hpp"
 
 
+#include "TypesVariants.h"
+
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -60,8 +64,9 @@ struct UnitDefinitionType{
 class FmuVariable {
 public:
 
-    using PtrType = varns::variant<fmi2Real*, fmi2Integer*, fmi2String*>;
-    using StartType = varns::variant<fmi2Real, fmi2Integer, std::string>;
+
+    using PtrType = FmuVariablePtrType;
+    using StartType = FmuVariableStartType;
 
     enum class Type{
         FMU_REAL = 0, // numbering gives the order in which each type is printed in the modelDescription.xml

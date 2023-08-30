@@ -16,12 +16,17 @@
 
 #include "variant/variant_guard.hpp"
 
+#ifndef FMU_MODEL_IDENTIFIER
+#define FMU_MODEL_IDENTIFIER "myfmu"
+#endif
+
+
 
 extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
 
 void FMI2_Export createModelDescription(const std::string& path);
 
-//                                      |name|kg, m, s, A, K,mol,cd,rad
+// Default UnitDefinitionTypes          |name|kg, m, s, A, K,mol,cd,rad
 static const UnitDefinitionType UD_kg  ("kg",  1, 0, 0, 0, 0, 0, 0, 0 );
 static const UnitDefinitionType UD_m   ("m",   0, 1, 0, 0, 0, 0, 0, 0 );
 static const UnitDefinitionType UD_s   ("s",   0, 0, 1, 0, 0, 0, 0, 0 );
@@ -38,9 +43,9 @@ static const UnitDefinitionType UD_rad_s2 ("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1 );
 
 
 
-class FmuComponent{
+class FmuComponentBase{
 public:
-    FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
+    FmuComponentBase(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
         callbackFunctions({nullptr, nullptr, nullptr, nullptr, nullptr}),
         instanceName(_instanceName),
         fmuGUID(_fmuGUID),
@@ -62,7 +67,7 @@ public:
 
     }
 
-    virtual ~FmuComponent(){}
+    virtual ~FmuComponentBase(){}
     
 
     void SetDefaultExperiment(fmi2Boolean _toleranceDefined, fmi2Real _tolerance, fmi2Real _startTime, fmi2Boolean _stopTimeDefined, fmi2Real _stopTime){
@@ -183,16 +188,16 @@ protected:
     virtual bool is_cosimulation_available() const = 0;
     virtual bool is_modelexchange_available() const = 0;
 
-    void AddUnitDefinition(const UnitDefinitionType& newunitdefinition){
+    void addUnitDefinition(const UnitDefinitionType& newunitdefinition){
         unitDefinitions[newunitdefinition.name] = newunitdefinition;
     }
 
-    void ClearUnitDefinitions(){
+    void clearUnitDefinitions(){
         unitDefinitions.clear();
     }
 
 
-    // DEV: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the reason is that :
+    // DEV: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the reason is that:
     // e.g. both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any possible splitting depending on type
     // if we accept to have both fmi2Integer and fmi2Boolean considered as the same type we can drop the 'scalartype' argument
     // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
@@ -216,10 +221,10 @@ protected:
             auto predicate_samename = [unitname](const UnitDefinitionType& var) { return var.name == unitname; };
             auto match_commonunit = std::find_if(common_unitdefinitions.begin(), common_unitdefinitions.end(), predicate_samename);
             if (match_commonunit == common_unitdefinitions.end()){
-                throw std::runtime_error("Variable unit is not registered within this ChFmuComponent. Call AddUnitDefinition first.");
+                throw std::runtime_error("Variable unit is not registered within this FmuComponentBase. Call addUnitDefinition first.");
             }
             else{
-                AddUnitDefinition(*match_commonunit);
+                addUnitDefinition(*match_commonunit);
             }
         }
 
@@ -259,7 +264,7 @@ protected:
 
 };
 
-FmuComponent* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID);
+FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID);
 
 
 

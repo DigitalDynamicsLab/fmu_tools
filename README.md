@@ -2,46 +2,47 @@
 
 FMUs are required to have some set of standard functions exposed at their interface, as declared in _fmi2Functions.h_. Their definitions, on the contrary, are up to the user to be implemented.
 
-The library, mainly through its main class `FmuComponent`, offers a higher C++ layer that should ease this process, taking care of the most trivial tasks and leaving to the user the implementation only those problem-specific parts.
+The library, mainly through its main class `FmuComponentBase`, offers a higher C++ layer that should ease this process, taking care of the most trivial tasks and leaving to the user the implementation only those problem-specific parts.
 
 The CMake infrastructure take care of the building of the source code, the generation of the _modelDescription.xml_, the creation of the standard FMU directory layout, and the packaging into a _.fmu_ ZIP archive.
 
 
-## How to build an FMU
+## Fmu Export
 
-While the library offers some generic features and tools, the user is asked to customize them for its specific problem. This is done by inheriting from `FmuComponent`, plus some additional customization.
+While the library offers some generic features and tools, users are asked to customize them for their specific problem. This is done by inheriting from `FmuComponentBase`, plus some additional customization. One example is provided by the `FmuComponent` class. The impatient user could also just modify and use it straight away.
 
-Looking at the `FmuInstance` class should give a lot of useful hints.
-
-More in detail:
+For those that want to develop their own indipendent class, they are required to:
 
 0. in CMake, set the `FMU_MODEL_IDENTIFIER` to any valid name (consider your operating system and C-function naming standards);
-1. derive from `FmuComponent` your own class; please refer to `FmuInstance` for an example;
+1. derive from `FmuComponentBase` your own class; please refer to `FmuComponent` for an example;
 2. the derived class should:
-   - in the constructor, remember to call `FmuComponent::instantiateType(_fmuType)`;
+   - in the constructor, remember to call `FmuComponentBase::instantiateType(_fmuType)`;
    - in the constructor, add all the relevant variables of the model to the FMU through `addFmuVariable`; variable measurement units are supported and some default units are already declared;
-   - override `FmuComponent::is_cosimulation_available()` and `FmuComponent::is_modelexchange_available()` so that they would return the proper answer;
+   - override `FmuComponentBase::is_cosimulation_available()` and `FmuComponentBase::is_modelexchange_available()` so that they would return the proper answer;
    - override `DoStep` method of the base class with the problem-specific implementation.
 3. provide the implementation of `fmi2Instantiate_getPointer` similarly to:
    ```
-   FmuComponent* fmi2Instantiate_getPointer(
+   FmuComponentBase* fmi2Instantiate_getPointer(
      fmi2String instanceName,
      fmi2Type fmuType,
      fmi2String fmuGUID)
    {
-     return new FmuInstance(instanceName, fmuType, fmuGUID);
+     return new FmuComponent(instanceName, fmuType, fmuGUID);
    }
     ```
 
-While adding new FMU variables, the user can associate a measurement unit to it (otherwise the adimensional unit "1" will be set). However, units needs to be defined _before_ any FMU variable could use them.
-
-Measurement units are defined through the `UnitDefinitionType` class, that stores the name of the unit (e.g. "rad/s2") together with the exponents of each SI base unit (e.g. rad=1, s=-2). The user should create its own object of type `UnitDefinitionType` and then pass it to `FmuComponent` through its method `AddUnitDefinition`. After this step, the user can use the unit name in any following call to `addFmuVariableXXX`.
-
 When everything is set up, build the **PACK_FMU** target to generate the FMU file.
 
-## Loading FMUs
+### Advanced Options
 
-The target `fmu_host_standalone` shows how to load and run FMUs. By default, it is set up so to use the just-generated FMU.
+- in the rare case that the user requires a different set of FMI variable types, it is required to modify _fmi2_headers\fmi2TypesPlatform.h_ accordingly; in this case the _TypesVariants.h_ file should be modified as well, so that the two variants declared there do not contain any repeated type.
+
+- while adding new FMU variables, the user can associate a measurement unit to them (otherwise the adimensional unit "1" will be set). However, units needs to be defined _before_ any FMU variable could use them. Measurement units are defined through the `UnitDefinitionType` class, that stores the name of the unit (e.g. "rad/s2") together with the exponents of each SI base unit (e.g. rad=1, s=-2). The user should create its own object of type `UnitDefinitionType` and then pass it to `FmuComponentBase` through its method `addUnitDefinition`. After this step, the user can use the unit name in any following call to `addFmuVariable`.
+
+
+## Fmu Import
+
+The target `fmu_host_standalone` shows how to load and run FMUs. By default, it is set up to use the FMU generated by the `FmuComponent` target.
 
 ## Features and TODOs
 

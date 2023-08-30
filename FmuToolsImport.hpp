@@ -26,6 +26,10 @@
 
 #include "filesystem.hpp"
 
+#define LOAD_FMI_FUNCTION(funcName) \
+    this->_##funcName = (##funcName##TYPE*)get_function_ptr(this->dynlib_handle, #funcName); \
+    if (!this->_##funcName) \
+        throw std::runtime_error(std::string(std::string("Could not find ") + std::string(#funcName) + std::string(" in the FMU library. Wrong or outdated FMU?")));
 
 
 std::string fmi2Status_toString(fmi2Status status){
@@ -414,82 +418,25 @@ public:
             throw std::runtime_error("Could not locate the compiled FMU files: " + dynlib_name + "\n");
 
         // run time binding of functions
-
-        this->_fmi2SetDebugLogging = (fmi2SetDebugLoggingTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetDebugLogging");
-        if (!this->_fmi2SetDebugLogging)
-            throw std::runtime_error("Could not find fmi2SetDebugLogging() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2Instantiate = (fmi2InstantiateTYPE*)get_function_ptr(this->dynlib_handle, "fmi2Instantiate");
-        if (!this->_fmi2Instantiate)
-            throw std::runtime_error("Could not find fmi2Instantiate() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2FreeInstance = (fmi2FreeInstanceTYPE*)get_function_ptr(this->dynlib_handle, "fmi2FreeInstance");
-        if (!this->_fmi2FreeInstance)
-            throw std::runtime_error("Could not find fmi2FreeInstance() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2GetVersion = (fmi2GetVersionTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetVersion");
-        if (!this->_fmi2GetVersion)
-            throw std::runtime_error("Could not find fmi2GetVersion() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2GetTypesPlatform = (fmi2GetTypesPlatformTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetTypesPlatform");
-        if (!this->_fmi2GetTypesPlatform)
-            throw std::runtime_error("Could not find fmi2GetTypesPlatform() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2SetupExperiment = (fmi2SetupExperimentTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetupExperiment");
-        if (!this->_fmi2SetupExperiment)
-            throw std::runtime_error("Could not find fmi2SetupExperiment() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2EnterInitializationMode = (fmi2EnterInitializationModeTYPE*)get_function_ptr(this->dynlib_handle, "fmi2EnterInitializationMode");
-        if (!this->_fmi2EnterInitializationMode)
-            throw std::runtime_error("Could not find fmi2EnterInitializationMode() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2ExitInitializationMode = (fmi2ExitInitializationModeTYPE*)get_function_ptr(this->dynlib_handle, "fmi2ExitInitializationMode");
-        if (!this->_fmi2ExitInitializationMode)
-            throw std::runtime_error("Could not find fmi2ExitInitializationMode() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2Terminate = (fmi2TerminateTYPE*)get_function_ptr(this->dynlib_handle, "fmi2Terminate");
-        if (!this->_fmi2Terminate)
-            throw std::runtime_error("Could not find fmi2Terminate() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2Reset = (fmi2ResetTYPE*)get_function_ptr(this->dynlib_handle, "fmi2Reset");
-        if (!this->_fmi2Reset)
-            throw std::runtime_error("Could not find fmi2Reset() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2GetReal = (fmi2GetRealTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetReal");
-        if (!this->_fmi2GetReal)
-            throw std::runtime_error("Could not find fmi2GetReal() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2GetInteger = (fmi2GetIntegerTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetInteger");
-        if (!this->_fmi2GetInteger)
-            throw std::runtime_error("Could not find fmi2GetInteger() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2GetBoolean = (fmi2GetBooleanTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetBoolean");
-        if (!this->_fmi2GetBoolean)
-            throw std::runtime_error("Could not find fmi2GetBoolean() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2GetString = (fmi2GetStringTYPE*)get_function_ptr(this->dynlib_handle, "fmi2GetString");
-        if (!this->_fmi2GetString)
-            throw std::runtime_error("Could not find fmi2GetString() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2SetReal = (fmi2SetRealTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetReal");
-        if (!this->_fmi2SetReal)
-            throw std::runtime_error("Could not find fmi2SetReal() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2SetInteger = (fmi2SetIntegerTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetInteger");
-        if (!this->_fmi2SetInteger)
-            throw std::runtime_error("Could not find fmi2SetInteger() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2SetBoolean = (fmi2SetBooleanTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetBoolean");
-        if (!this->_fmi2SetBoolean)
-            throw std::runtime_error("Could not find fmi2SetBoolean() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2SetString = (fmi2SetStringTYPE*)get_function_ptr(this->dynlib_handle, "fmi2SetString");
-        if (!this->_fmi2SetString)
-            throw std::runtime_error("Could not find fmi2SetString() in the FMU library. Wrong or outdated FMU?");
-
-        this->_fmi2DoStep = (fmi2DoStepTYPE*)get_function_ptr(this->dynlib_handle, "fmi2DoStep");
-        if (!this->_fmi2DoStep)
-            throw std::runtime_error("Could not find fmi2DoStep() in the FMU library. Wrong or outdated FMU?");
+        LOAD_FMI_FUNCTION(fmi2SetDebugLogging);
+        LOAD_FMI_FUNCTION(fmi2Instantiate);
+        LOAD_FMI_FUNCTION(fmi2FreeInstance);
+        LOAD_FMI_FUNCTION(fmi2GetVersion);
+        LOAD_FMI_FUNCTION(fmi2GetTypesPlatform);
+        LOAD_FMI_FUNCTION(fmi2SetupExperiment);
+        LOAD_FMI_FUNCTION(fmi2EnterInitializationMode);
+        LOAD_FMI_FUNCTION(fmi2ExitInitializationMode);
+        LOAD_FMI_FUNCTION(fmi2Terminate);
+        LOAD_FMI_FUNCTION(fmi2Reset);
+        LOAD_FMI_FUNCTION(fmi2GetReal);
+        LOAD_FMI_FUNCTION(fmi2GetInteger);
+        LOAD_FMI_FUNCTION(fmi2GetBoolean);
+        LOAD_FMI_FUNCTION(fmi2GetString);
+        LOAD_FMI_FUNCTION(fmi2SetReal);
+        LOAD_FMI_FUNCTION(fmi2SetInteger);
+        LOAD_FMI_FUNCTION(fmi2SetBoolean);
+        LOAD_FMI_FUNCTION(fmi2SetString);
+        LOAD_FMI_FUNCTION(fmi2DoStep);
 
     }
 

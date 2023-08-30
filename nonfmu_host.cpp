@@ -14,7 +14,7 @@
 // =============================================================================
 
 
-#include "FmuToolsStandalone.hpp"
+#include "FmuToolsImport.hpp"
 #include "fmi2_headers/fmi2Functions.h"
 
 #include <iostream>
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 
     fmi2CallbackFunctions callbackFunctions = callbackFunctions_default;
 
-    fmi2Component component = fmi2Instantiate("fmu_entity", fmi2Type::fmi2CoSimulation, "GUID", "", &callbackFunctions, fmi2False, fmi2False);
+    fmi2Component component = fmi2Instantiate("FmuComponentBase", fmi2Type::fmi2CoSimulation, "GUID", "", &callbackFunctions, fmi2False, fmi2False);
     fmi2Status fmi2SetupExperiment_status = fmi2SetupExperiment(component, fmi2False, 1e-6, time, fmi2False, t_end);
     fmi2EnterInitializationMode(component);
 

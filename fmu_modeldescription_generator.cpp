@@ -1,4 +1,4 @@
-#include "fmu_entity.h"
+#include "FmuToolsExport.h"
 
 
 int main(){

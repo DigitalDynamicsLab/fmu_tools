@@ -26,7 +26,7 @@ mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
 SET(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
 
-set(FMU_MODEL_IDENTIFIER "fmu_instance" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
+set(FMU_MODEL_IDENTIFIER "FmuComponent" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
 SET(FMU_FILENAME "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu")
 MESSAGE(STATUS "FMU to be created: \"${FMU_FILENAME}\"")
 
@@ -73,24 +73,24 @@ SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${OS_SUFFIX}/$<
 # -------------------------------------------------
 # Target: compiles FMU source code
 # -------------------------------------------------
-add_library(fmu_instance SHARED FmuToolsCommon.h FmuToolsCommon.cpp fmu_entity.h fmu_entity.cpp fmu_instance.h fmu_instance.cpp)
-target_include_directories(fmu_instance PUBLIC "variant")
-target_include_directories(fmu_instance PUBLIC "fmi2_headers")
-target_include_directories(fmu_instance PUBLIC "rapidxml")
-target_compile_definitions(fmu_instance PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
-target_compile_definitions(fmu_instance PUBLIC FMU_OS_SUFFIX="${OS_SUFFIX}")
-set_target_properties(fmu_instance PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
+add_library(FmuComponent SHARED FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariants.h FmuComponent.h FmuComponent.cpp)
+target_include_directories(FmuComponent PUBLIC "variant")
+target_include_directories(FmuComponent PUBLIC "fmi2_headers")
+target_include_directories(FmuComponent PUBLIC "rapidxml")
+target_compile_definitions(FmuComponent PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
+target_compile_definitions(FmuComponent PUBLIC FMU_OS_SUFFIX="${OS_SUFFIX}")
+set_target_properties(FmuComponent PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
 
 
-set_target_properties(fmu_instance PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_instance PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_instance PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_instance PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_instance PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_instance PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_instance PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_instance PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_instance PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(FmuComponent PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(FmuComponent PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(FmuComponent PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(FmuComponent PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(FmuComponent PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(FmuComponent PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(FmuComponent PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(FmuComponent PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(FmuComponent PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 
 # -------------------------------------------------
 # Target: generates modelDescription.xml
@@ -98,7 +98,7 @@ set_target_properties(fmu_instance PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${F
 add_executable(fmu_modeldescription_generator fmu_modeldescription_generator.cpp)
 target_compile_definitions(fmu_modeldescription_generator PUBLIC FMU_RUNTIME_OUTPUT_DIRECTORY="${FMU_RUNTIME_OUTPUT_DIRECTORY}")
 target_compile_definitions(fmu_modeldescription_generator PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
-target_link_libraries(fmu_modeldescription_generator PUBLIC fmu_instance)
+target_link_libraries(fmu_modeldescription_generator PUBLIC FmuComponent)
 
 
 set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
@@ -121,7 +121,7 @@ add_custom_target(PACK_FMU
 )
 
 add_dependencies(PACK_FMU fmu_modeldescription_generator)
-add_dependencies(PACK_FMU fmu_instance)
+add_dependencies(PACK_FMU FmuComponent)
 
 
 # # -------------------------------------------------
@@ -146,7 +146,7 @@ add_dependencies(PACK_FMU fmu_instance)
 # -------------------------------------------------
 # Target that runs the compiled and extracted fmu
 # -------------------------------------------------
-add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsStandalone.hpp)
+add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsImport.hpp)
 target_include_directories(fmu_host_standalone PUBLIC "fmi2_headers")
 target_include_directories(fmu_host_standalone PUBLIC "rapidxml")
 target_include_directories(fmu_host_standalone PUBLIC "miniz-cpp")
@@ -167,8 +167,8 @@ set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $
 # -------------------------------------------------
 # Target that runs the fmu project, but skips the modelDescription.xml loading and other auxiliary things
 # -------------------------------------------------
-add_executable(nonfmu_host nonfmu_host.cpp FmuToolsCommon.h FmuToolsStandalone.hpp)
+add_executable(nonfmu_host nonfmu_host.cpp FmuToolsCommon.h FmuToolsImport.hpp)
 target_include_directories(nonfmu_host PUBLIC "fmi2_headers")
-target_link_libraries(nonfmu_host PUBLIC fmu_instance)
+target_link_libraries(nonfmu_host PUBLIC FmuComponent)
 # target_include_directories(nonfmu_host PUBLIC "rapidxml")
 set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
