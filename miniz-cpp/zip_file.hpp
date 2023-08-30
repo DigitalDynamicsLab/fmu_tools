@@ -24,18 +24,7 @@
 #undef min
 #undef max
 
-#ifdef __cpp_lib_filesystem
-#include <filesystem>
-namespace fs = std::filesystem;
-#elif __cpp_lib_experimental_filesystem
-#  ifdef WIN32
-#    define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-#  endif
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
-#else
-    #error "No std::experimental::fileystem nor std::filesystem available in the system."
-#endif
+#include "../filesystem.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -45,6 +34,7 @@ namespace fs = std::experimental::filesystem;
 #include <memory>
 #include <sstream>
 #include <string>
+#include <cstring>
 #include <time.h>
 #include <vector>
 
@@ -5120,7 +5110,7 @@ tm safe_localtime(const time_t &t)
 #endif
 }
 
-std::size_t write_callback(void *opaque, std::uint64_t file_ofs, const void *pBuf, std::size_t n)
+std::size_t write_callback(void *opaque, mz_uint64 file_ofs, const void *pBuf, std::size_t n)
 {
     auto buffer = static_cast<std::vector<char> *>(opaque);
     

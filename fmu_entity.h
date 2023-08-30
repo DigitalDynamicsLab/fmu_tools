@@ -2,6 +2,7 @@
 #pragma once
 #include "FmuToolsCommon.h"
 #include "fmi2_headers/fmi2Functions.h"
+#include <algorithm>
 #include <cassert>
 #include <vector>
 #include <array>
@@ -172,7 +173,7 @@ protected:
     std::set<FmuVariable> scalarVariables;
     std::unordered_map<std::string, UnitDefinitionType> unitDefinitions;
 
-    std::set<FmuVariable>::iterator ChFmuComponent::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype);
+    std::set<FmuVariable>::iterator findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype);
 
 
     fmi2CallbackFunctions callbackFunctions;

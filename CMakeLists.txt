@@ -3,6 +3,22 @@ cmake_minimum_required(VERSION 3.15)
 
 
 project(fmu_generator)
+SET(CMAKE_SHARED_LIBRARY_PREFIX "")
+
+# Set the minimum required C++ standard to C++14
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Check if the compiler supports C++17
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX17)
+
+if(COMPILER_SUPPORTS_CXX17)
+    # Enable C++17 if supported
+    set(CMAKE_CXX_STANDARD 17)
+endif()
+
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
@@ -72,6 +88,9 @@ set_target_properties(fmu_instance PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${F
 set_target_properties(fmu_instance PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 set_target_properties(fmu_instance PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 set_target_properties(fmu_instance PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(fmu_instance PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(fmu_instance PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(fmu_instance PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 
 # -------------------------------------------------
 # Target: generates modelDescription.xml
@@ -135,7 +154,12 @@ target_compile_definitions(fmu_host_standalone PUBLIC FMU_UNPACK_DIRECTORY="${FM
 target_compile_definitions(fmu_host_standalone PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
 target_compile_definitions(fmu_host_standalone PUBLIC FMU_FILENAME="${FMU_FILENAME}")
 target_compile_definitions(fmu_host_standalone PUBLIC FMU_OS_SUFFIX="${OS_SUFFIX}")
-
+target_compile_definitions(fmu_host_standalone PUBLIC SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "6.0" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "10.0")
+    target_link_options(fmu_host_standalone PRIVATE "LINKER:-as-needed")
+    target_link_libraries(fmu_host_standalone PRIVATE stdc++fs)
+    target_link_libraries(fmu_host_standalone PRIVATE ${CMAKE_DL_LIBS})
+endif()
 set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY})
 # add_dependencies(fmu_host_standalone UNPACK_FMU)
 

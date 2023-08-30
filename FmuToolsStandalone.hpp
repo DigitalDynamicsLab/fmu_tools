@@ -24,18 +24,7 @@
 
 #include "miniz-cpp/zip_file.hpp"
 
-#ifdef __cpp_lib_filesystem
-#include <filesystem>
-namespace fs = std::filesystem;
-#elif __cpp_lib_experimental_filesystem
-#  ifdef WIN32
-#    define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING
-#  endif
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
-#else
-    #error "No std::experimental::fileystem nor std::filesystem available in the system."
-#endif
+#include "filesystem.hpp"
 
 
 
@@ -411,7 +400,7 @@ public:
 #endif
 
         std::string dynlib_name;
-        dynlib_name = dynlib_dir + "/" + this->info_cosimulation_modelIdentifier + ".dll";
+        dynlib_name = dynlib_dir + "/" + this->info_cosimulation_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
 
 #if WIN32
         // run time loading of dll:

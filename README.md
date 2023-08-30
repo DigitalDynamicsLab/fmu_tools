@@ -62,7 +62,7 @@ When everything is set up, build the **PACK_FMU** target to generate the FMU fil
 - [x] test exported FMUs through the importer
 - [ ] test exported FMUs with fmuChecker
 - [x] test on Win
-- [ ] test on Linux
+- [x] test on Linux (GCC8.5.0)
 - [ ] test on MacOS
 
 

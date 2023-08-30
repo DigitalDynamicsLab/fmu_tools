@@ -139,7 +139,7 @@ public:
         *ptr_address = varns::get<T*>(this->ptr);
     }
 
-    template <typename T>
+    template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
     void SetStartVal(T startval){
         if (allowed_start)
             has_start = true;
@@ -160,8 +160,7 @@ public:
         return "";
     }
 
-    template <>
-    void SetStartVal<fmi2String>(fmi2String startval){
+    void SetStartVal(fmi2String startval){
         if (allowed_start)
             has_start = true;
         else
