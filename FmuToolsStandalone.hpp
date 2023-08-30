@@ -229,7 +229,7 @@ public:
 
     }
 
-    void Load(const std::string& filepath, const std::string& unzipdir = fs::temp_directory_path().generic_string() + std::string("_fmu_temp")) {
+    void Load(const std::string& filepath, const std::string& unzipdir = fs::temp_directory_path().generic_string() + std::string("/_fmu_temp")) {
         std::error_code ec;
         fs::remove_all(unzipdir, ec);
         fs::create_directories(unzipdir);
@@ -237,6 +237,8 @@ public:
         fmufile.extractall(unzipdir);
         this->directory = unzipdir;
 
+        LoadXML();
+        LoadDLL();
     }
 
 

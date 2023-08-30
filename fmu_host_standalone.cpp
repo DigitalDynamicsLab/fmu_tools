@@ -28,11 +28,9 @@ int main(int argc, char* argv[]) {
 
 
         //my_fmu.LoadUnzipped(unzipped_fmu_folder);
-        //my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY);
-        my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY);
-        my_fmu.Load(FMU_FILENAME); // will go in TEMP/_fmu_temp
-        my_fmu.LoadXML();
-        my_fmu.LoadDLL();
+        my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY); // make sure the user has appropriate running privileges
+        //my_fmu.Load(FMU_FILENAME); // will go in TEMP/_fmu_temp
+
         my_fmu.BuildVariablesTree();
         my_fmu.BuildVisualizersList(&my_fmu.tree_variables);
 
