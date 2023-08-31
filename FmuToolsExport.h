@@ -23,8 +23,15 @@
 
 
 extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void FMI2_Export createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid);
+
+#ifdef __cplusplus
+}
+#endif
 
 // Default UnitDefinitionTypes          |name|kg, m, s, A, K,mol,cd,rad
 static const UnitDefinitionType UD_kg  ("kg",  1, 0, 0, 0, 0, 0, 0, 0 );
