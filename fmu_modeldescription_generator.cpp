@@ -3,6 +3,6 @@
 
 int main(){
 
-    createModelDescription(FMU_MAIN_DIRECTORY);
+    createModelDescription(FMU_MAIN_DIRECTORY, fmi2Type::fmi2CoSimulation, FMU_GUID);
     
 }

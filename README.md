@@ -51,17 +51,19 @@ The target `fmu_host_standalone` shows how to load and run FMUs. By default, it 
 
 ### Common Features
 - [x] associate Units to Variables
-- [x] keep C++14 compliance
+- [x] keep C++14 compliance (_filesystem_ and _variant_ custom C++14 compliant implementation are offered)
 
 
 ### Export Features
 - [x] register local variables as FMU variables
 - [x] automatic creation of *modelDescription.xml* based on registered variables
-- [x] automatic build and zipping of exported FMU (through CMake post-build)
+- [x] automatic build, *modelDescription.cml* generation and zipping (through CMake post-build)
+- [x] GUID creation
 
 
 ### Import Features
 - [x] unzip the FMUs (cross-platform, header-only)
+- [ ] GUID checks
 
 ### Extras and Testing
 - [x] test exported FMUs through the importer
@@ -69,5 +71,7 @@ The target `fmu_host_standalone` shows how to load and run FMUs. By default, it 
 - [x] test on Win
 - [x] test on Linux (GCC8.5.0)
 - [ ] test on MacOS
+
+
 
 

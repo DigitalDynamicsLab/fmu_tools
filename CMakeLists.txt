@@ -69,16 +69,33 @@ endif()
 SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${OS_SUFFIX}/$<0:>")
 
 
+# -------------------------------------------------
+# Generated GUID
+# -------------------------------------------------
+SET(UUID_ALPHABET "0123456789abcdef")
+string(RANDOM LENGTH 8  ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE1)
+string(RANDOM LENGTH 4  ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE2)
+string(RANDOM LENGTH 4  ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE3)
+string(RANDOM LENGTH 4  ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE4)
+string(RANDOM LENGTH 12 ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE5)
+SET(FMU_GUID_NAMESPACE_RANDOM "${FMU_NAMESPACE1}-${FMU_NAMESPACE2}-${FMU_NAMESPACE3}-${FMU_NAMESPACE4}-${FMU_NAMESPACE5}")
+set(FMU_GUID_NAMESPACE ${FMU_GUID_NAMESPACE_RANDOM} CACHE STRING "FMU Namespace used to generated FMU GUID; replace with your own.")
+MESSAGE(STATUS "FMU_GUID_NAMESPACE: ${FMU_GUID_NAMESPACE}")
+string(UUID FMU_GUID NAMESPACE ${FMU_GUID_NAMESPACE} NAME ${FMU_MODEL_IDENTIFIER} TYPE SHA1)
+MESSAGE(STATUS "FMU_GUID: ${FMU_GUID}")
+
+
 
 # -------------------------------------------------
 # Target: compiles FMU source code
 # -------------------------------------------------
 add_library(FmuComponent SHARED FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariants.h FmuComponent.h FmuComponent.cpp)
-target_include_directories(FmuComponent PUBLIC "variant")
+target_include_directories(FmuComponent PRIVATE "variant")
 target_include_directories(FmuComponent PUBLIC "fmi2_headers")
-target_include_directories(FmuComponent PUBLIC "rapidxml")
-target_compile_definitions(FmuComponent PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
-target_compile_definitions(FmuComponent PUBLIC FMU_OS_SUFFIX="${OS_SUFFIX}")
+target_include_directories(FmuComponent PRIVATE "rapidxml")
+target_compile_definitions(FmuComponent PRIVATE FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
+target_compile_definitions(FmuComponent PRIVATE FMU_OS_SUFFIX="${OS_SUFFIX}")
+target_compile_definitions(FmuComponent PRIVATE FMU_GUID="${FMU_GUID}")
 set_target_properties(FmuComponent PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
 
 
@@ -96,8 +113,9 @@ set_target_properties(FmuComponent PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${F
 # Target: generates modelDescription.xml
 # -------------------------------------------------
 add_executable(fmu_modeldescription_generator fmu_modeldescription_generator.cpp)
-target_compile_definitions(fmu_modeldescription_generator PUBLIC FMU_RUNTIME_OUTPUT_DIRECTORY="${FMU_RUNTIME_OUTPUT_DIRECTORY}")
-target_compile_definitions(fmu_modeldescription_generator PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
+target_compile_definitions(fmu_modeldescription_generator PRIVATE FMU_RUNTIME_OUTPUT_DIRECTORY="${FMU_RUNTIME_OUTPUT_DIRECTORY}")
+target_compile_definitions(fmu_modeldescription_generator PRIVATE FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
+target_compile_definitions(fmu_modeldescription_generator PRIVATE FMU_GUID="${FMU_GUID}")
 target_link_libraries(fmu_modeldescription_generator PUBLIC FmuComponent)
 
 
@@ -124,32 +142,13 @@ add_dependencies(PACK_FMU fmu_modeldescription_generator)
 add_dependencies(PACK_FMU FmuComponent)
 
 
-# # -------------------------------------------------
-# # Target that extracts back the created FMU
-# # -------------------------------------------------
-# add_custom_target(UNPACK_FMU
-#     COMMAND ${CMAKE_COMMAND} -E make_directory ${FMU_UNPACK_DIRECTORY}
-#     COMMAND ${CMAKE_COMMAND} -E tar "xzf" "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
-#     WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY}
-#     COMMENT "Unpacking FMU file: \"${FMU_MODEL_IDENTIFIER}.fmu\" into \"${FMU_UNPACK_DIRECTORY}\"."
-# )
-# add_dependencies(UNPACK_FMU PACK_FMU)
-
-# # takes care of creating the unpacking folder
-# add_custom_command(
-#     TARGET UNPACK_FMU PRE_BUILD
-#     COMMAND ${CMAKE_COMMAND} -E make_directory ${FMU_UNPACK_DIRECTORY}
-#     COMMENT "Creating unpacking folder ${FMU_UNPACK_DIRECTORY}."
-# )
-
-
 # -------------------------------------------------
 # Target that runs the compiled and extracted fmu
 # -------------------------------------------------
 add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsImport.hpp)
 target_include_directories(fmu_host_standalone PUBLIC "fmi2_headers")
-target_include_directories(fmu_host_standalone PUBLIC "rapidxml")
-target_include_directories(fmu_host_standalone PUBLIC "miniz-cpp")
+target_include_directories(fmu_host_standalone PRIVATE "rapidxml")
+target_include_directories(fmu_host_standalone PRIVATE "miniz-cpp")
 target_compile_definitions(fmu_host_standalone PUBLIC FMU_UNPACK_DIRECTORY="${FMU_UNPACK_DIRECTORY}")
 target_compile_definitions(fmu_host_standalone PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
 target_compile_definitions(fmu_host_standalone PUBLIC FMU_FILENAME="${FMU_FILENAME}")
@@ -161,7 +160,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_
     target_link_libraries(fmu_host_standalone PRIVATE ${CMAKE_DL_LIBS})
 endif()
 set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY})
-# add_dependencies(fmu_host_standalone UNPACK_FMU)
 
 
 # -------------------------------------------------

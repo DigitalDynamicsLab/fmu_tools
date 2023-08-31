@@ -24,7 +24,7 @@
 
 extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
 
-void FMI2_Export createModelDescription(const std::string& path);
+void FMI2_Export createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid);
 
 // Default UnitDefinitionTypes          |name|kg, m, s, A, K,mol,cd,rad
 static const UnitDefinitionType UD_kg  ("kg",  1, 0, 0, 0, 0, 0, 0, 0 );
@@ -48,7 +48,7 @@ public:
     FmuComponentBase(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
         callbackFunctions({nullptr, nullptr, nullptr, nullptr, nullptr}),
         instanceName(_instanceName),
-        fmuGUID(_fmuGUID),
+        fmuGUID(FMU_GUID),
         modelIdentifier(FMU_MODEL_IDENTIFIER)
     {
 
@@ -64,6 +64,8 @@ public:
         unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
 
         addFmuVariable(&time, "time", FmuVariable::Type::FMU_REAL, "s", "time");
+
+        assert(!std::string(_fmuGUID).compare(fmuGUID));
 
     }
 
@@ -202,8 +204,6 @@ protected:
     // if we accept to have both fmi2Integer and fmi2Boolean considered as the same type we can drop the 'scalartype' argument
     // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
     // At least, in this way, we do not have any redundant code at least
-                //start_type startval = std::numeric_limits<decltype(*ptr_type)>>::quiet_NaN(),
-
     const FmuVariable& addFmuVariable(
             FmuVariable::PtrType var_ptr,
             std::string name,
@@ -221,7 +221,7 @@ protected:
             auto predicate_samename = [unitname](const UnitDefinitionType& var) { return var.name == unitname; };
             auto match_commonunit = std::find_if(common_unitdefinitions.begin(), common_unitdefinitions.end(), predicate_samename);
             if (match_commonunit == common_unitdefinitions.end()){
-                throw std::runtime_error("Variable unit is not registered within this FmuComponentBase. Call addUnitDefinition first.");
+                throw std::runtime_error("Variable unit is not registered within this FmuComponentBase. Call 'addUnitDefinition' first.");
             }
             else{
                 addUnitDefinition(*match_commonunit);
@@ -234,7 +234,7 @@ protected:
         auto predicate_samename = [name](const FmuVariable& var) { return var.GetName() == name; };
         auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
         if (it!=scalarVariables.end())
-            throw std::runtime_error("Cannot add two Fmu Variables with the same name.");
+            throw std::runtime_error("Cannot add two Fmu variables with the same name.");
 
 
         FmuVariable newvar(name, scalartype);

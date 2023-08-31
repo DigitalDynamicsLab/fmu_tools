@@ -26,8 +26,8 @@ const std::set<std::string> FmuComponentBase::logCategories_available = {
 };
 
 
-void createModelDescription(const std::string& path){
-    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmi2Type::fmi2CoSimulation, "");
+void createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid){
+    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmi2Type::fmi2CoSimulation, guid);
     fmu->ExportModelDescription(path);
     delete fmu;
 }
@@ -46,24 +46,33 @@ void FmuComponentBase::ExportModelDescription(std::string path){
     // Create the root node
     rapidxml::xml_node<>* rootNode = doc_ptr->allocate_node(rapidxml::node_element, "fmiModelDescription");
     rootNode->append_attribute(doc_ptr->allocate_attribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"));
-    rootNode->append_attribute(doc_ptr->allocate_attribute("fmiVersion", "2.0"));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("fmiVersion", fmi2GetVersion()));
     rootNode->append_attribute(doc_ptr->allocate_attribute("modelName", modelIdentifier.c_str())); // modelName can be anything else
-    rootNode->append_attribute(doc_ptr->allocate_attribute("guid", "{16ce9076-4f15-4484-9e18-fefd58f15f51}"));
-    rootNode->append_attribute(doc_ptr->allocate_attribute("generationTool", "fmu_generator_standalone"));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("guid", FMU_GUID));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("generationTool", "fmu_generator"));
     rootNode->append_attribute(doc_ptr->allocate_attribute("variableNamingConvention", "structured"));
     rootNode->append_attribute(doc_ptr->allocate_attribute("numberOfEventIndicators", "0"));
     doc_ptr->append_node(rootNode);
 
     // Add CoSimulation node
-    rapidxml::xml_node<>* coSimNode = doc_ptr->allocate_node(rapidxml::node_element, "CoSimulation");
-    coSimNode->append_attribute(doc_ptr->allocate_attribute("modelIdentifier", modelIdentifier.c_str()));
-    coSimNode->append_attribute(doc_ptr->allocate_attribute("canHandleVariableCommunicationStepSize", "true"));
-    coSimNode->append_attribute(doc_ptr->allocate_attribute("canInterpolateInputs", "true"));
-    coSimNode->append_attribute(doc_ptr->allocate_attribute("maxOutputDerivativeOrder", "1"));
-    coSimNode->append_attribute(doc_ptr->allocate_attribute("canGetAndSetFMUstate", "false"));
-    coSimNode->append_attribute(doc_ptr->allocate_attribute("canSerializeFMUstate", "false"));
-    coSimNode->append_attribute(doc_ptr->allocate_attribute("providesDirectionalDerivative", "false"));
-    rootNode->append_node(coSimNode);
+    if (is_cosimulation_available()){
+        rapidxml::xml_node<>* coSimNode = doc_ptr->allocate_node(rapidxml::node_element, "CoSimulation");
+        coSimNode->append_attribute(doc_ptr->allocate_attribute("modelIdentifier", modelIdentifier.c_str()));
+        coSimNode->append_attribute(doc_ptr->allocate_attribute("canHandleVariableCommunicationStepSize", "true"));
+        coSimNode->append_attribute(doc_ptr->allocate_attribute("canInterpolateInputs", "true"));
+        coSimNode->append_attribute(doc_ptr->allocate_attribute("maxOutputDerivativeOrder", "1"));
+        coSimNode->append_attribute(doc_ptr->allocate_attribute("canGetAndSetFMUstate", "false"));
+        coSimNode->append_attribute(doc_ptr->allocate_attribute("canSerializeFMUstate", "false"));
+        coSimNode->append_attribute(doc_ptr->allocate_attribute("providesDirectionalDerivative", "false"));
+        rootNode->append_node(coSimNode);
+    }
+
+    // Add ModelExchange node
+    if (is_modelexchange_available()){
+        rapidxml::xml_node<>* modExNode = doc_ptr->allocate_node(rapidxml::node_element, "ModelExchange");
+        rootNode->append_node(modExNode);
+        throw std::runtime_error("Developer error: ModelExchange not supported in modelDescription.xml");
+    }
 
     // Add UnitDefinitions node
     std::list<std::string> stringbuf;

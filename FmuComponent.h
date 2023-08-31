@@ -5,8 +5,6 @@
 #include <vector>
 #include <array>
 
-#define _USE_MATH_DEFINES
-#include <math.h>
 
 
 class FmuComponent: public FmuComponentBase{
@@ -16,6 +14,7 @@ public:
     {
 
         initializeType(_fmuType);
+
         /// FMU_ACTION: define new units if needed
         //UnitDefinitionType UD_rad_s4 ("rad/s4"); UD_rad_s4.s = -4; UD_rad_s4.rad = 1;
         //addUnitDefinition(UD_rad_s4);
@@ -40,7 +39,7 @@ public:
         fmu_approximateOn.SetStartVal(fmi2False);
 
         // Additional commands
-        q = {0, 0, 0, M_PI/4};
+        q = {0, 0, 0, 3.14159265358979323846/4};
     }
 
     virtual ~FmuComponent(){}
