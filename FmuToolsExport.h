@@ -59,21 +59,12 @@ public:
         modelIdentifier(FMU_MODEL_IDENTIFIER)
     {
 
-        UnitDefinitionType ud_kg("kg");   ud_kg.kg = 1;
-        UnitDefinitionType ud_m("m");     ud_m.m = 1;
-        UnitDefinitionType ud_s("s");     ud_s.s = 1;
-        UnitDefinitionType ud_A("A");     ud_A.A = 1;
-        UnitDefinitionType ud_K("K");     ud_K.K = 1;
-        UnitDefinitionType ud_mol("mol"); ud_mol.mol = 1;
-        UnitDefinitionType ud_cd("cd");   ud_cd.cd = 1;
-        UnitDefinitionType ud_rad("rad"); ud_rad.rad = 1;
-
         unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
 
         addFmuVariable(&time, "time", FmuVariable::Type::FMU_REAL, "s", "time");
 
         if(std::string(_fmuGUID).compare(fmuGUID) && ENABLE_GUID_CHECK)
-            throw std::runtime_error("GUID used for instantiation not matching with source.")
+            throw std::runtime_error("GUID used for instantiation not matching with source.");
 
     }
 
@@ -114,6 +105,8 @@ public:
 
     template <class T>
     fmi2Status fmi2GetVariable(const fmi2ValueReference vr[], size_t nvr, T value[], FmuVariable::Type vartype){
+        //TODO, when multiple variables are requested it might be better to iterate through scalarVariables just once
+        // and check if they match any of the nvr requested variables 
         for (size_t s = 0; s<nvr; ++s){
             auto it = this->findByValrefType(vr[s], vartype);
             if (it != this->scalarVariables.end()){

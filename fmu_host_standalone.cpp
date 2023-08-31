@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
     */
 
     /*
-    for (auto i : my_fmu.flat_variables) {
+    for (auto i : my_fmu.scalarVariables) {
         std::cout   << "Variable: \n"
                     << "   name  = " << i.second.name << "\n"
                     << "   ref.  = " << i.second.valueReference << "\n";

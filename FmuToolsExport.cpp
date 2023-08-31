@@ -113,6 +113,7 @@ void FmuComponentBase::ExportModelDescription(std::string path){
     std::string stopTime_str = std::to_string(stopTime);
     std::string stepSize_str = std::to_string(stepSize);
     std::string tolerance_str = std::to_string(tolerance);
+
     rapidxml::xml_node<>* defaultExpNode = doc_ptr->allocate_node(rapidxml::node_element, "DefaultExperiment");
     defaultExpNode->append_attribute(doc_ptr->allocate_attribute("startTime", startTime_str.c_str()));
     defaultExpNode->append_attribute(doc_ptr->allocate_attribute("stopTime", stopTime_str.c_str()));
@@ -184,6 +185,13 @@ void FmuComponentBase::CheckVariables() const
 
     }
 }
+
+std::set<FmuVariable>::iterator FmuComponentBase::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){
+    auto predicate_samevalreftype = [vr, vartype](const FmuVariable& var) {
+        return var.GetValueReference() == vr && var.GetType() == vartype;
+    };
+    return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
+}
             
 //////////////// FMU FUNCTIONS /////////////////
 
@@ -235,13 +243,6 @@ fmi2Status fmi2ExitInitializationMode(fmi2Component c){
 }
 fmi2Status fmi2Terminate(fmi2Component c){ return fmi2Status::fmi2OK; }
 fmi2Status fmi2Reset(fmi2Component c){ return fmi2Status::fmi2OK; }
-
-std::set<FmuVariable>::iterator FmuComponentBase::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){
-    auto predicate_samevalreftype = [vr, vartype](const FmuVariable& var) {
-        return var.GetValueReference() == vr && var.GetType() == vartype;
-    };
-    return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
-}
 
 
 fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){

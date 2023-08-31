@@ -126,6 +126,11 @@ add_executable(fmu_modeldescription_generator fmu_modeldescription_generator.cpp
 target_compile_definitions(fmu_modeldescription_generator PRIVATE FMU_RUNTIME_OUTPUT_DIRECTORY="${FMU_RUNTIME_OUTPUT_DIRECTORY}")
 target_compile_definitions(fmu_modeldescription_generator PRIVATE FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
 target_compile_definitions(fmu_modeldescription_generator PRIVATE FMU_GUID="${FMU_GUID}")
+IF (ENABLE_GUID_CHECK)
+    target_compile_definitions(fmu_modeldescription_generator PRIVATE ENABLE_GUID_CHECK=1)
+ELSE()
+    target_compile_definitions(fmu_modeldescription_generator PRIVATE ENABLE_GUID_CHECK=0)
+ENDIF()
 target_link_libraries(fmu_modeldescription_generator PUBLIC FmuComponent)
 
 
