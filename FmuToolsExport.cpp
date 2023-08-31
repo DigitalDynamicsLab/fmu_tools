@@ -238,8 +238,7 @@ fmi2Status fmi2Reset(fmi2Component c){ return fmi2Status::fmi2OK; }
 
 std::set<FmuVariable>::iterator FmuComponentBase::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){
     auto predicate_samevalreftype = [vr, vartype](const FmuVariable& var) {
-        return var.GetValueReference() == vr;
-        return var.GetType() == vartype;
+        return var.GetValueReference() == vr && var.GetType() == vartype;
     };
     return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
 }

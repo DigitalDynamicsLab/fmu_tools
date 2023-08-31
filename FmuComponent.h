@@ -26,9 +26,9 @@ public:
         addFmuVariable(&q_t[2], "theta_tt", FmuVariable::Type::FMU_REAL, "rad/s2", "pendulum ang acceleration");
         addFmuVariable(&q[2],   "theta_t",  FmuVariable::Type::FMU_REAL, "rad/s",  "pendulum ang velocity");
         addFmuVariable(&q[3],   "theta",    FmuVariable::Type::FMU_REAL, "rad",    "pendulum angle");
-        auto fmu_len = addFmuVariable(&len,    "len",      FmuVariable::Type::FMU_REAL, "m",      "pendulum length", "parameter", "fixed");
-        auto fmu_m = addFmuVariable(&m,      "m",        FmuVariable::Type::FMU_REAL, "kg",     "pendulum mass",   "parameter", "fixed");
-        auto fmu_M = addFmuVariable(&M,      "M",        FmuVariable::Type::FMU_REAL, "kg",     "cart mass",       "parameter", "fixed");
+        auto fmu_len = addFmuVariable(&len,  "len", FmuVariable::Type::FMU_REAL, "m",  "pendulum length", "parameter", "fixed");
+        auto fmu_m =   addFmuVariable(&m,    "m",   FmuVariable::Type::FMU_REAL, "kg", "pendulum mass",   "parameter", "fixed");
+        auto fmu_M =   addFmuVariable(&M,    "M",   FmuVariable::Type::FMU_REAL, "kg", "cart mass",       "parameter", "fixed");
 
         fmu_len.SetStartVal(len);
         fmu_m.SetStartVal(m);

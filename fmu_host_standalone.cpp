@@ -84,14 +84,23 @@ int main(int argc, char* argv[]) {
     double time = 0;
     double dt = 0.001;
     
-    fmi2Real fmu_time;
-    valref = 1;
     for (int i = 0; i<1000; ++i) {
 
         my_fmu._fmi2DoStep(my_fmu.component, time, dt, fmi2True);
-        my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &fmu_time);
-        std::cout << "fmu_time: " << fmu_time << std::endl;
+
         time +=dt;
+    }
+
+    fmi2Real val_real;
+    for (fmi2ValueReference valref = 1; valref<11; valref++){
+        my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &val_real);
+        std::cout << "REAL: valref: " << valref << " | val: " << val_real << std::endl;
+    }
+
+    fmi2Boolean val_bool;
+    for (fmi2ValueReference valref = 1; valref<2; valref++){
+        my_fmu._fmi2GetBoolean(my_fmu.component, &valref, 1, &val_bool);
+        std::cout << "BOOLEAN: valref: " << valref << " | val: " << val_bool << std::endl;
     }
 
 

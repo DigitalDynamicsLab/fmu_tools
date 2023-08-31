@@ -63,11 +63,12 @@ The target `fmu_host_standalone` shows how to load and run FMUs. By default, it 
 
 ### Import Features
 - [x] unzip the FMUs (cross-platform, header-only)
-- [ ] GUID checks
+- [x] GUID checks
 
 ### Extras and Testing
 - [x] test exported FMUs through the importer
-- [ ] test exported FMUs with fmuChecker
+- [x] test exported FMUs with fmuChecker
+- [ ] automatic testing with fmuChecker
 - [x] test on Win
 - [x] test on Linux (GCC8.5.0)
 - [ ] test on MacOS
