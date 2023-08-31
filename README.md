@@ -35,9 +35,9 @@ When everything is set up, build the **PACK_FMU** target to generate the FMU fil
 
 ### Advanced Options
 
-- in the rare case that the user requires a different set of FMI variable types, it is required to modify _fmi2_headers\fmi2TypesPlatform.h_ accordingly; in this case the _TypesVariants.h_ file should be modified as well, so that the two variants declared there do not contain any repeated type.
-
+- in the rare case that the user requires a different set of FMI variable types, it is required to modify _fmi2_headers\fmi2TypesPlatform.h_ accordingly; in this case the _TypesVariants.h_ file should be modified as well, so that the two variants declared do not contain any repeated type.
 - while adding new FMU variables, the user can associate a measurement unit to them (otherwise the adimensional unit "1" will be set). However, units needs to be defined _before_ any FMU variable could use them. Measurement units are defined through the `UnitDefinitionType` class, that stores the name of the unit (e.g. "rad/s2") together with the exponents of each SI base unit (e.g. rad=1, s=-2). The user should create its own object of type `UnitDefinitionType` and then pass it to `FmuComponentBase` through its method `addUnitDefinition`. After this step, the user can use the unit name in any following call to `addFmuVariable`.
+- the `RUN_TESTS` target will run the _fmuChecker_ utility over the newly created fmu and makes sure no error is returned (only 'win64' and 'linux64' are available for now)
 
 
 ## Fmu Import
@@ -63,12 +63,12 @@ The target `fmu_host_standalone` shows how to load and run FMUs. By default, it 
 
 ### Import Features
 - [x] unzip the FMUs (cross-platform, header-only)
-- [x] GUID checks
+- [x] GUID checks (optional)
 
 ### Extras and Testing
 - [x] test exported FMUs through the importer
 - [x] test exported FMUs with fmuChecker
-- [ ] automatic testing with fmuChecker
+- [x] automatic testing with fmuChecker
 - [x] test on Win
 - [x] test on Linux (GCC8.5.0)
 - [ ] test on MacOS

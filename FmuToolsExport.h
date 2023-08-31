@@ -65,11 +65,16 @@ public:
 
         addFmuVariable(&time, "time", FmuVariable::Type::FMU_REAL, "s", "time");
 
-        assert(!std::string(_fmuGUID).compare(fmuGUID));
+        if(std::string(_fmuGUID).compare(fmuGUID) && ENABLE_GUID_CHECK)
+            throw std::runtime_error("GUID used for instantiation not matching with source.")
 
     }
 
     virtual ~FmuComponentBase(){}
+
+    void SetResourceLocation(fmi2String resloc){
+        resourceLocation = std::string(resloc);
+    }
     
 
     void SetDefaultExperiment(fmi2Boolean _toleranceDefined, fmi2Real _tolerance, fmi2Real _startTime, fmi2Boolean _stopTimeDefined, fmi2Real _stopTime){
@@ -154,6 +159,7 @@ protected:
 
     std::string instanceName;
     fmi2String fmuGUID;
+    std::string resourceLocation;
 
     static const std::set<std::string> logCategories_available;
     std::set<std::string> logCategories;

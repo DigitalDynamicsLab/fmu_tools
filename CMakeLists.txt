@@ -29,8 +29,12 @@ SET(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
 set(FMU_MODEL_IDENTIFIER "FmuComponent" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
 SET(FMU_FILENAME "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu")
 MESSAGE(STATUS "FMU to be created: \"${FMU_FILENAME}\"")
+set(ENABLE_GUID_CHECK ON CACHE BOOL "Enable GUID checking.")
 
 SET(FMU_UNPACK_DIRECTORY "${FMU_MAIN_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
+
+set(TESTING_ENABLED_OS "win64" "linux64")
+
 
 
 # -------------------------------------------------
@@ -96,6 +100,12 @@ target_include_directories(FmuComponent PRIVATE "rapidxml")
 target_compile_definitions(FmuComponent PRIVATE FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
 target_compile_definitions(FmuComponent PRIVATE FMU_OS_SUFFIX="${OS_SUFFIX}")
 target_compile_definitions(FmuComponent PRIVATE FMU_GUID="${FMU_GUID}")
+IF (ENABLE_GUID_CHECK)
+    target_compile_definitions(FmuComponent PRIVATE ENABLE_GUID_CHECK=1)
+ELSE()
+    target_compile_definitions(FmuComponent PRIVATE ENABLE_GUID_CHECK=0)
+ENDIF()
+
 set_target_properties(FmuComponent PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
 
 
@@ -170,3 +180,44 @@ target_include_directories(nonfmu_host PUBLIC "fmi2_headers")
 target_link_libraries(nonfmu_host PUBLIC FmuComponent)
 # target_include_directories(nonfmu_host PUBLIC "rapidxml")
 set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+
+
+# # -------------------------------------------------
+# # Testing
+# # -------------------------------------------------
+list(FIND TESTING_ENABLED_OS ${OS_SUFFIX} ENABLE_TESTING_FLAG)
+IF(ENABLE_TESTING_FLAG EQUAL 0)
+    MESSAGE(STATUS "Testing enabled.")
+    ## Call fmuChecker on the FMU, parse its output
+    SET(FMUCHECKER_LOG "${FMU_MODEL_IDENTIFIER}_log.txt")
+    SET(FMUCHECKER_RESULTS "${FMU_MODEL_IDENTIFIER}_results.txt")
+    add_executable(parseFmuChecker parseFmuChecker.cpp)
+    target_compile_definitions(parseFmuChecker PRIVATE FMUCHECKER_LOG="${FMUCHECKER_LOG}")
+    add_dependencies(parseFmuChecker PACK_FMU)
+
+    ## call the execution of fmuChecker
+    add_custom_command(TARGET parseFmuChecker
+                    PRE_BUILD
+                    COMMAND "${CMAKE_SOURCE_DIR}/fmuChecker/fmuCheck.${OS_SUFFIX}${CMAKE_EXECUTABLE_SUFFIX}" "-e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\""
+                    COMMENT "Testing FMU with fmuChecker")
+
+    ## enable the testing
+    enable_testing()
+
+    ## the 'fmuChecker_requirements' fixtures is registered
+    ## 'build_parseFmuChecker' is set as a requirement of type SETUP i.e. called before the FIXTURES_REQUIRED target
+    ## 'TestFmuComponent' is the one requiring the other targets
+    add_test(NAME TestFmuComponent
+            COMMAND parseFmuChecker)
+
+    add_test(build_parseFmuChecker
+        "${CMAKE_COMMAND}"
+        --build "${CMAKE_BINARY_DIR}"
+        --target parseFmuChecker
+    )
+
+    set_tests_properties(build_parseFmuChecker PROPERTIES FIXTURES_SETUP fmuChecker_requirements)
+    set_tests_properties(TestFmuComponent PROPERTIES FIXTURES_REQUIRED fmuChecker_requirements)
+ELSE()
+    MESSAGE(STATUS "Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
+ENDIF()

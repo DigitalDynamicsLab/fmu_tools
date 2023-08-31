@@ -585,7 +585,7 @@ public:
 
 
 
-    /// Instantiate the model:
+    /// Instantiate the model: simplified function wrapping fmi2Instantiate
     void Instantiate(std::string tool_name = std::string("tool1"),
         std::string resource_dir = std::string("file:///C:/temp"),
         bool logging = false) {
@@ -608,6 +608,7 @@ public:
         if (!this->component)
             throw std::runtime_error("Failed to instantiate the FMU.");
     }
+
 
 
 
