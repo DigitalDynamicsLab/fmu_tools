@@ -186,12 +186,12 @@ IF(ENABLE_TESTING_FLAG EQUAL 0)
     ## Call fmuChecker on the FMU, parse its output
     SET(FMUCHECKER_LOG "${FMU_MODEL_IDENTIFIER}_log.txt")
     SET(FMUCHECKER_RESULTS "${FMU_MODEL_IDENTIFIER}_results.txt")
-    add_executable(parseFmuChecker parseFmuChecker.cpp)
-    target_compile_definitions(parseFmuChecker PRIVATE FMUCHECKER_LOG="${FMUCHECKER_LOG}")
-    add_dependencies(parseFmuChecker PACK_FMU)
+    add_executable(test_parseFmuChecker test_parseFmuChecker.cpp)
+    target_compile_definitions(test_parseFmuChecker PRIVATE FMUCHECKER_LOG="${FMUCHECKER_LOG}")
+    add_dependencies(test_parseFmuChecker PACK_FMU)
 
     ## call the execution of fmuChecker
-    add_custom_command(TARGET parseFmuChecker
+    add_custom_command(TARGET test_parseFmuChecker
                     PRE_BUILD
                     COMMAND "${CMAKE_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" "-e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\""
                     COMMENT "Testing FMU with fmuChecker")
@@ -200,18 +200,18 @@ IF(ENABLE_TESTING_FLAG EQUAL 0)
     enable_testing()
 
     ## the 'fmuChecker_requirements' fixtures is registered
-    ## 'build_parseFmuChecker' is set as a requirement of type SETUP i.e. called before the FIXTURES_REQUIRED target
+    ## 'build_test_parseFmuChecker' is set as a requirement of type SETUP i.e. called before the FIXTURES_REQUIRED target
     ## 'TestFmuComponent' is the one requiring the other targets
     add_test(NAME TestFmuComponent
-            COMMAND parseFmuChecker)
+            COMMAND test_parseFmuChecker)
 
-    add_test(build_parseFmuChecker
+    add_test(build_test_parseFmuChecker
         "${CMAKE_COMMAND}"
         --build "${CMAKE_BINARY_DIR}"
-        --target parseFmuChecker
+        --target test_parseFmuChecker
     )
 
-    set_tests_properties(build_parseFmuChecker PROPERTIES FIXTURES_SETUP fmuChecker_requirements)
+    set_tests_properties(build_test_parseFmuChecker PROPERTIES FIXTURES_SETUP fmuChecker_requirements)
     set_tests_properties(TestFmuComponent PROPERTIES FIXTURES_REQUIRED fmuChecker_requirements)
 ELSE()
     MESSAGE(STATUS "Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
