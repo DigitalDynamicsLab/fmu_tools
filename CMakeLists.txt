@@ -176,43 +176,46 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_
 endif()
 set_property(TARGET fmu_host PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY})
 
+IF (BUILD_TESTING)
+    # # -------------------------------------------------
+    # # Testing
+    # # -------------------------------------------------
+    list(FIND TESTING_ENABLED_OS ${FMI_PLATFORM} ENABLE_TESTING_FLAG)
+    IF(ENABLE_TESTING_FLAG EQUAL 0)
+        MESSAGE(STATUS "Testing enabled.")
+        ## Call fmuChecker on the FMU, parse its output
+        SET(FMUCHECKER_LOG "${FMU_MODEL_IDENTIFIER}_log.txt")
+        SET(FMUCHECKER_RESULTS "${FMU_MODEL_IDENTIFIER}_results.txt")
+        add_executable(test_parseFmuChecker test_parseFmuChecker.cpp)
+        target_compile_definitions(test_parseFmuChecker PRIVATE FMUCHECKER_LOG="${FMUCHECKER_LOG}")
+        add_dependencies(test_parseFmuChecker PACK_FMU)
 
-# # -------------------------------------------------
-# # Testing
-# # -------------------------------------------------
-list(FIND TESTING_ENABLED_OS ${FMI_PLATFORM} ENABLE_TESTING_FLAG)
-IF(ENABLE_TESTING_FLAG EQUAL 0)
-    MESSAGE(STATUS "Testing enabled.")
-    ## Call fmuChecker on the FMU, parse its output
-    SET(FMUCHECKER_LOG "${FMU_MODEL_IDENTIFIER}_log.txt")
-    SET(FMUCHECKER_RESULTS "${FMU_MODEL_IDENTIFIER}_results.txt")
-    add_executable(test_parseFmuChecker test_parseFmuChecker.cpp)
-    target_compile_definitions(test_parseFmuChecker PRIVATE FMUCHECKER_LOG="${FMUCHECKER_LOG}")
-    add_dependencies(test_parseFmuChecker PACK_FMU)
+        ## call the execution of fmuChecker
+        add_custom_command(TARGET test_parseFmuChecker
+                        PRE_BUILD
+                        COMMAND "${CMAKE_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" "-e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\""
+                        COMMENT "Testing FMU with fmuChecker")
 
-    ## call the execution of fmuChecker
-    add_custom_command(TARGET test_parseFmuChecker
-                    PRE_BUILD
-                    COMMAND "${CMAKE_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" "-e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\""
-                    COMMENT "Testing FMU with fmuChecker")
+        ## enable the testing
+        enable_testing()
 
-    ## enable the testing
-    enable_testing()
+        ## the 'fmuChecker_requirements' fixtures is registered
+        ## 'build_test_parseFmuChecker' is set as a requirement of type SETUP i.e. called before the FIXTURES_REQUIRED target
+        ## 'TestFmuComponent' is the one requiring the other targets
+        add_test(NAME TestFmuComponent
+                COMMAND test_parseFmuChecker)
 
-    ## the 'fmuChecker_requirements' fixtures is registered
-    ## 'build_test_parseFmuChecker' is set as a requirement of type SETUP i.e. called before the FIXTURES_REQUIRED target
-    ## 'TestFmuComponent' is the one requiring the other targets
-    add_test(NAME TestFmuComponent
-            COMMAND test_parseFmuChecker)
+        add_test(build_test_parseFmuChecker
+            "${CMAKE_COMMAND}"
+            --build "${CMAKE_BINARY_DIR}"
+            --target test_parseFmuChecker
+        )
 
-    add_test(build_test_parseFmuChecker
-        "${CMAKE_COMMAND}"
-        --build "${CMAKE_BINARY_DIR}"
-        --target test_parseFmuChecker
-    )
-
-    set_tests_properties(build_test_parseFmuChecker PROPERTIES FIXTURES_SETUP fmuChecker_requirements)
-    set_tests_properties(TestFmuComponent PROPERTIES FIXTURES_REQUIRED fmuChecker_requirements)
+        set_tests_properties(build_test_parseFmuChecker PROPERTIES FIXTURES_SETUP fmuChecker_requirements)
+        set_tests_properties(TestFmuComponent PROPERTIES FIXTURES_REQUIRED fmuChecker_requirements)
+    ELSE()
+        MESSAGE(STATUS "Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
+    ENDIF()
 ELSE()
-    MESSAGE(STATUS "Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
-ENDIF()
+    MESSAGE(STATUS "Testing disabled.")
+ENDIF(BUILD_TESTING)
