@@ -16,11 +16,6 @@
 
 #include "variant/variant_guard.hpp"
 
-#ifndef FMU_MODEL_IDENTIFIER
-#define FMU_MODEL_IDENTIFIER "myfmu"
-#endif
-
-
 
 extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
 #ifdef __cplusplus
@@ -83,6 +78,8 @@ public:
         stopTimeDefined = _stopTimeDefined;
     }
 
+    const std::set<FmuVariable>& GetScalarVariables() const { return scalarVariables; }
+
     void SetInitializationMode(bool val){ initializationMode = val; }
 
     void SetCallbackFunctions(const fmi2CallbackFunctions* functions){ callbackFunctions = *functions; }
@@ -98,8 +95,6 @@ public:
     virtual fmi2Status DoStep(double stepSize = -1){ return fmi2Status::fmi2Error; };
 
     void ExportModelDescription(std::string path);
-
-    void CheckVariables() const;
 
     double GetTime() const {return time;}
 

@@ -49,7 +49,7 @@ void FmuComponentBase::ExportModelDescription(std::string path){
     rootNode->append_attribute(doc_ptr->allocate_attribute("fmiVersion", fmi2GetVersion()));
     rootNode->append_attribute(doc_ptr->allocate_attribute("modelName", modelIdentifier.c_str())); // modelName can be anything else
     rootNode->append_attribute(doc_ptr->allocate_attribute("guid", FMU_GUID));
-    rootNode->append_attribute(doc_ptr->allocate_attribute("generationTool", "fmu_generator"));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("generationTool", "rapidxml"));
     rootNode->append_attribute(doc_ptr->allocate_attribute("variableNamingConvention", "structured"));
     rootNode->append_attribute(doc_ptr->allocate_attribute("numberOfEventIndicators", "0"));
     doc_ptr->append_node(rootNode);
@@ -85,13 +85,13 @@ void FmuComponentBase::ExportModelDescription(std::string path){
         unitNode->append_attribute(doc_ptr->allocate_attribute("name", ud.name.c_str()));
 
         rapidxml::xml_node<>* baseUnitNode = doc_ptr->allocate_node(rapidxml::node_element, "BaseUnit");
-        if (ud.kg != 0) {stringbuf.push_back(std::to_string(ud.kg)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("kg", stringbuf.back().c_str())); }
-        if (ud.m != 0) {stringbuf.push_back(std::to_string(ud.m)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("m", stringbuf.back().c_str())); }
-        if (ud.s != 0) {stringbuf.push_back(std::to_string(ud.s)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("s", stringbuf.back().c_str())); }
-        if (ud.A != 0) {stringbuf.push_back(std::to_string(ud.A)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("A", stringbuf.back().c_str())); }
-        if (ud.K != 0) {stringbuf.push_back(std::to_string(ud.K)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("K", stringbuf.back().c_str())); }
+        if (ud.kg != 0)  {stringbuf.push_back(std::to_string(ud.kg)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("kg", stringbuf.back().c_str())); }
+        if (ud.m != 0)   {stringbuf.push_back(std::to_string(ud.m)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("m", stringbuf.back().c_str())); }
+        if (ud.s != 0)   {stringbuf.push_back(std::to_string(ud.s)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("s", stringbuf.back().c_str())); }
+        if (ud.A != 0)   {stringbuf.push_back(std::to_string(ud.A)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("A", stringbuf.back().c_str())); }
+        if (ud.K != 0)   {stringbuf.push_back(std::to_string(ud.K)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("K", stringbuf.back().c_str())); }
         if (ud.mol != 0) {stringbuf.push_back(std::to_string(ud.mol)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("mol", stringbuf.back().c_str())); }
-        if (ud.cd != 0) {stringbuf.push_back(std::to_string(ud.cd)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("cd", stringbuf.back().c_str())); }
+        if (ud.cd != 0)  {stringbuf.push_back(std::to_string(ud.cd)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("cd", stringbuf.back().c_str())); }
         if (ud.rad != 0) {stringbuf.push_back(std::to_string(ud.rad)); baseUnitNode->append_attribute(doc_ptr->allocate_attribute("rad", stringbuf.back().c_str())); }
         unitNode->append_node(baseUnitNode);
 
@@ -139,7 +139,6 @@ void FmuComponentBase::ExportModelDescription(std::string path){
     };
 
 
-    // TODO: std::set::iterator breaks unions!!!
     for (std::set<FmuVariable>::const_iterator it = scalarVariables.begin(); it!=scalarVariables.end(); ++it){
         // Create a ScalarVariable node
         rapidxml::xml_node<>* scalarVarNode = doc_ptr->allocate_node(rapidxml::node_element, "ScalarVariable");
@@ -168,7 +167,7 @@ void FmuComponentBase::ExportModelDescription(std::string path){
 
     // Add ModelStructure node
     rapidxml::xml_node<>* modelStructNode = doc_ptr->allocate_node(rapidxml::node_element, "ModelStructure");
-    // Add Outputs, Derivatives, and InitialUnknowns nodes and attributes here...
+    // TODO: Add Outputs, Derivatives, and InitialUnknowns nodes and attributes here...
     rootNode->append_node(modelStructNode);
 
     // Save the XML document to a file
@@ -177,13 +176,6 @@ void FmuComponentBase::ExportModelDescription(std::string path){
     outFile.close();
 
     delete doc_ptr;
-}
-
-void FmuComponentBase::CheckVariables() const
-{
-    for (auto& sv: scalarVariables){
-
-    }
 }
 
 std::set<FmuVariable>::iterator FmuComponentBase::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){

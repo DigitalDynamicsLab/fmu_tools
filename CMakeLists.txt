@@ -42,21 +42,21 @@ set(TESTING_ENABLED_OS "win64" "linux64")
 # -------------------------------------------------
 SET(UNKNOWN_TARGET_SYSTEM FALSE)
 if(WIN32)
-    SET(OS_SUFFIX "win")
+    SET(FMI_PLATFORM "win")
 elseif(APPLE)
-    SET(OS_SUFFIX "darwin")
+    SET(FMI_PLATFORM "darwin")
 elseif(CYGWIN)
-    SET(OS_SUFFIX "cygwin")
+    SET(FMI_PLATFORM "cygwin")
 elseif(UNIX)
-    SET(OS_SUFFIX "linux")
+    SET(FMI_PLATFORM "linux")
 else()
     SET(UNKNOWN_TARGET_SYSTEM TRUE)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    SET(OS_SUFFIX "${OS_SUFFIX}64")
+    SET(FMI_PLATFORM "${FMI_PLATFORM}64")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    SET(OS_SUFFIX "${OS_SUFFIX}32")
+    SET(FMI_PLATFORM "${FMI_PLATFORM}32")
 else()
     SET(UNKNOWN_TARGET_SYSTEM TRUE)
 endif()
@@ -66,11 +66,11 @@ if(UNKNOWN_TARGET_SYSTEM)
     set(TARGET_SYSTEM "win64" CACHE STRING "Target operating system and architecture (e.g. win64, linux32, ...)")
     MARK_AS_ADVANCED(CLEAR TARGET_SYSTEM)
 else()
-    MESSAGE(STATUS "Architecture: ${OS_SUFFIX}")
+    MESSAGE(STATUS "Architecture: ${FMI_PLATFORM}")
     MARK_AS_ADVANCED(FORCE TARGET_SYSTEM)
 endif()
 
-SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${OS_SUFFIX}/$<0:>")
+SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${FMI_PLATFORM}/$<0:>")
 
 
 # -------------------------------------------------
@@ -98,7 +98,7 @@ target_include_directories(FmuComponent PRIVATE "variant")
 target_include_directories(FmuComponent PUBLIC "fmi2_headers")
 target_include_directories(FmuComponent PRIVATE "rapidxml")
 target_compile_definitions(FmuComponent PRIVATE FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
-target_compile_definitions(FmuComponent PRIVATE FMU_OS_SUFFIX="${OS_SUFFIX}")
+target_compile_definitions(FmuComponent PRIVATE FMU_OS_SUFFIX="${FMI_PLATFORM}")
 target_compile_definitions(FmuComponent PRIVATE FMU_GUID="${FMU_GUID}")
 IF (ENABLE_GUID_CHECK)
     target_compile_definitions(FmuComponent PRIVATE ENABLE_GUID_CHECK=1)
@@ -160,37 +160,27 @@ add_dependencies(PACK_FMU FmuComponent)
 # -------------------------------------------------
 # Target that runs the compiled and extracted fmu
 # -------------------------------------------------
-add_executable(fmu_host_standalone fmu_host_standalone.cpp FmuToolsImport.hpp)
-target_include_directories(fmu_host_standalone PUBLIC "fmi2_headers")
-target_include_directories(fmu_host_standalone PRIVATE "rapidxml")
-target_include_directories(fmu_host_standalone PRIVATE "miniz-cpp")
-target_compile_definitions(fmu_host_standalone PUBLIC FMU_UNPACK_DIRECTORY="${FMU_UNPACK_DIRECTORY}")
-target_compile_definitions(fmu_host_standalone PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
-target_compile_definitions(fmu_host_standalone PUBLIC FMU_FILENAME="${FMU_FILENAME}")
-target_compile_definitions(fmu_host_standalone PUBLIC FMU_OS_SUFFIX="${OS_SUFFIX}")
-target_compile_definitions(fmu_host_standalone PUBLIC SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}")
+add_executable(fmu_host fmu_host.cpp FmuToolsImport.hpp)
+target_include_directories(fmu_host PUBLIC "fmi2_headers")
+target_include_directories(fmu_host PRIVATE "rapidxml")
+target_include_directories(fmu_host PRIVATE "miniz-cpp")
+target_compile_definitions(fmu_host PUBLIC FMU_UNPACK_DIRECTORY="${FMU_UNPACK_DIRECTORY}")
+target_compile_definitions(fmu_host PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
+target_compile_definitions(fmu_host PUBLIC FMU_FILENAME="${FMU_FILENAME}")
+target_compile_definitions(fmu_host PUBLIC FMU_OS_SUFFIX="${FMI_PLATFORM}")
+target_compile_definitions(fmu_host PUBLIC SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "6.0" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "10.0")
-    target_link_options(fmu_host_standalone PRIVATE "LINKER:-as-needed")
-    target_link_libraries(fmu_host_standalone PRIVATE stdc++fs)
-    target_link_libraries(fmu_host_standalone PRIVATE ${CMAKE_DL_LIBS})
+    target_link_options(fmu_host PRIVATE "LINKER:-as-needed")
+    target_link_libraries(fmu_host PRIVATE stdc++fs)
+    target_link_libraries(fmu_host PRIVATE ${CMAKE_DL_LIBS})
 endif()
-set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY})
-
-
-# -------------------------------------------------
-# Target that runs the fmu project, but skips the modelDescription.xml loading and other auxiliary things
-# -------------------------------------------------
-add_executable(nonfmu_host nonfmu_host.cpp FmuToolsCommon.h FmuToolsImport.hpp)
-target_include_directories(nonfmu_host PUBLIC "fmi2_headers")
-target_link_libraries(nonfmu_host PUBLIC FmuComponent)
-# target_include_directories(nonfmu_host PUBLIC "rapidxml")
-set_property(TARGET fmu_host_standalone PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_property(TARGET fmu_host PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY})
 
 
 # # -------------------------------------------------
 # # Testing
 # # -------------------------------------------------
-list(FIND TESTING_ENABLED_OS ${OS_SUFFIX} ENABLE_TESTING_FLAG)
+list(FIND TESTING_ENABLED_OS ${FMI_PLATFORM} ENABLE_TESTING_FLAG)
 IF(ENABLE_TESTING_FLAG EQUAL 0)
     MESSAGE(STATUS "Testing enabled.")
     ## Call fmuChecker on the FMU, parse its output
@@ -203,7 +193,7 @@ IF(ENABLE_TESTING_FLAG EQUAL 0)
     ## call the execution of fmuChecker
     add_custom_command(TARGET parseFmuChecker
                     PRE_BUILD
-                    COMMAND "${CMAKE_SOURCE_DIR}/fmuChecker/fmuCheck.${OS_SUFFIX}${CMAKE_EXECUTABLE_SUFFIX}" "-e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\""
+                    COMMAND "${CMAKE_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" "-e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\""
                     COMMENT "Testing FMU with fmuChecker")
 
     ## enable the testing
