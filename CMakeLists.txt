@@ -97,7 +97,7 @@ add_library(FmuComponent SHARED FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExpo
 target_include_directories(FmuComponent PRIVATE "variant")
 target_include_directories(FmuComponent PUBLIC "fmi2_headers")
 target_include_directories(FmuComponent PRIVATE "rapidxml")
-target_compile_definitions(FmuComponent PRIVATE FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
+target_compile_definitions(FmuComponent PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
 target_compile_definitions(FmuComponent PRIVATE FMU_OS_SUFFIX="${FMI_PLATFORM}")
 target_compile_definitions(FmuComponent PRIVATE FMU_GUID="${FMU_GUID}")
 IF (ENABLE_GUID_CHECK)
