@@ -175,6 +175,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_
     target_link_libraries(fmu_host PRIVATE ${CMAKE_DL_LIBS})
 endif()
 set_property(TARGET fmu_host PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY})
+set(BUILD_TESTING ON CACHE BOOL "Enable testing.")
 
 IF (BUILD_TESTING)
     # # -------------------------------------------------
