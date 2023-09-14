@@ -26,7 +26,7 @@ mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
 SET(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
 
-set(FMU_MODEL_IDENTIFIER "FmuComponent" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
+set(FMU_MODEL_IDENTIFIER "myFmuIdentifier" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
 SET(FMU_FILENAME "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu")
 MESSAGE(STATUS "FMU to be created: \"${FMU_FILENAME}\"")
 set(ENABLE_GUID_CHECK ON CACHE BOOL "Enable GUID checking.")
@@ -93,7 +93,16 @@ MESSAGE(STATUS "FMU_GUID: ${FMU_GUID}")
 # -------------------------------------------------
 # Target: compiles FMU source code
 # -------------------------------------------------
-add_library(FmuComponent SHARED FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariants.h FmuComponent.h FmuComponent.cpp)
+add_library(FmuComponent SHARED FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariants.h)
+
+set(USE_EXTERNAL_FMU_COMPONENT_SOURCES OFF CACHE BOOL "Let external users to add problem-specific sources.")
+
+MARK_AS_ADVANCED(USE_EXTERNAL_FMU_COMPONENT_SOURCES)
+IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
+    MESSAGE("Using default sources for FmuComponent target.")
+    target_sources(FmuComponent PRIVATE FmuComponent.h FmuComponent.cpp)
+ENDIF()
+
 target_include_directories(FmuComponent PRIVATE "variant")
 target_include_directories(FmuComponent PUBLIC "fmi2_headers")
 target_include_directories(FmuComponent PRIVATE "rapidxml")
@@ -101,8 +110,10 @@ target_compile_definitions(FmuComponent PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL
 target_compile_definitions(FmuComponent PRIVATE FMU_OS_SUFFIX="${FMI_PLATFORM}")
 target_compile_definitions(FmuComponent PRIVATE FMU_GUID="${FMU_GUID}")
 IF (ENABLE_GUID_CHECK)
+    MESSAGE(STATUS "GUID check enabled.")
     target_compile_definitions(FmuComponent PRIVATE ENABLE_GUID_CHECK=1)
 ELSE()
+    MESSAGE(STATUS "GUID check disabled.")
     target_compile_definitions(FmuComponent PRIVATE ENABLE_GUID_CHECK=0)
 ENDIF()
 
@@ -174,7 +185,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_
     target_link_libraries(fmu_host PRIVATE stdc++fs)
     target_link_libraries(fmu_host PRIVATE ${CMAKE_DL_LIBS})
 endif()
-set_property(TARGET fmu_host PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${FMU_UNPACK_DIRECTORY})
+
+
 set(BUILD_TESTING ON CACHE BOOL "Enable testing.")
 
 IF (BUILD_TESTING)
