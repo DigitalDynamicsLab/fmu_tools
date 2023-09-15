@@ -48,7 +48,7 @@ void FmuComponentBase::ExportModelDescription(std::string path){
     rootNode->append_attribute(doc_ptr->allocate_attribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"));
     rootNode->append_attribute(doc_ptr->allocate_attribute("fmiVersion", fmi2GetVersion()));
     rootNode->append_attribute(doc_ptr->allocate_attribute("modelName", modelIdentifier.c_str())); // modelName can be anything else
-    rootNode->append_attribute(doc_ptr->allocate_attribute("guid", FMU_GUID));
+    rootNode->append_attribute(doc_ptr->allocate_attribute("guid", fmuGUID));
     rootNode->append_attribute(doc_ptr->allocate_attribute("generationTool", "rapidxml"));
     rootNode->append_attribute(doc_ptr->allocate_attribute("variableNamingConvention", "structured"));
     rootNode->append_attribute(doc_ptr->allocate_attribute("numberOfEventIndicators", "0"));

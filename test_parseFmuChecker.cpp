@@ -27,5 +27,5 @@ int main() {
     }
 
     file.close();
-    return 0;
+    return hasError ? 1 : 0;
 }
