@@ -153,18 +153,6 @@ public:
         this->start = startval;
     }
 
-    std::string GetStartVal() const {
-        if (const fmi2Real* start_ptr = varns::get_if<fmi2Real>(&this->start))
-            return std::to_string(*start_ptr);
-        if (const fmi2Integer* start_ptr = varns::get_if<fmi2Integer>(&this->start))
-            return std::to_string(*start_ptr);
-        if (const fmi2Boolean* start_ptr = varns::get_if<fmi2Boolean>(&this->start))
-            return std::to_string(*start_ptr);
-        if (const std::string* start_ptr = varns::get_if<std::string>(&this->start))
-            return *start_ptr;
-        return "";
-    }
-
     void SetStartVal(fmi2String startval){
         if (allowed_start)
             has_start = true;
@@ -177,6 +165,32 @@ public:
     bool HasStartVal() const {
         return has_start;
     }
+
+    template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
+    void SetStartValIfRequired(T startval){
+        if (required_start)
+            SetStartVal(startval);
+    }
+
+    void SetStartValIfRequired(fmi2String startval){
+        if (required_start)
+            SetStartVal(startval);
+    }
+
+
+    std::string GetStartVal() const {
+        if (const fmi2Real* start_ptr = varns::get_if<fmi2Real>(&this->start))
+            return std::to_string(*start_ptr);
+        if (const fmi2Integer* start_ptr = varns::get_if<fmi2Integer>(&this->start))
+            return std::to_string(*start_ptr);
+        if (const fmi2Boolean* start_ptr = varns::get_if<fmi2Boolean>(&this->start))
+            return std::to_string(*start_ptr);
+        if (const std::string* start_ptr = varns::get_if<std::string>(&this->start))
+            return *start_ptr;
+        return "";
+    }
+
+
 
     static std::string Type_toString(Type type){
         switch (type)
@@ -216,7 +230,7 @@ public:
     void SetUnitName(const std::string& _unitname) { unitname = _unitname;}
     Type GetType() const { return type;}
 
-    void SetCausalityVariabilityInitial(const std::string& causality, const std::string& variability, const std::string& initial){
+    void SetCausalityVariabilityInitial(const std::string& _causality, const std::string& _variability, const std::string& _initial){
         assert(
             (causality.empty() ||
             !causality.compare("parameter") ||
@@ -255,6 +269,10 @@ public:
             allowed_start = true;
             required_start = true;
         }
+
+        causality = _causality;
+        variability = _variability;
+        initial = _initial;
 
     }
 

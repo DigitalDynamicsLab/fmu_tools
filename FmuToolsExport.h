@@ -245,6 +245,9 @@ protected:
         newvar.SetDescription(description);
         newvar.SetCausalityVariabilityInitial(causality, variability, initial);
 
+        varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(*var_ptr_expanded);}, var_ptr);
+
+
 
         std::pair<std::set<FmuVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
         assert(ret.second && "Cannot insert new variable into FMU.");
