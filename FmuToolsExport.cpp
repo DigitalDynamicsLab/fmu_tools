@@ -225,12 +225,12 @@ fmi2Status fmi2SetupExperiment(fmi2Component c, fmi2Boolean toleranceDefined, fm
 }
 
 fmi2Status fmi2EnterInitializationMode(fmi2Component c){
-    reinterpret_cast<FmuComponentBase*>(c)->SetInitializationMode(true);
+    reinterpret_cast<FmuComponentBase*>(c)->EnterInitializationMode();
     return fmi2Status::fmi2OK;
 }
 
 fmi2Status fmi2ExitInitializationMode(fmi2Component c){ 
-    reinterpret_cast<FmuComponentBase*>(c)->SetInitializationMode(false);
+    reinterpret_cast<FmuComponentBase*>(c)->ExitInitializationMode();
     return fmi2Status::fmi2OK;
 }
 fmi2Status fmi2Terminate(fmi2Component c){ return fmi2Status::fmi2OK; }
@@ -298,15 +298,15 @@ fmi2Status fmi2GetRealOutputDerivatives(fmi2Component c, const fmi2ValueReferenc
 fmi2Status fmi2DoStep(fmi2Component c, fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint){ 
     fmi2Status fmi2DoStep_status = fmi2Status::fmi2OK;
     while (true){
-        double candidateStepSize = currentCommunicationPoint + communicationStepSize - reinterpret_cast<FmuComponentBase*>(c)->GetTime();
-        if (candidateStepSize < -1e-10)
+        double requestedDeltaTime = currentCommunicationPoint + communicationStepSize - reinterpret_cast<FmuComponentBase*>(c)->GetTime();
+        if (requestedDeltaTime < -1e-10)
             return fmi2Status::fmi2Warning;
         else
         {
-            if (candidateStepSize < 1e-10)
+            if (requestedDeltaTime < 1e-10)
                 break;
 
-            fmi2DoStep_status = reinterpret_cast<FmuComponentBase*>(c)->DoStep(candidateStepSize);
+            fmi2DoStep_status = reinterpret_cast<FmuComponentBase*>(c)->DoStep(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPoint);
         }
     }
     

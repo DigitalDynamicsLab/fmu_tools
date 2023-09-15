@@ -17,7 +17,9 @@ For those that want to develop their own indipendent class, they are required to
 1. derive from `FmuComponentBase` your own class; please refer to `FmuComponent` for an example;
 2. the derived class should:
    - in the constructor, remember to call `FmuComponentBase::instantiateType(_fmuType)`;
-   - in the constructor, add all the relevant variables of the model to the FMU through `addFmuVariable`; variable measurement units are supported and some default units are already declared;
+   - in the constructor, add all the relevant variables of the model to the FMU through `addFmuVariable`; variable measurement units are supported and some default units are already declared; please also remember that the variables that are here binded to the FMU must be updated during `DoStep` call;
+   - a predefined `time` variable comes pre-binded to the FMU: remember to update it as well;
+   - override `FmuComponentBase::EnterInitializationMode()` and `FmuComponentBase::ExitInitializationMode()`: between these two calls the user should be able to set the parameters of the simulation; after the call to `ExitInitializationMode` the model should be ready to run;
    - override `FmuComponentBase::is_cosimulation_available()` and `FmuComponentBase::is_modelexchange_available()` so that they would return the proper answer;
    - override `DoStep` method of the base class with the problem-specific implementation.
 3. provide the implementation of `fmi2Instantiate_getPointer` similarly to:

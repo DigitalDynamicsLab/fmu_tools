@@ -89,7 +89,9 @@ public:
 
     const std::set<FmuVariable>& GetScalarVariables() const { return scalarVariables; }
 
-    void SetInitializationMode(bool val){ initializationMode = val; }
+    virtual void EnterInitializationMode() = 0;
+
+    virtual void ExitInitializationMode() = 0;
 
     void SetCallbackFunctions(const fmi2CallbackFunctions* functions){ callbackFunctions = *functions; }
 
@@ -101,7 +103,7 @@ public:
         logCategories.insert(cat);
     }
 
-    virtual fmi2Status DoStep(double stepSize = -1){ return fmi2Status::fmi2Error; };
+    virtual fmi2Status DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) = 0;
 
     void ExportModelDescription(std::string path);
 
@@ -167,8 +169,6 @@ protected:
 
     static const std::set<std::string> logCategories_available;
     std::set<std::string> logCategories;
-
-    bool initializationMode = false;
 
     // DefaultExperiment
     fmi2Real startTime = 0;
