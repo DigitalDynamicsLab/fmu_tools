@@ -42,10 +42,14 @@ public:
         q = {0, 0, 0, 3.14159265358979323846/4};
     }
 
+    virtual void EnterInitializationMode() override {}
+
+    virtual void ExitInitializationMode() override {}
+
     virtual ~FmuComponent(){}
 
     /// FMU_ACTION: override DoStep of the base class with the problem-specific implementation
-    virtual fmi2Status DoStep(double _stepSize = -1) override;
+    virtual fmi2Status DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) override;
 
 
     // Problem-specific functions

@@ -53,24 +53,25 @@ void FmuComponent::get_q_t(const std::array<double, 4>& _q, std::array<double, 4
     q_t[3] = _q[2];
 }
 
-fmi2Status FmuComponent::DoStep(double _stepSize) {
-    if (_stepSize<0){
-        sendToLog("Step at time: " + std::to_string(time) + " succeeded.\n", fmi2Status::fmi2Warning, "logStatusWarning");
-        return fmi2Status::fmi2Warning;
+fmi2Status FmuComponent::DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
+
+     while (time < currentCommunicationPoint + communicationStepSize){
+        fmi2Real _stepSize = std::min((currentCommunicationPoint + communicationStepSize - time), std::min(communicationStepSize, stepSize));
+
+        get_q_t(q, k1); // = q_t(q(step, :));
+        get_q_t(q + (0.5*_stepSize)*k1, k2); // = q_t(q(step, :) + stepsize*k1/2);
+        get_q_t(q + (0.5*_stepSize)*k2, k3); // = q_t(q(step, :) + stepsize*k2/2);
+        get_q_t(q + _stepSize*k3, k4); // = q_t(q(step, :) + stepsize*k3);
+
+        q_t = (1.0/6.0)*(k1 + 2.0*k2 + 2.0*k3 + k4);
+        q = q + _stepSize*q_t;
+        time = time + _stepSize;
+
+        sendToLog("Step at time: " + std::to_string(time) + " succeeded.\n", fmi2Status::fmi2OK, "logAll");
+
     }
 
-    _stepSize = std::min(_stepSize, stepSize);
 
-    get_q_t(q, k1); // = q_t(q(step, :));
-    get_q_t(q + (0.5*_stepSize)*k1, k2); // = q_t(q(step, :) + stepsize*k1/2);
-    get_q_t(q + (0.5*_stepSize)*k2, k3); // = q_t(q(step, :) + stepsize*k2/2);
-    get_q_t(q + _stepSize*k3, k4); // = q_t(q(step, :) + stepsize*k3);
-
-    q_t = (1.0/6.0)*(k1 + 2.0*k2 + 2.0*k3 + k4);
-    q = q + _stepSize*q_t;
-    time = time + _stepSize;
-
-    sendToLog("Step at time: " + std::to_string(time) + " succeeded.\n", fmi2Status::fmi2OK, "logAll");
 
     return fmi2Status::fmi2OK;
 }

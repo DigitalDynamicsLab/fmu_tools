@@ -296,21 +296,9 @@ fmi2Status fmi2SetRealInputDerivatives(fmi2Component c, const fmi2ValueReference
 fmi2Status fmi2GetRealOutputDerivatives(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer order[], fmi2Real value[]){ return fmi2Status::fmi2OK; }
 
 fmi2Status fmi2DoStep(fmi2Component c, fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint){ 
-    fmi2Status fmi2DoStep_status = fmi2Status::fmi2OK;
-    while (true){
-        double requestedDeltaTime = currentCommunicationPoint + communicationStepSize - reinterpret_cast<FmuComponentBase*>(c)->GetTime();
-        if (requestedDeltaTime < -1e-10)
-            return fmi2Status::fmi2Warning;
-        else
-        {
-            if (requestedDeltaTime < 1e-10)
-                break;
-
-            fmi2DoStep_status = reinterpret_cast<FmuComponentBase*>(c)->DoStep(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPoint);
-        }
-    }
     
-    return fmi2DoStep_status;
+    return reinterpret_cast<FmuComponentBase*>(c)->DoStep(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPoint);
+
 }
 
 fmi2Status fmi2CancelStep(fmi2Component c){ return fmi2Status::fmi2OK; }
