@@ -104,6 +104,7 @@ IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
 ENDIF()
 
 target_include_directories(FmuComponent PRIVATE "variant")
+target_include_directories(FmuComponent PRIVATE "${CMAKE_SOURCES_DIR}")
 target_include_directories(FmuComponent PUBLIC "fmi2_headers")
 target_include_directories(FmuComponent PRIVATE "rapidxml")
 target_compile_definitions(FmuComponent PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
