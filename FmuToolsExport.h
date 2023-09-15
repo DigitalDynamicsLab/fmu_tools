@@ -13,6 +13,15 @@
 #include <unordered_map>
 #include <unordered_set>
 
+//// for GUID random generation
+//#include <sstream>
+//#include <random>
+//#include <climits>
+//#include <functional>
+
+
+
+
 
 #include "variant/variant_guard.hpp"
 
@@ -153,7 +162,7 @@ protected:
     }
 
     std::string instanceName;
-    fmi2String fmuGUID;
+    std::string fmuGUID;
     std::string resourceLocation;
 
     static const std::set<std::string> logCategories_available;
@@ -267,6 +276,34 @@ protected:
     }
 
 };
+
+
+
+//std::string GenerateGUID(){
+//    auto generate_hex = [](const unsigned int len) -> std::string {
+//        std::stringstream ss;
+//        auto random_char = []() -> unsigned char {
+//            std::random_device rd;
+//            std::mt19937 gen(rd()); 
+//            std::uniform_int_distribution<> dis(0, 255);
+//            return static_cast<unsigned char>(dis(gen));
+//        };
+//
+//        for(auto i = 0; i < len; i++) {
+//            auto rc = random_char();
+//            std::stringstream hexstream;
+//            hexstream << std::hex << int(rc);
+//            auto hex = hexstream.str(); 
+//            ss << (hex.length() < 2 ? '0' + hex : hex);
+//        }        
+//        return ss.str();
+//    };
+//
+//    std::string fmuGUID = "{" + generate_hex(8) + "-" + generate_hex(4)+ "-" + generate_hex(4)+ "-" + generate_hex(4)+ "-" + generate_hex(12) + "}";
+//
+//    return fmuGUID;
+//}
+
 
 FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID);
 
