@@ -116,7 +116,7 @@ public:
         for (size_t s = 0; s<nvr; ++s){
             auto it = this->findByValrefType(vr[s], vartype);
             if (it != this->scalarVariables.end()){
-                T* val_ptr;
+                T* val_ptr = nullptr;
                 it->GetPtr(&val_ptr);
                 value[s] = *val_ptr;
             }
@@ -131,7 +131,7 @@ public:
     for (size_t s = 0; s<nvr; ++s){
         auto it = this->findByValrefType(vr[s], vartype);
         if (it != this->scalarVariables.end()){
-            T* val_ptr;
+            T* val_ptr = nullptr;
             it->GetPtr(&val_ptr);
             *val_ptr = value[s];
         }

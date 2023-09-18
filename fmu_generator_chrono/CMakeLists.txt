@@ -79,9 +79,6 @@ target_link_options(FmuComponent PUBLIC ${CHRONO_LINKER_FLAGS})
 target_link_libraries(FmuComponent ${CHRONO_LIBRARIES})
 
 
-# set(RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-# add_DLL_copy_command("${CHRONO_DLLS}")
-
 string(REPLACE ";" "\" \"" CHRONO_DLLS_SPACEDELIM "${CHRONO_DLLS}")
 SET(CHRONO_DLLS_SPACEDELIM "\"${CHRONO_DLLS_SPACEDELIM}\"")
 add_custom_target(COPY_DEPENDENCIES
@@ -90,3 +87,4 @@ add_custom_target(COPY_DEPENDENCIES
 )
 
 add_dependencies(fmu_modeldescription_generator COPY_DEPENDENCIES)
+add_dependencies(PACK_FMU COPY_DEPENDENCIES)

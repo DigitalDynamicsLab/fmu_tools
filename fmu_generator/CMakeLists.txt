@@ -97,15 +97,19 @@ MESSAGE(STATUS "FMU_GUID: ${FMU_GUID}")
 # -------------------------------------------------
 # Target: compiles FMU source code
 # -------------------------------------------------
-add_library(FmuComponent SHARED FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariants.h)
 
 set(USE_EXTERNAL_FMU_COMPONENT_SOURCES OFF CACHE BOOL "Let external users to add problem-specific sources.")
+SET(FMU_SOURCES FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariants.h)
 
 MARK_AS_ADVANCED(USE_EXTERNAL_FMU_COMPONENT_SOURCES)
 IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
     MESSAGE("Using default sources for FmuComponent target.")
-    target_sources(FmuComponent PRIVATE FmuComponent.h FmuComponent.cpp)
+    LIST(APPEND FMU_SOURCES FmuComponent.h FmuComponent.cpp)
 ENDIF()
+
+SET(FMU_SOURCES ${FMU_SOURCES} PARENT_SCOPE)
+add_library(FmuComponent SHARED ${FMU_SOURCES})
+
 
 target_include_directories(FmuComponent PRIVATE "variant")
 target_include_directories(FmuComponent PRIVATE "${CMAKE_SOURCES_DIR}")
