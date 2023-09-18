@@ -198,16 +198,6 @@ endif()
 add_dependencies(fmu_host PACK_FMU)
 
 
-
-
-if(NOT PROJECT_IS_TOP_LEVEL)
-    # make them available to fetcher projects
-    SET(FMI_PLATFORM ${FMI_PLATFORM} PARENT_SCOPE)
-    SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_RUNTIME_OUTPUT_DIRECTORY}" PARENT_SCOPE)
-    SET(FMU_SOURCES ${FMU_SOURCES} PARENT_SCOPE)
-
-endif()
-
 # -------------------------------------------------
 # Target that runs the compiled and extracted fmu
 # -------------------------------------------------
@@ -219,6 +209,7 @@ IF (BUILD_TESTING)
     # # -------------------------------------------------
     list(FIND TESTING_ENABLED_OS ${FMI_PLATFORM} ENABLE_TESTING_FLAG)
     IF(ENABLE_TESTING_FLAG EQUAL 0)
+        SET(TESTING_ENABLED ON)
         MESSAGE(STATUS "Testing enabled.")
         ## Call fmuChecker on the FMU, parse its output
         SET(FMUCHECKER_LOG "${FMU_MODEL_IDENTIFIER}_log.txt")
@@ -244,7 +235,7 @@ IF (BUILD_TESTING)
 
         add_test(build_test_parseFmuChecker
             "${CMAKE_COMMAND}"
-            --build "${CMAKE_BINARY_DIR}"
+            --build "${CMAKE_CURRENT_BINARY_DIR}"
             --target test_parseFmuChecker
         )
 
@@ -254,5 +245,18 @@ IF (BUILD_TESTING)
         MESSAGE(STATUS "Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
     ENDIF()
 ELSE()
+    SET(TESTING_ENABLED OFF)
     MESSAGE(STATUS "Testing disabled.")
 ENDIF(BUILD_TESTING)
+
+
+# -------------------------------------------------
+# Propagate variable to upper levels
+# -------------------------------------------------
+if(NOT PROJECT_IS_TOP_LEVEL)
+    # make them available to fetcher projects
+    SET(FMI_PLATFORM ${FMI_PLATFORM} PARENT_SCOPE)
+    SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_RUNTIME_OUTPUT_DIRECTORY}" PARENT_SCOPE)
+    SET(FMU_SOURCES ${FMU_SOURCES} PARENT_SCOPE)
+    SET(TESTING_ENABLED ${TESTING_ENABLED} PARENT_SCOPE)
+endif()

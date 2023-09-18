@@ -55,7 +55,6 @@ FetchContent_Declare(
 set(FMU_MODEL_IDENTIFIER "myChronoFmuIdentifier" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
 # set(BUILD_TESTING OFF)
 set(BUILD_TESTING ON CACHE BOOL "Enable testing.")
-
 set(USE_EXTERNAL_FMU_COMPONENT_SOURCES ON CACHE INTERNAL "")
 set(ENABLE_GUID_CHECK ON)
 
@@ -86,8 +85,6 @@ endif()
 
 target_sources(fmu_host PRIVATE fmu_host.cpp)
 
-
-
 # Copy dependencies
 string(REPLACE ";" "\" \"" CHRONO_DLLS_SPACEDELIM "${CHRONO_DLLS}")
 SET(CHRONO_DLLS_SPACEDELIM "\"${CHRONO_DLLS_SPACEDELIM}\"")
@@ -98,3 +95,9 @@ add_custom_target(COPY_DEPENDENCIES
 
 add_dependencies(fmu_modeldescription_generator COPY_DEPENDENCIES)
 add_dependencies(PACK_FMU COPY_DEPENDENCIES)
+
+
+if(TESTING_ENABLED)
+  ## enable the testing
+  enable_testing()
+endif()
