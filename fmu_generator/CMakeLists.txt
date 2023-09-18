@@ -1,5 +1,5 @@
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.21)
 
 
 project(fmu_generator)
@@ -72,9 +72,7 @@ endif()
 
 SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${FMI_PLATFORM}/$<0:>")
 
-# make them available to fetcher projects
-SET(FMI_PLATFORM ${FMI_PLATFORM} PARENT_SCOPE)
-SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_RUNTIME_OUTPUT_DIRECTORY}" PARENT_SCOPE)
+
 
 
 # -------------------------------------------------
@@ -107,7 +105,6 @@ IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
     LIST(APPEND FMU_SOURCES FmuComponent.h FmuComponent.cpp)
 ENDIF()
 
-SET(FMU_SOURCES ${FMU_SOURCES} PARENT_SCOPE)
 add_library(FmuComponent SHARED ${FMU_SOURCES})
 
 
@@ -178,7 +175,7 @@ add_dependencies(PACK_FMU FmuComponent)
 
 
 # -------------------------------------------------
-# Target that runs the compiled and extracted fmu
+# Target that runs the compiled fmu
 # -------------------------------------------------
 add_executable(fmu_host FmuToolsImport.hpp)
 IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
@@ -198,8 +195,22 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_
     target_link_libraries(fmu_host PRIVATE stdc++fs)
     target_link_libraries(fmu_host PRIVATE ${CMAKE_DL_LIBS})
 endif()
+add_dependencies(fmu_host PACK_FMU)
 
 
+
+
+if(NOT PROJECT_IS_TOP_LEVEL)
+    # make them available to fetcher projects
+    SET(FMI_PLATFORM ${FMI_PLATFORM} PARENT_SCOPE)
+    SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_RUNTIME_OUTPUT_DIRECTORY}" PARENT_SCOPE)
+    SET(FMU_SOURCES ${FMU_SOURCES} PARENT_SCOPE)
+
+endif()
+
+# -------------------------------------------------
+# Target that runs the compiled and extracted fmu
+# -------------------------------------------------
 set(BUILD_TESTING ON CACHE BOOL "Enable testing.")
 
 IF (BUILD_TESTING)
@@ -219,7 +230,7 @@ IF (BUILD_TESTING)
         ## call the execution of fmuChecker
         add_custom_command(TARGET test_parseFmuChecker
                         PRE_BUILD
-                        COMMAND "${CMAKE_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" "-e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\""
+                        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" "-e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\""
                         COMMENT "Testing FMU with fmuChecker")
 
         ## enable the testing
