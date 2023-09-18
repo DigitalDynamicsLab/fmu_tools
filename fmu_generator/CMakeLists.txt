@@ -72,6 +72,10 @@ endif()
 
 SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${FMI_PLATFORM}/$<0:>")
 
+# make them available to fetcher projects
+SET(FMI_PLATFORM ${FMI_PLATFORM} PARENT_SCOPE)
+SET(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_RUNTIME_OUTPUT_DIRECTORY}" PARENT_SCOPE)
+
 
 # -------------------------------------------------
 # Generated GUID
