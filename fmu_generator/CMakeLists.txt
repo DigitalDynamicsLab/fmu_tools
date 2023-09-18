@@ -180,7 +180,10 @@ add_dependencies(PACK_FMU FmuComponent)
 # -------------------------------------------------
 # Target that runs the compiled and extracted fmu
 # -------------------------------------------------
-add_executable(fmu_host fmu_host.cpp FmuToolsImport.hpp)
+add_executable(fmu_host FmuToolsImport.hpp)
+IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
+    target_sources(fmu_host PRIVATE fmu_host.cpp)
+ENDIF()
 target_include_directories(fmu_host PUBLIC "fmi2_headers")
 target_include_directories(fmu_host PRIVATE "rapidxml")
 target_include_directories(fmu_host PRIVATE "miniz-cpp")

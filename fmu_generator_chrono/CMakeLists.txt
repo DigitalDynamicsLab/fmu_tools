@@ -78,7 +78,15 @@ target_compile_options(FmuComponent PUBLIC ${CHRONO_CXX_FLAGS})
 target_link_options(FmuComponent PUBLIC ${CHRONO_LINKER_FLAGS})
 target_link_libraries(FmuComponent ${CHRONO_LIBRARIES})
 
+IF (NOT EXISTS "${CMAKE_SOURCE_DIR}/fmu_host.cpp")
+  file(COPY_FILE "${FMU_GENERATOR_DIR}/fmu_host.cpp" "${CMAKE_SOURCE_DIR}/fmu_host.cpp")
+endif()
 
+target_sources(fmu_host PRIVATE fmu_host.cpp)
+
+
+
+# Copy dependencies
 string(REPLACE ";" "\" \"" CHRONO_DLLS_SPACEDELIM "${CHRONO_DLLS}")
 SET(CHRONO_DLLS_SPACEDELIM "\"${CHRONO_DLLS_SPACEDELIM}\"")
 add_custom_target(COPY_DEPENDENCIES
