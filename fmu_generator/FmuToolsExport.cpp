@@ -154,7 +154,8 @@ void FmuComponentBase::ExportModelDescription(std::string path){
         modelVarsNode->append_node(scalarVarNode);
 
         rapidxml::xml_node<>* unitNode = doc_ptr->allocate_node(rapidxml::node_element, Type_strings.at(it->GetType()).c_str());
-        unitNode->append_attribute(doc_ptr->allocate_attribute("unit", it->GetUnitName().c_str()));
+        if (it->GetType() == FmuVariable::Type::FMU_REAL)
+            unitNode->append_attribute(doc_ptr->allocate_attribute("unit", it->GetUnitName().c_str()));
         if (it->HasStartVal()){
             stringbuf.push_back(it->GetStartVal());
             unitNode->append_attribute(doc_ptr->allocate_attribute("start", stringbuf.back().c_str()));

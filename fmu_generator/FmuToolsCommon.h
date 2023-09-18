@@ -166,13 +166,8 @@ public:
         return has_start;
     }
 
-    template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
+    template <typename T>
     void SetStartValIfRequired(T startval){
-        if (required_start)
-            SetStartVal(startval);
-    }
-
-    void SetStartValIfRequired(fmi2String startval){
         if (required_start)
             SetStartVal(startval);
     }
@@ -231,33 +226,54 @@ public:
     Type GetType() const { return type;}
 
     void SetCausalityVariabilityInitial(const std::string& _causality, const std::string& _variability, const std::string& _initial){
+
+        // pre-check of meaningful requests
         assert(
-            (causality.empty() ||
-            !causality.compare("parameter") ||
-            !causality.compare("calculatedParameter") ||
-            !causality.compare("input") ||
-            !causality.compare("output") ||
-            !causality.compare("local") ||
-            !causality.compare("independent"))
+            (_causality.empty() ||
+            !_causality.compare("parameter") ||
+            !_causality.compare("calculatedParameter") ||
+            !_causality.compare("input") ||
+            !_causality.compare("output") ||
+            !_causality.compare("local") ||
+            !_causality.compare("independent"))
             && "Requested bad formatted \"causality\"");
 
+        causality = _causality;
+
+
         assert(
-            (variability.empty() ||
-            !variability.compare("constant") ||
-            !variability.compare("fixed") ||
-            !variability.compare("tunable") ||
-            !variability.compare("discrete") ||
-            !variability.compare("continuous"))
+            (_variability.empty() ||
+            !_variability.compare("constant") ||
+            !_variability.compare("fixed") ||
+            !_variability.compare("tunable") ||
+            !_variability.compare("discrete") ||
+            !_variability.compare("continuous"))
             && "Requested bad formatted \"variability\"");
 
-        // TODO: automatically set initial to something based on table pag 51
+        variability = _variability;
+
 
         assert(
-            (initial.empty() ||
-            !initial.compare("exact") ||
-            !initial.compare("approx") ||
-            !initial.compare("calculated"))
+            (_initial.empty() ||
+            !_initial.compare("exact") ||
+            !_initial.compare("approx") ||
+            !_initial.compare("calculated"))
             && "Requested bad formatted \"initial\"");
+
+        initial = _initial;
+
+
+        // set default value for "initial" if empty: reference FMIReference 2.0.2 - Section 2.2.7 Definition of Model Variables
+        if (initial.empty()){
+            if(!variability.compare("constant") && (!causality.compare("output") || !causality.compare("local")))
+                initial = "exact";
+            if((!variability.compare("fixed") || !variability.compare("tunable")) && !causality.compare("parameter"))
+                initial = "exact";
+            if((!variability.compare("fixed") || !variability.compare("tunable")) && (!causality.compare("calculatedParameter") || !causality.compare("local")))
+                initial = "calculated";
+            if((!variability.compare("discrete") || !variability.compare("continuous")) && (!causality.compare("output") || !causality.compare("local")))
+                initial = "calculated";
+        }
 
 
         if (!initial.compare("calculated") || !causality.compare("independent")){
@@ -270,9 +286,6 @@ public:
             required_start = true;
         }
 
-        causality = _causality;
-        variability = _variability;
-        initial = _initial;
 
     }
 
