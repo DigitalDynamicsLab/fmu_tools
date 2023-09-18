@@ -65,10 +65,10 @@ void FmuComponent::ExitInitializationMode() {
     updateVarsCallbacks.push_back([this](){ x_t = this->sys.SearchBodyID(10)->GetPos_dt().x(); });
     updateVarsCallbacks.push_back([this](){ x = this->sys.SearchBodyID(10)->GetPos().x(); });
 
-    updateVarsCallbacks.push_back([this](){
-        ChCoordsys<> rel_ref = std::dynamic_pointer_cast<ChLinkRevolute>(this->sys.SearchLink("cart_prism"))->GetLinkRelativeCoords();
-        this->theta = std::atan2(rel_ref.rot.GetXaxis() ^ ChVector<>(0,1,0), rel_ref.rot.GetXaxis() ^ ChVector<>(1,0,0));
-        });
+    //updateVarsCallbacks.push_back([this](){
+    //    ChCoordsys<> rel_ref = std::dynamic_pointer_cast<ChLinkRevolute>(this->sys.SearchLink("cart_prism"))->GetLinkRelativeCoords();
+    //    this->theta = std::atan2(rel_ref.rot.GetXaxis() ^ ChVector<>(0,1,0), rel_ref.rot.GetXaxis() ^ ChVector<>(1,0,0));
+    //    });
 };
 
 fmi2Status FmuComponent::DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
@@ -77,9 +77,11 @@ fmi2Status FmuComponent::DoStep(fmi2Real currentCommunicationPoint, fmi2Real com
         fmi2Real _stepSize = std::min((currentCommunicationPoint + communicationStepSize - time), std::min(communicationStepSize, stepSize));
 
         sys.DoStepDynamics(_stepSize);
-        sendToLog("Step at time: " + std::to_string(time) + " succeeded.\n", fmi2Status::fmi2OK, "logAll");
-
+        sendToLog("Step at time: " + std::to_string(time) + " with timestep: " + std::to_string(_stepSize) + "ms succeeded.\n", fmi2Status::fmi2OK, "logAll");
         updateVars();
+
+        time = time + _stepSize;
+
 
     }
     
