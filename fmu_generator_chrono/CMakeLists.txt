@@ -53,7 +53,9 @@ FetchContent_Declare(
 )
 
 set(FMU_MODEL_IDENTIFIER "myChronoFmuIdentifier" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
-set(BUILD_TESTING OFF)
+# set(BUILD_TESTING OFF)
+set(BUILD_TESTING ON CACHE BOOL "Enable testing.")
+
 set(USE_EXTERNAL_FMU_COMPONENT_SOURCES ON CACHE INTERNAL "")
 set(ENABLE_GUID_CHECK ON)
 
