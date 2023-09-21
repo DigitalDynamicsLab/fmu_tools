@@ -1,6 +1,8 @@
 
 cmake_minimum_required(VERSION 3.21)
 
+cmake_policy(SET CMP0091 NEW) # MSVC runtime library flags are selected by an abstraction i.e. CMAKE_MSVC_RUNTIME_LIBRARY
+
 
 project(fmu_generator)
 SET(CMAKE_SHARED_LIBRARY_PREFIX "")
@@ -212,8 +214,8 @@ IF (BUILD_TESTING)
         SET(TESTING_ENABLED ON)
         MESSAGE(STATUS "Testing enabled.")
         ## Call fmuChecker on the FMU, parse its output
-        SET(FMUCHECKER_LOG "${FMU_MODEL_IDENTIFIER}_log.txt")
-        SET(FMUCHECKER_RESULTS "${FMU_MODEL_IDENTIFIER}_results.txt")
+        SET(FMUCHECKER_LOG "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_log.txt")
+        SET(FMUCHECKER_RESULTS "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_results.txt")
         add_executable(test_parseFmuChecker test_parseFmuChecker.cpp)
         target_compile_definitions(test_parseFmuChecker PRIVATE FMUCHECKER_LOG="${FMUCHECKER_LOG}")
         add_dependencies(test_parseFmuChecker PACK_FMU)
@@ -231,11 +233,11 @@ IF (BUILD_TESTING)
         ## 'build_test_parseFmuChecker' is set as a requirement of type SETUP i.e. called before the FIXTURES_REQUIRED target
         ## 'TestFmuComponent' is the one requiring the other targets
         add_test(NAME TestFmuComponent
-                COMMAND test_parseFmuChecker)
+                 COMMAND test_parseFmuChecker)
 
         add_test(build_test_parseFmuChecker
             "${CMAKE_COMMAND}"
-            --build "${CMAKE_CURRENT_BINARY_DIR}"
+            --build "${CMAKE_BINARY_DIR}"
             --target test_parseFmuChecker
         )
 
