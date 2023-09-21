@@ -25,9 +25,9 @@ FmuComponent::FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2Stri
     addFmuVariable(&theta_tt, "theta_tt", FmuVariable::Type::FMU_REAL, "rad/s2", "pendulum ang acceleration");
     addFmuVariable(&theta_t,   "theta_t",  FmuVariable::Type::FMU_REAL, "rad/s",  "pendulum ang velocity");
     addFmuVariable(&theta,   "theta",    FmuVariable::Type::FMU_REAL, "rad",    "pendulum angle");
-    auto& fmu_pendulum_length = addFmuVariable(&pendulum_length,  "pendulum_length", FmuVariable::Type::FMU_REAL, "m",  "pendulum length", "parameter", "fixed");
-    auto& fmu_cart_mass =   addFmuVariable(&cart_mass,    "cart_mass",   FmuVariable::Type::FMU_REAL, "kg", "pendulum mass",   "parameter", "fixed");
-    auto& fmu_pendulum_mass =   addFmuVariable(&pendulum_mass,    "pendulum_mass",   FmuVariable::Type::FMU_REAL, "kg", "cart mass",       "parameter", "fixed");
+    auto& fmu_pendulum_length = addFmuVariable(&pendulum_length,  "pendulum_length", FmuVariable::Type::FMU_REAL, "m",  "pendulum length", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    auto& fmu_cart_mass =   addFmuVariable(&cart_mass,    "cart_mass",   FmuVariable::Type::FMU_REAL, "kg", "pendulum mass", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    auto& fmu_pendulum_mass =   addFmuVariable(&pendulum_mass,    "pendulum_mass",   FmuVariable::Type::FMU_REAL, "kg", "cart mass", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
 };
 

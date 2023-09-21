@@ -58,6 +58,8 @@ struct UnitDefinitionType{
 
 
 
+
+
 /// Class holding a reference to a single FMU variable
 /// Note that this is retrieved from the information from the XML
 
@@ -75,6 +77,32 @@ public:
         FMU_STRING = 3,
         FMU_UNKNOWN = 4
     };
+
+    enum class CausalityType{
+        parameter,
+        calculatedParameter,
+        input,
+        output,
+        local,
+        independent
+    };
+
+    enum class VariabilityType{
+        constant,
+        fixed,
+        tunable,
+        discrete,
+        continuous
+    };
+
+    enum class InitialType{
+        none,
+        exact,
+        approx,
+        calculated
+    };
+    // TODO: DARIOM check if an additional InitialType::auto is needed
+
 
     FmuVariable() : FmuVariable("", FmuVariable::Type::FMU_REAL){}
 
@@ -97,8 +125,82 @@ public:
 
     }
 
-    FmuVariable(const std::string& _name, FmuVariable::Type _type): name(_name), type(_type)
+    FmuVariable(
+        const std::string& _name,
+        FmuVariable::Type _type,
+        CausalityType _causality = CausalityType::local,
+        VariabilityType _variability = VariabilityType::continuous,
+        InitialType _initial = InitialType::none):
+        name(_name),
+        type(_type),
+        causality(_causality),
+        variability(_variability),
+        initial(_initial)
     {
+        // set default value for "initial" if empty: reference FMIReference 2.0.2 - Section 2.2.7 Definition of Model Variables
+
+        // (A)
+        if((variability == VariabilityType::constant && (causality == CausalityType::output || causality == CausalityType::local)) ||
+            (variability == VariabilityType::fixed || variability == VariabilityType::tunable) && causality == CausalityType::parameter){
+            if (initial == InitialType::none)
+                initial = InitialType::exact;
+            else
+                if (initial != InitialType::exact)
+                    throw std::runtime_error("initial not set properly.");
+        }
+        // (B)
+        else if((variability == VariabilityType::fixed || variability == VariabilityType::tunable) && (causality == CausalityType::calculatedParameter || causality == CausalityType::local)){
+            if (initial == InitialType::none)
+                initial = InitialType::calculated;
+            else
+                if (initial != InitialType::approx && initial != InitialType::calculated)
+                    throw std::runtime_error("initial not set properly.");
+        }
+        // (C)
+        else if((variability == VariabilityType::discrete || variability == VariabilityType::continuous) && (causality == CausalityType::output || causality == CausalityType::local)){
+            if (initial == InitialType::none)
+                initial = InitialType::calculated;
+        }
+
+        // From FMI Reference
+        // (1) If causality = "independent", it is neither allowed to define a value for initial nor a value for start.
+        // (2) If causality = "input", it is not allowed to define a value for initial and a value for start must be defined.
+        // (3) [not relevant] If (C) and initial = "exact", then the variable is explicitly defined by its start value in Initialization Mode
+        if (causality == CausalityType::independent && initial != InitialType::none)
+            throw std::runtime_error("If causality = 'independent', it is neither allowed to define a value for initial nor a value for start.");
+
+        if (causality == CausalityType::input && initial != InitialType::none)
+            throw std::runtime_error("If causality = 'input', it is not allowed to define a value for initial and a value for start must be defined.");
+
+        // From FMI Reference
+        // If initial = 'exact' or 'approx', or causality = 'input',       a start value MUST be provided.
+        // If initial = 'calculated',        or causality = 'independent', a start value CANNOT be provided. 
+        if (initial == InitialType::calculated || causality == CausalityType::independent){
+            allowed_start = false;
+            required_start = false;
+        }
+
+        if (initial == InitialType::exact || initial == InitialType::approx || causality == CausalityType::input){
+            allowed_start = true;
+            required_start = true;
+        }
+
+
+        // Incompatible variability/causality settings
+        // (a)
+        if (variability == VariabilityType::constant && (causality == CausalityType::parameter || causality == CausalityType::calculatedParameter || causality == CausalityType::input))
+            throw std::runtime_error("constants always have their value already set, thus their causality can be only 'output' or 'local'");
+        // (b)
+        if ((variability == VariabilityType::discrete || variability == VariabilityType::continuous) && (causality == CausalityType::parameter || causality == CausalityType::calculatedParameter))
+            throw std::runtime_error("parameters and calculatedParameters cannot be discrete nor continuous, since the latters mean that they could change over time");
+        // (c)
+        if (causality == CausalityType::independent && variability != VariabilityType::continuous)
+            throw std::runtime_error("For an 'independent' variable only variability = 'continuous' makes sense.");
+        // (d) + (e)
+        if (causality == CausalityType::input && (variability == VariabilityType::fixed || variability == VariabilityType::tunable))
+            throw std::runtime_error("A fixed or tunable 'input'|'output' have exactly the same properties as a fixed or tunable parameter. For simplicity, only fixed and tunable parameters|calculatedParameters shall be defined.");
+
+
     }
 
 
@@ -107,7 +209,7 @@ public:
     }
 
     bool operator==(const FmuVariable& other) const {
-        // according to FMI Reference there can exist two different variables with same type and same valueReference;
+        // according to FMI Reference can exist two different variables with same type and same valueReference;
         // they are called "alias" thus they should be allowed but not considered equal
         return this->name == other.name;
     }
@@ -173,7 +275,7 @@ public:
     }
 
 
-    std::string GetStartVal() const {
+    std::string GetStartVal_toString() const {
         if (const fmi2Real* start_ptr = varns::get_if<fmi2Real>(&this->start))
             return std::to_string(*start_ptr);
         if (const fmi2Integer* start_ptr = varns::get_if<fmi2Integer>(&this->start))
@@ -214,9 +316,9 @@ public:
     }
 
     const inline std::string& GetName() const { return name;}
-    const inline std::string& GetCausality() const { return causality;}
-    const inline std::string& GetVariability() const { return variability;}
-    const inline std::string& GetInitial() const { return initial;}
+    inline CausalityType GetCausality() const { return causality;}
+    inline VariabilityType GetVariability() const { return variability;}
+    inline InitialType GetInitial() const { return initial;}
     const inline std::string& GetDescription() const { return description;}
     void SetDescription(const std::string& _description) { description = _description;}
     const inline fmi2ValueReference GetValueReference() const { return valueReference;}
@@ -225,70 +327,6 @@ public:
     void SetUnitName(const std::string& _unitname) { unitname = _unitname;}
     Type GetType() const { return type;}
 
-    void SetCausalityVariabilityInitial(const std::string& _causality, const std::string& _variability, const std::string& _initial){
-
-        // pre-check of meaningful requests
-        assert(
-            (_causality.empty() ||
-            !_causality.compare("parameter") ||
-            !_causality.compare("calculatedParameter") ||
-            !_causality.compare("input") ||
-            !_causality.compare("output") ||
-            !_causality.compare("local") ||
-            !_causality.compare("independent"))
-            && "Requested bad formatted \"causality\"");
-
-        causality = _causality;
-
-
-        assert(
-            (_variability.empty() ||
-            !_variability.compare("constant") ||
-            !_variability.compare("fixed") ||
-            !_variability.compare("tunable") ||
-            !_variability.compare("discrete") ||
-            !_variability.compare("continuous"))
-            && "Requested bad formatted \"variability\"");
-
-        variability = _variability;
-
-
-        assert(
-            (_initial.empty() ||
-            !_initial.compare("exact") ||
-            !_initial.compare("approx") ||
-            !_initial.compare("calculated"))
-            && "Requested bad formatted \"initial\"");
-
-        initial = _initial;
-
-
-        // set default value for "initial" if empty: reference FMIReference 2.0.2 - Section 2.2.7 Definition of Model Variables
-        if (initial.empty()){
-            if(!variability.compare("constant") && (!causality.compare("output") || !causality.compare("local")))
-                initial = "exact";
-            if((!variability.compare("fixed") || !variability.compare("tunable")) && !causality.compare("parameter"))
-                initial = "exact";
-            if((!variability.compare("fixed") || !variability.compare("tunable")) && (!causality.compare("calculatedParameter") || !causality.compare("local")))
-                initial = "calculated";
-            if((!variability.compare("discrete") || !variability.compare("continuous")) && (!causality.compare("output") || !causality.compare("local")))
-                initial = "calculated";
-        }
-
-
-        if (!initial.compare("calculated") || !causality.compare("independent")){
-            allowed_start = false;
-            required_start = false;
-        }
-
-        if (!initial.compare("exact") || !initial.compare("approx") || !causality.compare("input")){
-            allowed_start = true;
-            required_start = true;
-        }
-
-
-    }
-
 
 
 protected:
@@ -296,9 +334,9 @@ protected:
     std::string name;
     fmi2ValueReference valueReference = 0;
     std::string unitname = "1";
-    std::string causality = "";
-    std::string variability = "";
-    std::string initial = "";
+    CausalityType causality;
+    VariabilityType variability;
+    InitialType initial;
     std::string description = "";
 
 

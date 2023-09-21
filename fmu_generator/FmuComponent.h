@@ -26,17 +26,16 @@ public:
         addFmuVariable(&q_t[2], "theta_tt", FmuVariable::Type::FMU_REAL, "rad/s2", "pendulum ang acceleration");
         addFmuVariable(&q[2],   "theta_t",  FmuVariable::Type::FMU_REAL, "rad/s",  "pendulum ang velocity");
         addFmuVariable(&q[3],   "theta",    FmuVariable::Type::FMU_REAL, "rad",    "pendulum angle");
-        auto fmu_len = addFmuVariable(&len,  "len", FmuVariable::Type::FMU_REAL, "m",  "pendulum length", "parameter", "fixed");
-        auto fmu_m =   addFmuVariable(&m,    "m",   FmuVariable::Type::FMU_REAL, "kg", "pendulum mass",   "parameter", "fixed");
-        auto fmu_M =   addFmuVariable(&M,    "M",   FmuVariable::Type::FMU_REAL, "kg", "cart mass",       "parameter", "fixed");
+        auto fmu_len = addFmuVariable(&len,  "len", FmuVariable::Type::FMU_REAL, "m",  "pendulum length", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+        auto fmu_m =   addFmuVariable(&m,    "m",   FmuVariable::Type::FMU_REAL, "kg", "pendulum mass",   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+        auto fmu_M =   addFmuVariable(&M,    "M",   FmuVariable::Type::FMU_REAL, "kg", "cart mass",       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
         // FMU_ACTION: start value will be automatically grabbed from 'len' during addFmuVariable;
         // use the following statement only if the start value is not already in 'len' when called addFmuVariable
         //fmu_len.SetStartVal(len);
 
 
-        auto fmu_approximateOn = addFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::FMU_BOOLEAN, "1", "use approximated model", "parameter", "fixed");
-        fmu_approximateOn.SetStartVal(fmi2False);
+        auto fmu_approximateOn = addFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::FMU_BOOLEAN, "1", "use approximated model", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
         // Additional commands
         q = {0, 0, 0, 3.14159265358979323846/4};

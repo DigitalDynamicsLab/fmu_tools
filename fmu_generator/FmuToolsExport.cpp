@@ -138,6 +138,29 @@ void FmuComponentBase::ExportModelDescription(std::string path){
         {FmuVariable::Type::FMU_STRING, "String"}
     };
 
+    const std::unordered_map<FmuVariable::InitialType, std::string> InitialType_strings = {
+        {FmuVariable::InitialType::exact, "exact"},
+        {FmuVariable::InitialType::approx, "approx"},
+        {FmuVariable::InitialType::calculated, "calculated"}
+    };
+
+    const std::unordered_map<FmuVariable::VariabilityType, std::string> VariabilityType_strings = {
+        {FmuVariable::VariabilityType::constant, "constant"},
+        {FmuVariable::VariabilityType::fixed, "fixed"},
+        {FmuVariable::VariabilityType::tunable, "tunable"},
+        {FmuVariable::VariabilityType::discrete, "discrete"},
+        {FmuVariable::VariabilityType::continuous, "continuous"}
+    };
+
+    const std::unordered_map<FmuVariable::CausalityType, std::string> CausalityType_strings = {
+        {FmuVariable::CausalityType::parameter, "parameter"},
+        {FmuVariable::CausalityType::calculatedParameter, "calculatedParameter"},
+        {FmuVariable::CausalityType::input, "input"},
+        {FmuVariable::CausalityType::output, "output"},
+        {FmuVariable::CausalityType::local, "local"},
+        {FmuVariable::CausalityType::independent, "independent"}
+    };
+
 
     for (std::set<FmuVariable>::const_iterator it = scalarVariables.begin(); it!=scalarVariables.end(); ++it){
         // Create a ScalarVariable node
@@ -148,16 +171,16 @@ void FmuComponentBase::ExportModelDescription(std::string path){
         scalarVarNode->append_attribute(doc_ptr->allocate_attribute("valueReference", valueref_str.back().c_str()));
 
         if (!it->GetDescription().empty()) scalarVarNode->append_attribute(doc_ptr->allocate_attribute("description", it->GetDescription().c_str()));
-        if (!it->GetCausality().empty())   scalarVarNode->append_attribute(doc_ptr->allocate_attribute("causality",   it->GetCausality().c_str()));
-        if (!it->GetVariability().empty()) scalarVarNode->append_attribute(doc_ptr->allocate_attribute("variability", it->GetVariability().c_str()));
-        if (!it->GetInitial().empty())     scalarVarNode->append_attribute(doc_ptr->allocate_attribute("initial",     it->GetInitial().c_str()));
+        if (it->GetCausality() != FmuVariable::CausalityType::local)          scalarVarNode->append_attribute(doc_ptr->allocate_attribute("causality",   CausalityType_strings.at(it->GetCausality()).c_str()));
+        if (it->GetVariability() != FmuVariable::VariabilityType::continuous) scalarVarNode->append_attribute(doc_ptr->allocate_attribute("variability", VariabilityType_strings.at(it->GetVariability()).c_str()));
+        if (it->GetInitial() != FmuVariable::InitialType::none)               scalarVarNode->append_attribute(doc_ptr->allocate_attribute("initial",     InitialType_strings.at(it->GetInitial()).c_str()));
         modelVarsNode->append_node(scalarVarNode);
 
         rapidxml::xml_node<>* unitNode = doc_ptr->allocate_node(rapidxml::node_element, Type_strings.at(it->GetType()).c_str());
         if (it->GetType() == FmuVariable::Type::FMU_REAL)
             unitNode->append_attribute(doc_ptr->allocate_attribute("unit", it->GetUnitName().c_str()));
         if (it->HasStartVal()){
-            stringbuf.push_back(it->GetStartVal());
+            stringbuf.push_back(it->GetStartVal_toString());
             unitNode->append_attribute(doc_ptr->allocate_attribute("start", stringbuf.back().c_str()));
         }
         scalarVarNode->append_node(unitNode);       

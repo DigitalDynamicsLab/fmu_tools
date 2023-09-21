@@ -141,6 +141,61 @@ public:
     return fmi2Status::fmi2OK;
 }
 
+    // DEV: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the reason is that:
+    // e.g. both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any possible splitting depending on type
+    // if we accept to have both fmi2Integer and fmi2Boolean considered as the same type we can drop the 'scalartype' argument
+    // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
+    // At least, in this way, we do not have any redundant code at least
+    // NOTED: moved into public part so to let other classes (not friends) to add variables
+    const FmuVariable& addFmuVariable(
+            FmuVariable::PtrType var_ptr,
+            std::string name,
+            FmuVariable::Type scalartype = FmuVariable::Type::FMU_REAL,
+            std::string unitname = "",
+            std::string description = "",
+            FmuVariable::CausalityType causality = FmuVariable::CausalityType::local,
+            FmuVariable::VariabilityType variability = FmuVariable::VariabilityType::continuous,
+            FmuVariable::InitialType initial = FmuVariable::InitialType::none)
+    {
+
+        // check if unit definition exists
+        auto match_unit = unitDefinitions.find(unitname);
+        if (match_unit == unitDefinitions.end()){
+            auto predicate_samename = [unitname](const UnitDefinitionType& var) { return var.name == unitname; };
+            auto match_commonunit = std::find_if(common_unitdefinitions.begin(), common_unitdefinitions.end(), predicate_samename);
+            if (match_commonunit == common_unitdefinitions.end()){
+                throw std::runtime_error("Variable unit is not registered within this FmuComponentBase. Call 'addUnitDefinition' first.");
+            }
+            else{
+                addUnitDefinition(*match_commonunit);
+            }
+        }
+
+
+        // create new variable
+        // check if same-name variable exists
+        auto predicate_samename = [name](const FmuVariable& var) { return var.GetName() == name; };
+        auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
+        if (it!=scalarVariables.end())
+            throw std::runtime_error("Cannot add two Fmu variables with the same name.");
+
+
+        FmuVariable newvar(name, scalartype, causality, variability, initial);
+        newvar.SetUnitName(unitname);
+        newvar.SetValueReference(++valueReferenceCounter[scalartype]);
+        newvar.SetPtr(var_ptr);
+        newvar.SetDescription(description);
+
+        varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(*var_ptr_expanded);}, var_ptr);
+
+
+
+        std::pair<std::set<FmuVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
+        assert(ret.second && "Cannot insert new variable into FMU.");
+
+        return *(ret.first);
+    }
+
 
 protected:
 
@@ -206,62 +261,6 @@ protected:
 
     void clearUnitDefinitions(){
         unitDefinitions.clear();
-    }
-
-
-    // DEV: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the reason is that:
-    // e.g. both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any possible splitting depending on type
-    // if we accept to have both fmi2Integer and fmi2Boolean considered as the same type we can drop the 'scalartype' argument
-    // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
-    // At least, in this way, we do not have any redundant code at least
-    const FmuVariable& addFmuVariable(
-            FmuVariable::PtrType var_ptr,
-            std::string name,
-            FmuVariable::Type scalartype = FmuVariable::Type::FMU_REAL,
-            std::string unitname = "",
-            std::string description = "",
-            std::string causality = "",
-            std::string variability = "",
-            std::string initial = "")
-    {
-
-        // check if unit definition exists
-        auto match_unit = unitDefinitions.find(unitname);
-        if (match_unit == unitDefinitions.end()){
-            auto predicate_samename = [unitname](const UnitDefinitionType& var) { return var.name == unitname; };
-            auto match_commonunit = std::find_if(common_unitdefinitions.begin(), common_unitdefinitions.end(), predicate_samename);
-            if (match_commonunit == common_unitdefinitions.end()){
-                throw std::runtime_error("Variable unit is not registered within this FmuComponentBase. Call 'addUnitDefinition' first.");
-            }
-            else{
-                addUnitDefinition(*match_commonunit);
-            }
-        }
-
-
-        // create new variable
-        // check if same-name variable exists
-        auto predicate_samename = [name](const FmuVariable& var) { return var.GetName() == name; };
-        auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
-        if (it!=scalarVariables.end())
-            throw std::runtime_error("Cannot add two Fmu variables with the same name.");
-
-
-        FmuVariable newvar(name, scalartype);
-        newvar.SetUnitName(unitname);
-        newvar.SetValueReference(++valueReferenceCounter[scalartype]);
-        newvar.SetPtr(var_ptr);
-        newvar.SetDescription(description);
-        newvar.SetCausalityVariabilityInitial(causality, variability, initial);
-
-        varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(*var_ptr_expanded);}, var_ptr);
-
-
-
-        std::pair<std::set<FmuVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
-        assert(ret.second && "Cannot insert new variable into FMU.");
-
-        return *(ret.first);
     }
 
 

@@ -360,20 +360,19 @@ public:
                 mvar_type = FmuVariable::Type::FMU_REAL;
 
 
-
-            FmuVariable mvar(mvar_name, mvar_type);
+            fmi2ValueReference valref;
+            std::string description = "";
+            std::string variability = "";
+            std::string causality = "";
+            std::string initial = "";
 
             if (auto attr = variable_node->first_attribute("valueReference"))
-                mvar.SetValueReference(std::stoul(attr->value()));
+                valref = std::stoul(attr->value());
             else
                 throw std::runtime_error("Cannot find 'valueReference' property in variable.\n");
 
             if (auto attr = variable_node->first_attribute("description"))
-                mvar.SetDescription(attr->value());
-
-            std::string variability = "";
-            std::string causality = "";
-            std::string initial = "";
+                description = attr->value();
 
             if (auto attr = variable_node->first_attribute("variability"))
                 variability = attr->value();
@@ -384,8 +383,54 @@ public:
             if (auto attr = variable_node->first_attribute("initial"))
                 initial = attr->value();
 
-            mvar.SetCausalityVariabilityInitial(causality, variability, initial);
+            FmuVariable::CausalityType causality_enum;
+            FmuVariable::VariabilityType variability_enum;
+            FmuVariable::InitialType initial_enum;
 
+            if (causality.empty())
+                causality_enum == FmuVariable::CausalityType::local;
+            else if (!causality.compare("parameter"))
+                causality_enum == FmuVariable::CausalityType::parameter;
+            else if (!causality.compare("calculatedParameter"))
+                causality_enum == FmuVariable::CausalityType::calculatedParameter;
+            else if (!causality.compare("input"))
+                causality_enum == FmuVariable::CausalityType::input;
+            else if (!causality.compare("output"))
+                causality_enum == FmuVariable::CausalityType::output;
+            else if (!causality.compare("local"))
+                causality_enum == FmuVariable::CausalityType::local;
+            else if (!causality.compare("independent"))
+                causality_enum == FmuVariable::CausalityType::independent;
+            else
+                throw std::runtime_error("causality is badly formatted.");
+
+            if (variability.empty())
+                variability_enum == FmuVariable::VariabilityType::continuous;
+            else if (!variability.compare("constant"))
+                variability_enum == FmuVariable::VariabilityType::constant;
+            else if (!variability.compare("fixed"))
+                variability_enum == FmuVariable::VariabilityType::fixed;
+            else if (!variability.compare("tunable"))
+                variability_enum == FmuVariable::VariabilityType::tunable;
+            else if (!variability.compare("discrete"))
+                variability_enum == FmuVariable::VariabilityType::discrete;
+            else if (!variability.compare("continuous"))
+                variability_enum == FmuVariable::VariabilityType::continuous;
+            else
+                throw std::runtime_error("variability is badly formatted.");
+
+            if (initial.empty())
+                initial_enum == FmuVariable::InitialType::none;
+            else if (!initial.compare("exact"))
+                initial_enum == FmuVariable::InitialType::exact;
+            else if (!initial.compare("approx"))
+                initial_enum == FmuVariable::InitialType::approx;
+            else if (!initial.compare("calculated"))
+                initial_enum == FmuVariable::InitialType::calculated;
+            else
+                throw std::runtime_error("variability is badly formatted.");
+
+            FmuVariable mvar(mvar_name, mvar_type, causality_enum, variability_enum, initial_enum);
 
 
             scalarVariables[mvar.GetName()] = mvar;
