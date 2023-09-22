@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <cassert>
 
+
 #include "variant/variant_guard.hpp"
 
 #ifndef FMITYPESPLATFORM_CUSTOM
@@ -61,6 +62,7 @@ struct UnitDefinitionType{
 
 
 enum class FmuMachineStateType{
+    anySettableState, // custom element, used to do checks
     instantiated,
     initializationMode,
     stepCompleted,  // only CoSimulation
@@ -321,13 +323,13 @@ public:
 
             if (variability != VariabilityType::constant){
                 if (initial == InitialType::approx)
-                    return fmu_machine_state == FmuMachineStateType::instantiated;
+                    return fmu_machine_state == FmuMachineStateType::instantiated  || fmu_machine_state == FmuMachineStateType::anySettableState;
                 else if (initial == InitialType::exact)
-                    return fmu_machine_state == FmuMachineStateType::instantiated || fmu_machine_state == FmuMachineStateType::initializationMode;
+                    return fmu_machine_state == FmuMachineStateType::instantiated || fmu_machine_state == FmuMachineStateType::initializationMode || fmu_machine_state == FmuMachineStateType::anySettableState;
             }
 
             if (causality == CausalityType::input || (causality == CausalityType::parameter && variability == VariabilityType::tunable))
-                return fmu_machine_state == FmuMachineStateType::initializationMode || fmu_machine_state == FmuMachineStateType::stepCompleted;
+                return fmu_machine_state == FmuMachineStateType::initializationMode || fmu_machine_state == FmuMachineStateType::stepCompleted || fmu_machine_state == FmuMachineStateType::anySettableState;
 
             return false;
         }

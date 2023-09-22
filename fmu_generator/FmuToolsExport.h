@@ -13,16 +13,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-//// for GUID random generation
-//#include <sstream>
-//#include <random>
-//#include <climits>
-//#include <functional>
 
-
-
-
-
+#include "is_variant_invocable.h"
 #include "variant/variant_guard.hpp"
 
 
@@ -214,18 +206,29 @@ public:
             throw std::runtime_error("Cannot add two Fmu variables with the same name.");
 
 
+
+
         FmuVariable newvar(name, scalartype, causality, variability, initial);
         newvar.SetUnitName(unitname);
         newvar.SetValueReference(++valueReferenceCounter[scalartype]);
-        newvar.SetPtr(var_ptr);
         newvar.SetDescription(description);
+
+        // check that the attributes of the variable would allow a no-set variable
+        const FmuMachineStateType tempFmuState = FmuMachineStateType::anySettableState;
+        if (is_variant_invocable(var_ptr) && newvar.IsSetAllowed(fmuType, tempFmuState)){
+            sendToLog("Variable '" + name + "' was provided only through getter function, but its attributes would allow the user to call fmi2SetXXX on it. This is a bad practice.\n", fmi2Status::fmi2Warning, "logWarning");
+        }
+
+        newvar.SetPtr(var_ptr);
+
 
         varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(var_ptr_expanded);}, var_ptr);
 
 
 
         std::pair<std::set<FmuVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
-        assert(ret.second && "Cannot insert new variable into FMU.");
+        if(!ret.second)
+            throw std::runtime_error("Developer error: cannot insert new variable into FMU.");
 
         return *(ret.first);
     }
@@ -316,33 +319,6 @@ protected:
     }
 
 };
-
-
-
-//std::string GenerateGUID(){
-//    auto generate_hex = [](const unsigned int len) -> std::string {
-//        std::stringstream ss;
-//        auto random_char = []() -> unsigned char {
-//            std::random_device rd;
-//            std::mt19937 gen(rd()); 
-//            std::uniform_int_distribution<> dis(0, 255);
-//            return static_cast<unsigned char>(dis(gen));
-//        };
-//
-//        for(auto i = 0; i < len; i++) {
-//            auto rc = random_char();
-//            std::stringstream hexstream;
-//            hexstream << std::hex << int(rc);
-//            auto hex = hexstream.str(); 
-//            ss << (hex.length() < 2 ? '0' + hex : hex);
-//        }        
-//        return ss.str();
-//    };
-//
-//    std::string fmuGUID = "{" + generate_hex(8) + "-" + generate_hex(4)+ "-" + generate_hex(4)+ "-" + generate_hex(4)+ "-" + generate_hex(12) + "}";
-//
-//    return fmuGUID;
-//}
 
 
 FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID);
