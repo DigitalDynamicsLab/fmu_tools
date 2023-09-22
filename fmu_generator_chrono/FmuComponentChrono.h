@@ -17,8 +17,8 @@ public:
 
     virtual ~FmuComponent(){}
 
-    /// FMU_ACTION: override DoStep of the base class with the problem-specific implementation
-    virtual fmi2Status DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) override;
+    /// FMU_ACTION: override _doStep of the base class with the problem-specific implementation
+    virtual fmi2Status _doStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) override;
 
 
 
@@ -30,9 +30,8 @@ protected:
         }
     }
 
-    virtual void EnterInitializationMode() override;
-
-    virtual void ExitInitializationMode() override;
+    virtual void _enterInitializationMode() override;
+    virtual void _exitInitializationMode() override;
 
     virtual bool is_cosimulation_available() const override {return true;}
     virtual bool is_modelexchange_available() const override {return false;}

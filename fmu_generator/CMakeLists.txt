@@ -99,7 +99,7 @@ MESSAGE(STATUS "FMU_GUID: ${FMU_GUID}")
 # -------------------------------------------------
 
 set(USE_EXTERNAL_FMU_COMPONENT_SOURCES OFF CACHE BOOL "Let external users to add problem-specific sources.")
-SET(FMU_SOURCES FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariants.h)
+SET(FMU_SOURCES FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariants.h) # TODO: get TypesVariants.h from parent project if any 
 
 MARK_AS_ADVANCED(USE_EXTERNAL_FMU_COMPONENT_SOURCES)
 IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)

@@ -68,13 +68,15 @@ int main(int argc, char* argv[]) {
      //unsigned int sref = 1;
      //my_fmu._fmi2GetString(my_fmu.component, &sref, 1, &m_str);
      //std::cout << "FMU variable 1 has value: "   << m_str << "\n";
-    fmi2ValueReference valref = 8;
-    fmi2Real m_in = 15;
-    my_fmu._fmi2SetReal(my_fmu.component, &valref, 1, &m_in);
+    {
+        fmi2ValueReference valref = 8;
+        fmi2Real m_in = 15;
+        my_fmu._fmi2SetReal(my_fmu.component, &valref, 1, &m_in);
 
-    fmi2Real m_out;
-    my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &m_out);
-    std::cout << "m_out_: " << m_out << std::endl;
+        fmi2Real m_out;
+        my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &m_out);
+        std::cout << "m_out_: " << m_out << std::endl;
+    }
 
 
     my_fmu._fmi2ExitInitializationMode(my_fmu.component);
@@ -92,7 +94,7 @@ int main(int argc, char* argv[]) {
     }
 
     fmi2Real val_real;
-    for (fmi2ValueReference valref = 1; valref<11; valref++){
+    for (fmi2ValueReference valref = 1; valref<12; valref++){
         my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &val_real);
         std::cout << "REAL: valref: " << valref << " | val: " << val_real << std::endl;
     }
@@ -102,6 +104,8 @@ int main(int argc, char* argv[]) {
         my_fmu._fmi2GetBoolean(my_fmu.component, &valref, 1, &val_bool);
         std::cout << "BOOLEAN: valref: " << valref << " | val: " << val_bool << std::endl;
     }
+
+
 
 
 

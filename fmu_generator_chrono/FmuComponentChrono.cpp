@@ -31,11 +31,11 @@ FmuComponent::FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2Stri
 
 };
 
-void FmuComponent::EnterInitializationMode() {
+void FmuComponent::_enterInitializationMode() {
     sys.Clear();
 };
 
-void FmuComponent::ExitInitializationMode() {
+void FmuComponent::_exitInitializationMode() {
     auto ground = chrono_types::make_shared<ChBody>();
     sys.Add(ground);
 
@@ -71,7 +71,7 @@ void FmuComponent::ExitInitializationMode() {
     //    });
 };
 
-fmi2Status FmuComponent::DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
+fmi2Status FmuComponent::_doStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
 
     while (time < currentCommunicationPoint + communicationStepSize){
         fmi2Real _stepSize = std::min((currentCommunicationPoint + communicationStepSize - time), std::min(communicationStepSize, stepSize));

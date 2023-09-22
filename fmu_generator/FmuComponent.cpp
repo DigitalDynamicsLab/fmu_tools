@@ -53,7 +53,7 @@ void FmuComponent::get_q_t(const std::array<double, 4>& _q, std::array<double, 4
     q_t[3] = _q[2];
 }
 
-fmi2Status FmuComponent::DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
+fmi2Status FmuComponent::_doStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
 
      while (time < currentCommunicationPoint + communicationStepSize){
         fmi2Real _stepSize = std::min((currentCommunicationPoint + communicationStepSize - time), std::min(communicationStepSize, stepSize));

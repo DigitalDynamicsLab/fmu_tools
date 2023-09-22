@@ -388,45 +388,45 @@ public:
             FmuVariable::InitialType initial_enum;
 
             if (causality.empty())
-                causality_enum == FmuVariable::CausalityType::local;
+                causality_enum = FmuVariable::CausalityType::local;
             else if (!causality.compare("parameter"))
-                causality_enum == FmuVariable::CausalityType::parameter;
+                causality_enum = FmuVariable::CausalityType::parameter;
             else if (!causality.compare("calculatedParameter"))
-                causality_enum == FmuVariable::CausalityType::calculatedParameter;
+                causality_enum = FmuVariable::CausalityType::calculatedParameter;
             else if (!causality.compare("input"))
-                causality_enum == FmuVariable::CausalityType::input;
+                causality_enum = FmuVariable::CausalityType::input;
             else if (!causality.compare("output"))
-                causality_enum == FmuVariable::CausalityType::output;
+                causality_enum = FmuVariable::CausalityType::output;
             else if (!causality.compare("local"))
-                causality_enum == FmuVariable::CausalityType::local;
+                causality_enum = FmuVariable::CausalityType::local;
             else if (!causality.compare("independent"))
-                causality_enum == FmuVariable::CausalityType::independent;
+                causality_enum = FmuVariable::CausalityType::independent;
             else
                 throw std::runtime_error("causality is badly formatted.");
 
             if (variability.empty())
-                variability_enum == FmuVariable::VariabilityType::continuous;
+                variability_enum = FmuVariable::VariabilityType::continuous;
             else if (!variability.compare("constant"))
-                variability_enum == FmuVariable::VariabilityType::constant;
+                variability_enum = FmuVariable::VariabilityType::constant;
             else if (!variability.compare("fixed"))
-                variability_enum == FmuVariable::VariabilityType::fixed;
+                variability_enum = FmuVariable::VariabilityType::fixed;
             else if (!variability.compare("tunable"))
-                variability_enum == FmuVariable::VariabilityType::tunable;
+                variability_enum = FmuVariable::VariabilityType::tunable;
             else if (!variability.compare("discrete"))
-                variability_enum == FmuVariable::VariabilityType::discrete;
+                variability_enum = FmuVariable::VariabilityType::discrete;
             else if (!variability.compare("continuous"))
-                variability_enum == FmuVariable::VariabilityType::continuous;
+                variability_enum = FmuVariable::VariabilityType::continuous;
             else
                 throw std::runtime_error("variability is badly formatted.");
 
             if (initial.empty())
-                initial_enum == FmuVariable::InitialType::none;
+                initial_enum = FmuVariable::InitialType::none;
             else if (!initial.compare("exact"))
-                initial_enum == FmuVariable::InitialType::exact;
+                initial_enum = FmuVariable::InitialType::exact;
             else if (!initial.compare("approx"))
-                initial_enum == FmuVariable::InitialType::approx;
+                initial_enum = FmuVariable::InitialType::approx;
             else if (!initial.compare("calculated"))
-                initial_enum == FmuVariable::InitialType::calculated;
+                initial_enum = FmuVariable::InitialType::calculated;
             else
                 throw std::runtime_error("variability is badly formatted.");
 

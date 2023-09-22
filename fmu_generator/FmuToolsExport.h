@@ -55,12 +55,14 @@ static const UnitDefinitionType UD_rad_s2 ("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1 );
 
 
 class FmuComponentBase{
+
 public:
     FmuComponentBase(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
         callbackFunctions({nullptr, nullptr, nullptr, nullptr, nullptr}),
         instanceName(_instanceName),
         fmuGUID(FMU_GUID),
-        modelIdentifier(FMU_MODEL_IDENTIFIER)
+        modelIdentifier(FMU_MODEL_IDENTIFIER),
+        fmuMachineState(FmuMachineStateType::instantiated)
     {
 
         unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
@@ -89,9 +91,15 @@ public:
 
     const std::set<FmuVariable>& GetScalarVariables() const { return scalarVariables; }
 
-    virtual void EnterInitializationMode() = 0;
+    void EnterInitializationMode(){
+        fmuMachineState = FmuMachineStateType::initializationMode;
+        _enterInitializationMode();
+    };
 
-    virtual void ExitInitializationMode() = 0;
+    void ExitInitializationMode(){
+        _exitInitializationMode();
+        fmuMachineState = FmuMachineStateType::stepCompleted; // TODO: introduce additional state when after initialization and before step?
+    };
 
     void SetCallbackFunctions(const fmi2CallbackFunctions* functions){ callbackFunctions = *functions; }
 
@@ -103,7 +111,36 @@ public:
         logCategories.insert(cat);
     }
 
-    virtual fmi2Status DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) = 0;
+    fmi2Status DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
+        fmi2Status doStep_status = _doStep(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPoint);
+
+        switch (doStep_status)
+        {
+        case fmi2OK:
+            fmuMachineState = FmuMachineStateType::stepCompleted;
+            break;
+        case fmi2Warning:
+            fmuMachineState = FmuMachineStateType::stepCompleted;
+            break;
+        case fmi2Discard:
+            fmuMachineState = FmuMachineStateType::stepFailed;
+            break;
+        case fmi2Error:
+            fmuMachineState = FmuMachineStateType::error;
+            break;
+        case fmi2Fatal:
+            fmuMachineState = FmuMachineStateType::fatal;
+            break;
+        case fmi2Pending:
+            fmuMachineState = FmuMachineStateType::stepInProgress;
+            break;
+        default:
+            throw std::runtime_error("Developer error: unexpected status from _doStep");
+            break;
+        }
+
+        return doStep_status;
+    }
 
     void ExportModelDescription(std::string path);
 
@@ -116,9 +153,7 @@ public:
         for (size_t s = 0; s<nvr; ++s){
             auto it = this->findByValrefType(vr[s], vartype);
             if (it != this->scalarVariables.end()){
-                T* val_ptr = nullptr;
-                it->GetPtr(&val_ptr);
-                value[s] = *val_ptr;
+                it->GetValue(&value[s]);
             }
             else
                 return fmi2Status::fmi2Error; // requested a variable that does not exist
@@ -130,13 +165,13 @@ public:
     fmi2Status fmi2SetVariable(const fmi2ValueReference vr[], size_t nvr, const T value[], FmuVariable::Type vartype){
     for (size_t s = 0; s<nvr; ++s){
         auto it = this->findByValrefType(vr[s], vartype);
-        if (it != this->scalarVariables.end()){
+        if (it != this->scalarVariables.end() && it->IsSetAllowed(this->fmuType, this->fmuMachineState)){
             T* val_ptr = nullptr;
             it->GetPtr(&val_ptr);
             *val_ptr = value[s];
         }
         else
-            return fmi2Status::fmi2Error; // requested a variable that does not exist
+            return fmi2Status::fmi2Error; // requested a variable that does not exist or that cannot be set
     }
     return fmi2Status::fmi2OK;
 }
@@ -146,7 +181,6 @@ public:
     // if we accept to have both fmi2Integer and fmi2Boolean considered as the same type we can drop the 'scalartype' argument
     // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
     // At least, in this way, we do not have any redundant code at least
-    // NOTED: moved into public part so to let other classes (not friends) to add variables
     const FmuVariable& addFmuVariable(
             FmuVariable::PtrType var_ptr,
             std::string name,
@@ -186,7 +220,7 @@ public:
         newvar.SetPtr(var_ptr);
         newvar.SetDescription(description);
 
-        varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(*var_ptr_expanded);}, var_ptr);
+        varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(var_ptr_expanded);}, var_ptr);
 
 
 
@@ -198,6 +232,13 @@ public:
 
 
 protected:
+
+    virtual fmi2Status _doStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) = 0;
+
+
+    virtual void _enterInitializationMode() = 0;
+
+    virtual void _exitInitializationMode() = 0;
 
     void initializeType(fmi2Type _fmuType){
         switch (_fmuType)
@@ -235,7 +276,6 @@ protected:
     fmi2Real stepSize = 1e-3;
     fmi2Real time = 0;
 
-
     const std::string modelIdentifier;
 
     fmi2Type fmuType;
@@ -250,6 +290,7 @@ protected:
 
     fmi2CallbackFunctions callbackFunctions;
     bool loggingOn = true;
+    FmuMachineStateType fmuMachineState;
 
     
     virtual bool is_cosimulation_available() const = 0;

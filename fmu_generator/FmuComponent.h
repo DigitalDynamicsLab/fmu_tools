@@ -16,8 +16,8 @@ public:
         initializeType(_fmuType);
 
         /// FMU_ACTION: define new units if needed
-        //UnitDefinitionType UD_rad_s4 ("rad/s4"); UD_rad_s4.s = -4; UD_rad_s4.rad = 1;
-        //addUnitDefinition(UD_rad_s4);
+        UnitDefinitionType UD_J ("J"); UD_J.kg = 1; UD_J.m = 2; UD_J.s = -2;
+        addUnitDefinition(UD_J);
 
         /// FMU_ACTION: declare relevant variables
         addFmuVariable(&q_t[0], "x_tt",     FmuVariable::Type::FMU_REAL, "m/s2",   "cart acceleration");
@@ -30,6 +30,12 @@ public:
         auto fmu_m =   addFmuVariable(&m,    "m",   FmuVariable::Type::FMU_REAL, "kg", "pendulum mass",   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
         auto fmu_M =   addFmuVariable(&M,    "M",   FmuVariable::Type::FMU_REAL, "kg", "cart mass",       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
+        
+        /// FMU_ACTION: you can also pass std::functions that retrieve a variable value, but limitations apply!
+
+        addFmuVariable(std::function<fmi2Real()>([this]() -> fmi2Real { return (0.5*(this->m*this->len*this->len/3)*(this->q_t[2]*this->q_t[2]));}),   "kineticEnergy",    FmuVariable::Type::FMU_REAL, "J",    "kinetic energy");
+
+
         // FMU_ACTION: start value will be automatically grabbed from 'len' during addFmuVariable;
         // use the following statement only if the start value is not already in 'len' when called addFmuVariable
         //fmu_len.SetStartVal(len);
@@ -41,14 +47,14 @@ public:
         q = {0, 0, 0, 3.14159265358979323846/4};
     }
 
-    virtual void EnterInitializationMode() override {}
+    virtual void _enterInitializationMode() override {}
 
-    virtual void ExitInitializationMode() override {}
+    virtual void _exitInitializationMode() override {}
 
     virtual ~FmuComponent(){}
 
     /// FMU_ACTION: override DoStep of the base class with the problem-specific implementation
-    virtual fmi2Status DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) override;
+    virtual fmi2Status _doStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) override;
 
 
     // Problem-specific functions

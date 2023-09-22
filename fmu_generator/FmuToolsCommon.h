@@ -9,7 +9,6 @@
 
 #include "variant/variant_guard.hpp"
 
-
 #include "TypesVariants.h"
 
 
@@ -57,7 +56,19 @@ struct UnitDefinitionType{
 };
 
 
-
+enum class FmuMachineStateType{
+    instantiated,
+    initializationMode,
+    stepCompleted,  // only CoSimulation
+    stepInProgress,  // only CoSimulation
+    stepFailed,  // only CoSimulation
+    stepCanceled,  // only CoSimulation
+    terminated,
+    error,
+    fatal,
+    eventMode, // only ModelExchange
+    continuousTimeMode // only ModelExchange
+};
 
 
 /// Class holding a reference to a single FMU variable
@@ -246,6 +257,13 @@ public:
         *ptr_address = varns::get<T*>(this->ptr);
     }
 
+
+    template <typename T>
+    void GetValue(T* varptr) const {
+        *varptr = varns::holds_alternative<std::function<T(void)>>(this->ptr) ? varns::get<std::function<T(void)>>(this->ptr)() : *varns::get<T*>(this->ptr);
+    }
+
+
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
     void SetStartVal(T startval){
         if (allowed_start)
@@ -269,9 +287,15 @@ public:
     }
 
     template <typename T>
-    void SetStartValIfRequired(T startval){
+    void SetStartValIfRequired(T* startval){
         if (required_start)
-            SetStartVal(startval);
+            SetStartVal(*startval);
+    }
+
+    template <typename T>
+    void SetStartValIfRequired(std::function<T(void)> startval){
+        if (required_start)
+            throw std::runtime_error("Developer error: there shouldn't be a required_start on a function.");
     }
 
 
@@ -287,7 +311,29 @@ public:
         return "";
     }
 
+    bool IsSetAllowed(fmi2Type fmi_type, FmuMachineStateType fmu_machine_state) const {
 
+        if (fmi_type == fmi2Type::fmi2CoSimulation){
+
+            if (variability != VariabilityType::constant){
+                if (initial == InitialType::approx)
+                    return fmu_machine_state == FmuMachineStateType::instantiated;
+                else if (initial == InitialType::exact)
+                    return fmu_machine_state == FmuMachineStateType::instantiated || fmu_machine_state == FmuMachineStateType::initializationMode;
+            }
+
+            if (causality == CausalityType::input || (causality == CausalityType::parameter && variability == VariabilityType::tunable))
+                return fmu_machine_state == FmuMachineStateType::initializationMode || fmu_machine_state == FmuMachineStateType::stepCompleted;
+
+            return false;
+        }
+        else
+        {
+            // TODO for ModelExchange
+        }
+
+        return false;
+    }
 
     static std::string Type_toString(Type type){
         switch (type)
@@ -338,6 +384,8 @@ protected:
     VariabilityType variability;
     InitialType initial;
     std::string description = "";
+
+
 
 
     bool allowed_start = true;
