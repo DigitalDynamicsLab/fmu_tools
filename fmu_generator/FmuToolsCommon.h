@@ -12,7 +12,7 @@
 #ifndef FMITYPESPLATFORM_CUSTOM
     #include "TypesVariantsDefault.h"
 #else
-    #include "TypesVariants.h"
+    #include "TypesVariantsCustom.h"
 #endif
 
 
