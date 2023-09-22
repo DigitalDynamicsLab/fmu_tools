@@ -53,7 +53,6 @@ FetchContent_Declare(
 )
 
 set(FMU_MODEL_IDENTIFIER "myChronoFmuIdentifier" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
-# set(BUILD_TESTING OFF)
 set(BUILD_TESTING ON CACHE BOOL "Enable testing.")
 set(USE_EXTERNAL_FMU_COMPONENT_SOURCES ON CACHE INTERNAL "")
 set(ENABLE_GUID_CHECK ON)
@@ -72,32 +71,32 @@ MARK_AS_ADVANCED(FETCHCONTENT_UPDATES_DISCONNECTED_PACK_FMU)
 MESSAGE(STATUS "---------------------------------------------------------")
 
 
-# Add sources to imported target
-target_sources(FmuComponent PRIVATE FmuComponentChrono.h FmuComponentChrono.cpp)
+
+target_sources(FmuComponent PRIVATE FmuToolsChrono.h FmuComponentChrono.h FmuComponentChrono.cpp) ## FMU_ACTION: put your source code here
 target_compile_definitions(FmuComponent PUBLIC "CHRONO_DATA_DIR=\"${CHRONO_DATA_DIR}\"") 
 target_compile_options(FmuComponent PUBLIC ${CHRONO_CXX_FLAGS})
 target_link_options(FmuComponent PUBLIC ${CHRONO_LINKER_FLAGS})
 target_link_libraries(FmuComponent ${CHRONO_LIBRARIES})
 
+
+
 IF (NOT EXISTS "${CMAKE_SOURCE_DIR}/fmu_host.cpp")
   file(COPY_FILE "${FMU_GENERATOR_DIR}/fmu_host.cpp" "${CMAKE_SOURCE_DIR}/fmu_host.cpp")
 endif()
-
 target_sources(fmu_host PRIVATE fmu_host.cpp)
 
-# Copy dependencies
-string(REPLACE ";" "\" \"" CHRONO_DLLS_SPACEDELIM "${CHRONO_DLLS}")
-SET(CHRONO_DLLS_SPACEDELIM "\"${CHRONO_DLLS_SPACEDELIM}\"")
-add_custom_target(COPY_DEPENDENCIES
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CHRONO_DLLS_SPACEDELIM}" "${FMU_RUNTIME_OUTPUT_DIRECTORY}"
-  COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
-)
+# # Copy dependencies
+# string(REPLACE ";" "\" \"" CHRONO_DLLS_SPACEDELIM "${CHRONO_DLLS}")
+# SET(CHRONO_DLLS_SPACEDELIM "\"${CHRONO_DLLS_SPACEDELIM}\"")
+# add_custom_target(COPY_DEPENDENCIES
+#   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CHRONO_DLLS_SPACEDELIM}" "${FMU_RUNTIME_OUTPUT_DIRECTORY}"
+#   COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
+# )
 
-add_dependencies(fmu_modeldescription_generator COPY_DEPENDENCIES)
-add_dependencies(PACK_FMU COPY_DEPENDENCIES)
+# add_dependencies(fmu_modeldescription_generator COPY_DEPENDENCIES)
+# add_dependencies(PACK_FMU COPY_DEPENDENCIES)
 
-
+# Enable testing
 if(TESTING_ENABLED)
-  ## enable the testing
   enable_testing()
 endif()

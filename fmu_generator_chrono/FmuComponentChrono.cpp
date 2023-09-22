@@ -7,7 +7,7 @@
 #include <map>
 #include <algorithm>
 #include <chrono/core/ChVector.h>
-
+#include "FmuToolsChrono.h"
 
 FmuComponent::FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
         FmuComponentBase(_instanceName, _fmuType, _fmuGUID)
@@ -50,12 +50,12 @@ void FmuComponent::_exitInitializationMode() {
     sys.Add(pendulum);
 
     auto cart_prism = chrono_types::make_shared<ChLinkLockPrismatic>();
-    cart_prism->Initialize(cart, ground, ChCoordsys<>(ChVector<>(0,0,0), Q_from_AngY(90*3.14/180))); //TODO: Chrono definitions gives unresolved symbol
+    cart_prism->Initialize(cart, ground, ChCoordsys<>(VNULL, Q_from_AngY(90*CH_C_DEG_TO_RAD))); //TODO: Chrono definitions gives unresolved symbol
     cart_prism->SetName("cart_prism");
     sys.Add(cart_prism);
 
     auto pendulum_rev = chrono_types::make_shared<ChLinkRevolute>();
-    pendulum_rev->Initialize(pendulum, ground, ChFrame<>(ChVector<>(0,0,0), ChQuaternion<>(1,0,0,0)));
+    pendulum_rev->Initialize(pendulum, ground, ChFrame<>(VNULL, ChQuaternion<>(1,0,0,0)));
     pendulum_rev->SetName("pendulum_rev");
     sys.Add(pendulum_rev);
 

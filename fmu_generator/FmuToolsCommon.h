@@ -9,7 +9,11 @@
 
 #include "variant/variant_guard.hpp"
 
-#include "TypesVariants.h"
+#ifndef FMITYPESPLATFORM_CUSTOM
+    #include "TypesVariantsDefault.h"
+#else
+    #include "TypesVariants.h"
+#endif
 
 
 

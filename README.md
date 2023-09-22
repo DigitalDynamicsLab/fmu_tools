@@ -63,7 +63,8 @@ The target `fmu_host` shows how to load and run FMUs. By default, it is set up t
 - [x] associate Units to Variables
 - [x] keep C++14 compliance (_filesystem_ and _variant_ custom C++14 compliant implementation are offered)
 - [x] check compatibility of causality|variability|initial attributes for variables
-- [ ] accept getter function instead of the usual pointer to variable (guarantee that this is allowed only for variables that can never be set)
+- [x] accept getter function instead of the usual pointer to variable (guarantee that this is allowed only for variables that can never be set)
+- [x] allow non-default 'fmi2TypesPlatform.h'
 
 ### Export Features
 - [x] register local variables as FMU variables

@@ -1,8 +1,12 @@
 
-#pragma once
+#ifndef TYPESVARIANTS_H
+#define TYPESVARIANTS_H
 #include "variant/variant_guard.hpp"
-#include "fmi2_headers/fmi2TypesPlatform.h"
+#include "fmi2TypesPlatformCustom.h"
 #include <string>
+
+
+#define FMITYPESPLATFORM_DEFAULT
 
 
 // variants does not allow repeated types;
@@ -10,8 +14,13 @@
 // that's why, by default, FmuVariable::PtrType and FmuVariable::StartType does not have both of them
 // however, in case the user has its own custom types definition, it is required to define new valid variants
 // in order to cover all possible available types
-using FmuVariablePtrType = varns::variant<fmi2Real*, fmi2Integer*, fmi2String*,
+
+/// FMU_ACTION: update the following declarations according to "fmi2TypesPlatformCustom.h"
+using FmuVariablePtrType = varns::variant<fmi2Real*, fmi2Integer*, fmi2Boolean*, fmi2String*,
                                             std::function<fmi2Real()>,
                                             std::function<fmi2Integer()>,
+                                            std::function<fmi2Boolean()>,
                                             std::function<fmi2String()>>;
-using FmuVariableStartType = varns::variant<fmi2Real, fmi2Integer, std::string>;
+using FmuVariableStartType = varns::variant<fmi2Real, fmi2Integer, fmi2Boolean, std::string>;
+
+#endif

@@ -37,8 +37,6 @@ SET(FMU_UNPACK_DIRECTORY "${FMU_MAIN_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
 
 set(TESTING_ENABLED_OS "win64" "linux64")
 
-
-
 # -------------------------------------------------
 # Set Architecture and Operating System Flags
 # -------------------------------------------------
@@ -99,12 +97,37 @@ MESSAGE(STATUS "FMU_GUID: ${FMU_GUID}")
 # -------------------------------------------------
 
 set(USE_EXTERNAL_FMU_COMPONENT_SOURCES OFF CACHE BOOL "Let external users to add problem-specific sources.")
-SET(FMU_SOURCES FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariants.h) # TODO: get TypesVariants.h from parent project if any 
+set(USE_CUSTOM_TYPESPLATFORM OFF CACHE BOOL "Use custom types platform definition.")
+
+SET(FMU_SOURCES FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariantsDefault.h)
+
+# MESSAGE(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+# MESSAGE(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
+
+IF(USE_CUSTOM_TYPESPLATFORM)
+    MESSAGE(STATUS "Using custom 'fmi2TypesPlatform'.")
+    target_compile_definitions(FmuComponent PUBLIC FMITYPESPLATFORM_CUSTOM)
+    IF (NOT EXISTS "${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h")
+        MESSAGE(STATUS "Created template 'TypesVariantsCustom.h'. Please make your changes there.")
+        file(COPY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/TypesVariantsTemplate.h" "${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h")
+    endif()
+    IF (NOT EXISTS "${CMAKE_SOURCE_DIR}/fmi2TypesPlatformCustom.h")
+        MESSAGE(STATUS "Created template 'fmi2TypesPlatformCustom.h'. Please make your changes there.")
+        file(COPY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/fmi2_headers/fmi2TypesPlatform.h" "${CMAKE_SOURCE_DIR}/fmi2TypesPlatformCustom.h")
+    endif()
+    LIST(APPEND FMU_SOURCES ${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h)
+ELSE()
+    MESSAGE(STATUS "Using default fmi2TypesPlatform.")
+    LIST(APPEND FMU_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/TypesVariantsDefault.h)
+ENDIF()
+
 
 MARK_AS_ADVANCED(USE_EXTERNAL_FMU_COMPONENT_SOURCES)
 IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
-    MESSAGE("Using default sources for FmuComponent target.")
+    MESSAGE(STATUS "Using default sources for FmuComponent target.")
     LIST(APPEND FMU_SOURCES FmuComponent.h FmuComponent.cpp)
+ELSE()
+    MESSAGE(STATUS "Add custom sources to FmuComponent target through 'target_sources(FmuComponent PRIVATE <yoursourcefiles>)'")
 ENDIF()
 
 add_library(FmuComponent SHARED ${FMU_SOURCES})
