@@ -11,13 +11,14 @@
 
 // variants does not allow repeated types;
 // unfortunately, in the default implementation, both fmi2Boolean and fmi2Integer point to a int type
-// that's why, by default, FmuVariable::PtrType and FmuVariable::StartType does not have both of them
+// that's why, by default, FmuVariable::VarbindType and FmuVariable::StartType does not have both of them
 // however, in case the user has its own custom types definition, it is required to define new valid variants
 // in order to cover all possible available types
-using FmuVariablePtrType = varns::variant<fmi2Real*, fmi2Integer*, fmi2String*,
-                                            std::function<fmi2Real()>,
-                                            std::function<fmi2Integer()>,
-                                            std::function<fmi2String()>>;
+using FmuVariableBindType = varns::variant<fmi2Real*, fmi2Integer*, fmi2String*,
+                                            std::pair<std::function<fmi2Real()>, std::function<void(fmi2Real)>>,
+                                            std::pair<std::function<fmi2Integer()>, std::function<void(fmi2Integer)>>,
+                                            std::pair<std::function<fmi2String()>, std::function<void(fmi2String)>>
+                                            >;
 using FmuVariableStartType = varns::variant<fmi2Real, fmi2Integer, std::string>;
 
 #endif

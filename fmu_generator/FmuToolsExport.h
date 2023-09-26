@@ -1,5 +1,6 @@
 
-#pragma once
+#ifndef FMUTOOLSEXPORT_H
+#define FMUTOOLSEXPORT_H
 #include "FmuToolsCommon.h"
 #include "fmi2_headers/fmi2Functions.h"
 #include <algorithm>
@@ -14,10 +15,6 @@
 #include <unordered_set>
 
 
-#include "is_variant_invocable.h"
-#include "variant/variant_guard.hpp"
-
-
 extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +25,7 @@ void FMI2_Export createModelDescription(const std::string& path, fmi2Type fmutyp
 #ifdef __cplusplus
 }
 #endif
+
 
 // Default UnitDefinitionTypes          |name|kg, m, s, A, K,mol,cd,rad
 static const UnitDefinitionType UD_kg  ("kg",  1, 0, 0, 0, 0, 0, 0, 0 );
@@ -139,7 +137,7 @@ public:
     double GetTime() const {return time;}
 
     template <class T>
-    fmi2Status fmi2GetVariable(const fmi2ValueReference vr[], size_t nvr, T value[], FmuVariable::Type vartype){
+    fmi2Status fmi2GetVariable(const fmi2ValueReference vr[], size_t nvr, T value[], FmuVariable::Type vartype) {
         //TODO, when multiple variables are requested it might be better to iterate through scalarVariables just once
         // and check if they match any of the nvr requested variables 
         for (size_t s = 0; s<nvr; ++s){
@@ -154,13 +152,11 @@ public:
     }
 
     template <class T>
-    fmi2Status fmi2SetVariable(const fmi2ValueReference vr[], size_t nvr, const T value[], FmuVariable::Type vartype){
+    fmi2Status fmi2SetVariable(const fmi2ValueReference vr[], size_t nvr, const T value[], FmuVariable::Type vartype) {
     for (size_t s = 0; s<nvr; ++s){
-        auto it = this->findByValrefType(vr[s], vartype);
+        std::set<FmuVariable>::iterator it = this->findByValrefType(vr[s], vartype);
         if (it != this->scalarVariables.end() && it->IsSetAllowed(this->fmuType, this->fmuMachineState)){
-            T* val_ptr = nullptr;
-            it->GetPtr(&val_ptr);
-            *val_ptr = value[s];
+            it->SetValue(value[s]);
         }
         else
             return fmi2Status::fmi2Error; // requested a variable that does not exist or that cannot be set
@@ -174,7 +170,7 @@ public:
     // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
     // At least, in this way, we do not have any redundant code at least
     const FmuVariable& addFmuVariable(
-            FmuVariable::PtrType var_ptr,
+            FmuVariable::VarbindType varbind,
             std::string name,
             FmuVariable::Type scalartype = FmuVariable::Type::FMU_REAL,
             std::string unitname = "",
@@ -208,21 +204,16 @@ public:
 
 
 
-        FmuVariable newvar(name, scalartype, causality, variability, initial);
+        FmuVariable newvar(varbind, name, scalartype, causality, variability, initial);
         newvar.SetUnitName(unitname);
         newvar.SetValueReference(++valueReferenceCounter[scalartype]);
         newvar.SetDescription(description);
 
         // check that the attributes of the variable would allow a no-set variable
         const FmuMachineStateType tempFmuState = FmuMachineStateType::anySettableState;
-        if (is_variant_invocable(var_ptr) && newvar.IsSetAllowed(fmuType, tempFmuState)){
-            sendToLog("Variable '" + name + "' was provided only through getter function, but its attributes would allow the user to call fmi2SetXXX on it. This is a bad practice.\n", fmi2Status::fmi2Warning, "logWarning");
-        }
 
-        newvar.SetPtr(var_ptr);
-
-
-        varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(var_ptr_expanded);}, var_ptr);
+        newvar.ExposeCurrentValueAsStart();
+        //varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(var_ptr_expanded);}, var_ptr);
 
 
 
@@ -326,3 +317,5 @@ FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type f
 
 
 
+
+#endif

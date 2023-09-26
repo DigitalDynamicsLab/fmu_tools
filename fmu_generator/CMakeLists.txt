@@ -99,7 +99,7 @@ MESSAGE(STATUS "FMU_GUID: ${FMU_GUID}")
 set(USE_EXTERNAL_FMU_COMPONENT_SOURCES OFF CACHE BOOL "Let external users to add problem-specific sources.")
 set(USE_CUSTOM_TYPESPLATFORM OFF CACHE BOOL "Use custom types platform definition.")
 
-SET(FMU_SOURCES FmuToolsCommon.h FmuToolsExport.h FmuToolsExport.cpp TypesVariantsDefault.h is_variant_invocable.h)
+SET(FMU_SOURCES FmuToolsCommon.h FmuToolsCommon.cpp FmuToolsExport.h FmuToolsExport.cpp TypesVariantsDefault.h)
 
 # MESSAGE(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
 # MESSAGE(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FMUTOOLSCOMMON_H
+#define FMUTOOLSCOMMON_H
 #include "fmi2_headers/fmi2FunctionTypes.h"
 #include "fmi2_headers/fmi2Functions.h"
 #include <stdexcept>
@@ -16,7 +17,7 @@
     #include "TypesVariantsCustom.h"
 #endif
 
-
+bool is_pointer_variant(const FmuVariableBindType& myVariant);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -77,6 +78,10 @@ enum class FmuMachineStateType{
 };
 
 
+template<class T>
+using FunGetSet = std::pair<std::function<T(void)>, std::function<void(T)>>;
+
+
 /// Class holding a reference to a single FMU variable
 /// Note that this is retrieved from the information from the XML
 
@@ -84,7 +89,7 @@ class FmuVariable {
 public:
 
 
-    using PtrType = FmuVariablePtrType;
+    using VarbindType = FmuVariableBindType;
     using StartType = FmuVariableStartType;
 
     enum class Type{
@@ -121,7 +126,7 @@ public:
     // TODO: DARIOM check if an additional InitialType::auto is needed
 
 
-    FmuVariable() : FmuVariable("", FmuVariable::Type::FMU_REAL){}
+    //FmuVariable() : FmuVariable("", , FmuVariable::Type::FMU_REAL){}
 
 
     FmuVariable(const FmuVariable& other) {
@@ -134,7 +139,7 @@ public:
         variability = other.variability;
         initial = other.initial;
         description = other.description;
-        ptr = other.ptr;
+        varbind = other.varbind;
         start = other.start;
         allowed_start = other.allowed_start;
         required_start = other.required_start;
@@ -143,6 +148,7 @@ public:
     }
 
     FmuVariable(
+        const VarbindType& varbind,
         const std::string& _name,
         FmuVariable::Type _type,
         CausalityType _causality = CausalityType::local,
@@ -218,6 +224,8 @@ public:
             throw std::runtime_error("A fixed or tunable 'input'|'output' have exactly the same properties as a fixed or tunable parameter. For simplicity, only fixed and tunable parameters|calculatedParameters shall be defined.");
 
 
+        this->varbind = varbind;
+
     }
 
 
@@ -245,7 +253,7 @@ public:
         variability = other.variability;
         initial = other.initial;
         description = other.description;
-        ptr = other.ptr;
+        varbind = other.varbind;
         start = other.start;
         allowed_start = other.allowed_start;
         required_start = other.required_start;
@@ -254,19 +262,16 @@ public:
         return *this;
     }
 
-    void SetPtr(const PtrType& ptr) {
-        this->ptr = ptr;
-    }
 
     template <class T>
-    void GetPtr(T** ptr_address) const {
-        *ptr_address = varns::get<T*>(this->ptr);
+    void SetValue(const T& val) const {
+        is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind) = val : varns::get<FunGetSet<T>>(this->varbind).second(val);
     }
 
 
     template <typename T>
     void GetValue(T* varptr) const {
-        *varptr = varns::holds_alternative<std::function<T(void)>>(this->ptr) ? varns::get<std::function<T(void)>>(this->ptr)() : *varns::get<T*>(this->ptr);
+        *varptr = is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind) : varns::get<FunGetSet<T>>(this->varbind).first();
     }
 
 
@@ -276,6 +281,7 @@ public:
             has_start = true;
         else
             return;
+
         this->start = startval;
     }
 
@@ -288,20 +294,37 @@ public:
     }
 
 
+
+
     bool HasStartVal() const {
         return has_start;
     }
 
-    template <typename T>
-    void SetStartValIfRequired(T* startval){
-        if (required_start)
-            SetStartVal(*startval);
-    }
 
-    template <typename T>
-    void SetStartValIfRequired(std::function<T(void)> startval){
-        if (required_start)
-            throw std::runtime_error("Developer error: there shouldn't be a required_start on a function.");
+
+
+    void ExposeCurrentValueAsStart(){
+        if (required_start){
+
+            varns::visit([this](auto&& arg){
+                    this->setStartFromVar(arg);
+                }, this->varbind);
+
+
+            //if (is_pointer_variant(this->varbind)){
+            //    // check if string TODO: check if this check is needed .-)
+            //    if (varns::holds_alternative<fmi2String*>(this->varbind)) {
+            //        // TODO
+            //        varns::visit([this](auto& arg){ return this->start = arg; }, this->varbind);
+            //    }
+            //    else{
+            //        varns::visit([this](auto& arg){ return this->SetStartVal(*arg); }, this->varbind);
+            //    }
+            //}
+            //else{
+
+            //}
+        }
     }
 
 
@@ -399,9 +422,32 @@ protected:
     bool has_start = false;
 
 
-    PtrType ptr;
+    VarbindType varbind;
     StartType start;
+
+
+    // TODO: in C++17 should be possible to either use constexpr or use lambda with 'overload' keyword
+    template <typename T>
+    void setStartFromVar(FunGetSet<T> funPair){
+        if (allowed_start)
+            has_start = true;
+        else
+            return;
+
+        this->start = funPair.first();
+    }
+
+    template <typename T>
+    void setStartFromVar(T* var_ptr){
+        if (allowed_start)
+            has_start = true;
+        else
+            return;
+
+        this->start = *var_ptr;
+    }
 
 };
 
     
+#endif

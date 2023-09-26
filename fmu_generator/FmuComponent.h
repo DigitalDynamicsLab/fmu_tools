@@ -26,14 +26,14 @@ public:
         addFmuVariable(&q_t[2], "theta_tt", FmuVariable::Type::FMU_REAL, "rad/s2", "pendulum ang acceleration");
         addFmuVariable(&q[2],   "theta_t",  FmuVariable::Type::FMU_REAL, "rad/s",  "pendulum ang velocity");
         addFmuVariable(&q[3],   "theta",    FmuVariable::Type::FMU_REAL, "rad",    "pendulum angle");
-        auto fmu_len = addFmuVariable(&len,  "len", FmuVariable::Type::FMU_REAL, "m",  "pendulum length", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
-        auto fmu_m =   addFmuVariable(&m,    "m",   FmuVariable::Type::FMU_REAL, "kg", "pendulum mass",   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
-        auto fmu_M =   addFmuVariable(&M,    "M",   FmuVariable::Type::FMU_REAL, "kg", "cart mass",       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+        auto& fmu_len = addFmuVariable(&len,  "len", FmuVariable::Type::FMU_REAL, "m",  "pendulum length", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+        auto& fmu_m =   addFmuVariable(&m,    "m",   FmuVariable::Type::FMU_REAL, "kg", "pendulum mass",   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+        auto& fmu_M =   addFmuVariable(&M,    "M",   FmuVariable::Type::FMU_REAL, "kg", "cart mass",       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
         
         /// FMU_ACTION: you can also pass std::functions that retrieve a variable value, but limitations apply!
 
-        addFmuVariable(std::function<fmi2Real()>([this]() -> fmi2Real { return (0.5*(this->m*this->len*this->len/3)*(this->q_t[2]*this->q_t[2]));}),   "kineticEnergy",    FmuVariable::Type::FMU_REAL, "J",    "kinetic energy");
+        addFmuVariable(std::make_pair(std::function<fmi2Real()>([this]() -> fmi2Real { return (0.5*(this->m*this->len*this->len/3)*(this->q_t[2]*this->q_t[2]));}), std::function<void(fmi2Real)>([this](fmi2Real) {})),   "kineticEnergy",    FmuVariable::Type::FMU_REAL, "J",    "kinetic energy");
 
 
         // FMU_ACTION: start value will be automatically grabbed from 'len' during addFmuVariable;
@@ -41,7 +41,7 @@ public:
         //fmu_len.SetStartVal(len);
 
 
-        auto fmu_approximateOn = addFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::FMU_BOOLEAN, "1", "use approximated model", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+        auto& fmu_approximateOn = addFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::FMU_BOOLEAN, "1", "use approximated model", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
         // Additional commands
         q = {0, 0, 0, 3.14159265358979323846/4};

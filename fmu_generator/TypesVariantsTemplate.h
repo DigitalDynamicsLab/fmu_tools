@@ -16,7 +16,7 @@
 // in order to cover all possible available types
 
 /// FMU_ACTION: update the following declarations according to "fmi2TypesPlatformCustom.h"
-using FmuVariablePtrType = varns::variant<fmi2Real*, fmi2Integer*, fmi2Boolean*, fmi2String*,
+using FmuVariableBindType = varns::variant<fmi2Real*, fmi2Integer*, fmi2Boolean*, fmi2String*,
                                             std::function<fmi2Real()>,
                                             std::function<fmi2Integer()>,
                                             std::function<fmi2Boolean()>,
