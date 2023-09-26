@@ -15,6 +15,17 @@
 #include <unordered_set>
 
 
+#include "variant/variant_guard.hpp"
+
+#ifndef FMITYPESPLATFORM_CUSTOM
+    #include "TypesVariantsDefault.h"
+#else
+    #include "TypesVariantsCustom.h"
+#endif
+
+bool is_pointer_variant(const FmuVariableBindType& myVariant);
+
+
 extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +55,193 @@ static const UnitDefinitionType UD_rad_s2 ("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1 );
 
 
 
+template<class T>
+using FunGetSet = std::pair<std::function<T(void)>, std::function<void(T)>>;
+
+class FmuVariableExport : public FmuVariable {
+public:
+
+
+    using VarbindType = FmuVariableBindType;
+    using StartType = FmuVariableStartType;
+
+    //FmuVariable() : FmuVariable("", , FmuVariable::Type::FMU_REAL){}
+
+    FmuVariableExport(
+        const VarbindType& varbind,
+        const std::string& _name,
+        FmuVariable::Type _type,
+        CausalityType _causality = CausalityType::local,
+        VariabilityType _variability = VariabilityType::continuous,
+        InitialType _initial = InitialType::none):
+        FmuVariable(_name, _type, _causality, _variability, _initial)
+    {
+
+        // From FMI Reference
+        // If initial = 'exact' or 'approx', or causality = 'input',       a start value MUST be provided.
+        // If initial = 'calculated',        or causality = 'independent', a start value CANNOT be provided. 
+        if (initial == InitialType::calculated || causality == CausalityType::independent){
+            allowed_start = false;
+            required_start = false;
+        }
+
+        if (initial == InitialType::exact || initial == InitialType::approx || causality == CausalityType::input){
+            allowed_start = true;
+            required_start = true;
+        }
+
+        this->varbind = varbind;
+
+    }
+
+
+    FmuVariableExport(const FmuVariableExport& other) {
+        
+        type = other.type;
+        name = other.name;
+        valueReference = other.valueReference;
+        unitname = other.unitname;
+        causality = other.causality;
+        variability = other.variability;
+        initial = other.initial;
+        description = other.description;
+        varbind = other.varbind;
+        start = other.start;
+        allowed_start = other.allowed_start;
+        required_start = other.required_start;
+        has_start = other.has_start;
+
+    }
+
+
+    // Copy assignment operator
+    FmuVariableExport& operator=(const FmuVariableExport& other) {
+        if (this == &other) {
+            return *this; // Self-assignment guard
+        }
+
+        type = other.type;
+        name = other.name;
+        valueReference = other.valueReference;
+        unitname = other.unitname;
+        causality = other.causality;
+        variability = other.variability;
+        initial = other.initial;
+        description = other.description;
+        varbind = other.varbind;
+        start = other.start;
+        allowed_start = other.allowed_start;
+        required_start = other.required_start;
+        has_start = other.has_start;
+
+        return *this;
+    }
+
+
+    template <class T>
+    void SetValue(const T& val) const {
+        is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind) = val : varns::get<FunGetSet<T>>(this->varbind).second(val);
+    }
+
+
+    template <typename T>
+    void GetValue(T* varptr) const {
+        *varptr = is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind) : varns::get<FunGetSet<T>>(this->varbind).first();
+    }
+
+
+    template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
+    void SetStartVal(T startval){
+        if (allowed_start)
+            has_start = true;
+        else
+            return;
+
+        this->start = startval;
+    }
+
+    void SetStartVal(fmi2String startval){
+        if (allowed_start)
+            has_start = true;
+        else
+            return;
+        this->start = std::string(startval);
+    }
+
+
+    void ExposeCurrentValueAsStart(){
+        if (required_start){
+
+            varns::visit([this](auto&& arg){
+                    this->setStartFromVar(arg);
+                }, this->varbind);
+
+
+            //if (is_pointer_variant(this->varbind)){
+            //    // check if string TODO: check if this check is needed .-)
+            //    if (varns::holds_alternative<fmi2String*>(this->varbind)) {
+            //        // TODO
+            //        varns::visit([this](auto& arg){ return this->start = arg; }, this->varbind);
+            //    }
+            //    else{
+            //        varns::visit([this](auto& arg){ return this->SetStartVal(*arg); }, this->varbind);
+            //    }
+            //}
+            //else{
+
+            //}
+        }
+    }
+
+
+    std::string GetStartVal_toString() const {
+        if (const fmi2Real* start_ptr = varns::get_if<fmi2Real>(&this->start))
+            return std::to_string(*start_ptr);
+        if (const fmi2Integer* start_ptr = varns::get_if<fmi2Integer>(&this->start))
+            return std::to_string(*start_ptr);
+        if (const fmi2Boolean* start_ptr = varns::get_if<fmi2Boolean>(&this->start))
+            return std::to_string(*start_ptr);
+        if (const std::string* start_ptr = varns::get_if<std::string>(&this->start))
+            return *start_ptr;
+        return "";
+    }
+
+
+
+protected:
+
+    bool allowed_start = true;
+    bool required_start = false;
+
+    VarbindType varbind;
+    StartType start;
+
+
+    // TODO: in C++17 should be possible to either use constexpr or use lambda with 'overload' keyword
+    template <typename T>
+    void setStartFromVar(FunGetSet<T> funPair){
+        if (allowed_start)
+            has_start = true;
+        else
+            return;
+
+        this->start = funPair.first();
+    }
+
+    template <typename T>
+    void setStartFromVar(T* var_ptr){
+        if (allowed_start)
+            has_start = true;
+        else
+            return;
+
+        this->start = *var_ptr;
+    }
+
+};
+
+
+
 class FmuComponentBase{
 
 public:
@@ -54,6 +252,8 @@ public:
         modelIdentifier(FMU_MODEL_IDENTIFIER),
         fmuMachineState(FmuMachineStateType::instantiated)
     {
+
+        initializeType(_fmuType);
 
         unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
 
@@ -79,7 +279,7 @@ public:
         stopTimeDefined = _stopTimeDefined;
     }
 
-    const std::set<FmuVariable>& GetScalarVariables() const { return scalarVariables; }
+    const std::set<FmuVariableExport>& GetScalarVariables() const { return scalarVariables; }
 
     void EnterInitializationMode(){
         fmuMachineState = FmuMachineStateType::initializationMode;
@@ -103,6 +303,9 @@ public:
 
     fmi2Status DoStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
         fmi2Status doStep_status = _doStep(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPoint);
+
+        // once the step is done make sure all the auxiliary variables are updated as well
+        updateVars();
 
         switch (doStep_status)
         {
@@ -136,6 +339,12 @@ public:
 
     double GetTime() const {return time;}
 
+    void updateVars(){
+        for (auto& callb : updateVarsCallbacks){
+            callb();
+        }
+    }
+
     template <class T>
     fmi2Status fmi2GetVariable(const fmi2ValueReference vr[], size_t nvr, T value[], FmuVariable::Type vartype) {
         //TODO, when multiple variables are requested it might be better to iterate through scalarVariables just once
@@ -154,7 +363,7 @@ public:
     template <class T>
     fmi2Status fmi2SetVariable(const fmi2ValueReference vr[], size_t nvr, const T value[], FmuVariable::Type vartype) {
     for (size_t s = 0; s<nvr; ++s){
-        std::set<FmuVariable>::iterator it = this->findByValrefType(vr[s], vartype);
+        std::set<FmuVariableExport>::iterator it = this->findByValrefType(vr[s], vartype);
         if (it != this->scalarVariables.end() && it->IsSetAllowed(this->fmuType, this->fmuMachineState)){
             it->SetValue(value[s]);
         }
@@ -170,7 +379,7 @@ public:
     // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
     // At least, in this way, we do not have any redundant code at least
     const FmuVariable& addFmuVariable(
-            FmuVariable::VarbindType varbind,
+            FmuVariableExport::VarbindType varbind,
             std::string name,
             FmuVariable::Type scalartype = FmuVariable::Type::FMU_REAL,
             std::string unitname = "",
@@ -204,7 +413,7 @@ public:
 
 
 
-        FmuVariable newvar(varbind, name, scalartype, causality, variability, initial);
+        FmuVariableExport newvar(varbind, name, scalartype, causality, variability, initial);
         newvar.SetUnitName(unitname);
         newvar.SetValueReference(++valueReferenceCounter[scalartype]);
         newvar.SetDescription(description);
@@ -217,7 +426,7 @@ public:
 
 
 
-        std::pair<std::set<FmuVariable>::iterator, bool> ret = scalarVariables.insert(newvar);
+        std::pair<std::set<FmuVariableExport>::iterator, bool> ret = scalarVariables.insert(newvar);
         if(!ret.second)
             throw std::runtime_error("Developer error: cannot insert new variable into FMU.");
 
@@ -276,10 +485,12 @@ protected:
 
     std::map<FmuVariable::Type, unsigned int> valueReferenceCounter;
 
-    std::set<FmuVariable> scalarVariables;
+    std::set<FmuVariableExport> scalarVariables;
     std::unordered_map<std::string, UnitDefinitionType> unitDefinitions;
 
-    std::set<FmuVariable>::iterator findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype);
+    std::set<FmuVariableExport>::iterator findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype);
+
+    std::list<std::function<void(void)>> updateVarsCallbacks;
 
 
     fmi2CallbackFunctions callbackFunctions;

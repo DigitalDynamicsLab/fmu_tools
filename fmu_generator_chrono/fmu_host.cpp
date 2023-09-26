@@ -18,12 +18,18 @@
 
 #include <iostream>
 
+std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
+//std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY; // for debug
 int main(int argc, char* argv[]) {
     
     FmuUnit my_fmu;
 
     try {
+
+
+        //my_fmu.LoadUnzipped(unzipped_fmu_folder);
         my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY); // make sure the user has appropriate privileges to remove/create FMU_UNPACK_DIRECTORY
+        //my_fmu.Load(FMU_FILENAME); // will go in TEMP/_fmu_temp
 
         my_fmu.BuildVariablesTree();
         my_fmu.BuildVisualizersList(&my_fmu.tree_variables);
@@ -83,22 +89,23 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i<1000; ++i) {
 
         my_fmu._fmi2DoStep(my_fmu.component, time, dt, fmi2True);
-        {
-            fmi2Real val_real;
-            fmi2ValueReference valref = 4;
-            my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &val_real);
-            std::cout << "REAL: valref: " << valref << " | val: " << val_real << std::endl;
-        }
+
         time +=dt;
     }
 
-    {
-        fmi2Real val_real;
-        for (fmi2ValueReference valref = 1; valref<10; valref++){
-            my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &val_real);
-            std::cout << "REAL: valref: " << valref << " | val: " << val_real << std::endl;
-        }
+    fmi2Real val_real;
+    for (fmi2ValueReference valref = 1; valref<12; valref++){
+        my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &val_real);
+        std::cout << "REAL: valref: " << valref << " | val: " << val_real << std::endl;
     }
+
+    fmi2Boolean val_bool;
+    for (fmi2ValueReference valref = 1; valref<2; valref++){
+        my_fmu._fmi2GetBoolean(my_fmu.component, &valref, 1, &val_bool);
+        std::cout << "BOOLEAN: valref: " << valref << " | val: " << val_bool << std::endl;
+    }
+
+
 
 
 

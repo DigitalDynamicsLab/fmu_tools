@@ -24,11 +24,7 @@ public:
 
 protected:
 
-    void updateVars(){
-        for (auto& callb : updateVarsCallbacks){
-            callb();
-        }
-    }
+
 
     virtual void _enterInitializationMode() override;
     virtual void _exitInitializationMode() override;
@@ -39,7 +35,6 @@ protected:
     // Problem-specific data members   
     ChSystemNSC sys;
 
-    std::list<std::function<void(void)>> updateVarsCallbacks;
 
     double x_tt;
     double x_t;
@@ -50,10 +45,6 @@ protected:
     double pendulum_length = 0.5;
     double pendulum_mass = 1.0;
     double cart_mass = 1.0;
-
-    /// FMU_ACTION: set flags accordingly to mode availability
-    const bool cosim_available = true;
-    const bool modelexchange_available = false;
 
 
 };

@@ -25,6 +25,12 @@ const std::set<std::string> FmuComponentBase::logCategories_available = {
     "logAll"
 };
 
+bool is_pointer_variant(const FmuVariableBindType& myVariant) {
+    return varns::visit([](auto&& arg) -> bool {
+        return std::is_pointer_v<std::decay_t<decltype(arg)>>;
+    }, myVariant);
+}
+
 
 void createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid){
     FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmi2Type::fmi2CoSimulation, guid);
@@ -162,7 +168,7 @@ void FmuComponentBase::ExportModelDescription(std::string path){
     };
 
 
-    for (std::set<FmuVariable>::const_iterator it = scalarVariables.begin(); it!=scalarVariables.end(); ++it){
+    for (std::set<FmuVariableExport>::const_iterator it = scalarVariables.begin(); it!=scalarVariables.end(); ++it){
         // Create a ScalarVariable node
         rapidxml::xml_node<>* scalarVarNode = doc_ptr->allocate_node(rapidxml::node_element, "ScalarVariable");
         scalarVarNode->append_attribute(doc_ptr->allocate_attribute("name", it->GetName().c_str()));
@@ -202,7 +208,7 @@ void FmuComponentBase::ExportModelDescription(std::string path){
     delete doc_ptr;
 }
 
-std::set<FmuVariable>::iterator FmuComponentBase::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){
+std::set<FmuVariableExport>::iterator FmuComponentBase::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){
     auto predicate_samevalreftype = [vr, vartype](const FmuVariable& var) {
         return var.GetValueReference() == vr && var.GetType() == vartype;
     };

@@ -9,15 +9,6 @@
 #include <cassert>
 
 
-#include "variant/variant_guard.hpp"
-
-#ifndef FMITYPESPLATFORM_CUSTOM
-    #include "TypesVariantsDefault.h"
-#else
-    #include "TypesVariantsCustom.h"
-#endif
-
-bool is_pointer_variant(const FmuVariableBindType& myVariant);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -78,8 +69,6 @@ enum class FmuMachineStateType{
 };
 
 
-template<class T>
-using FunGetSet = std::pair<std::function<T(void)>, std::function<void(T)>>;
 
 
 /// Class holding a reference to a single FMU variable
@@ -88,9 +77,6 @@ using FunGetSet = std::pair<std::function<T(void)>, std::function<void(T)>>;
 class FmuVariable {
 public:
 
-
-    using VarbindType = FmuVariableBindType;
-    using StartType = FmuVariableStartType;
 
     enum class Type{
         FMU_REAL = 0, // numbering gives the order in which each type is printed in the modelDescription.xml
@@ -123,10 +109,9 @@ public:
         approx,
         calculated
     };
-    // TODO: DARIOM check if an additional InitialType::auto is needed
 
 
-    //FmuVariable() : FmuVariable("", , FmuVariable::Type::FMU_REAL){}
+    FmuVariable() : FmuVariable("", FmuVariable::Type::FMU_REAL){}
 
 
     FmuVariable(const FmuVariable& other) {
@@ -139,16 +124,12 @@ public:
         variability = other.variability;
         initial = other.initial;
         description = other.description;
-        varbind = other.varbind;
-        start = other.start;
-        allowed_start = other.allowed_start;
-        required_start = other.required_start;
         has_start = other.has_start;
 
     }
 
+
     FmuVariable(
-        const VarbindType& varbind,
         const std::string& _name,
         FmuVariable::Type _type,
         CausalityType _causality = CausalityType::local,
@@ -195,19 +176,6 @@ public:
         if (causality == CausalityType::input && initial != InitialType::none)
             throw std::runtime_error("If causality = 'input', it is not allowed to define a value for initial and a value for start must be defined.");
 
-        // From FMI Reference
-        // If initial = 'exact' or 'approx', or causality = 'input',       a start value MUST be provided.
-        // If initial = 'calculated',        or causality = 'independent', a start value CANNOT be provided. 
-        if (initial == InitialType::calculated || causality == CausalityType::independent){
-            allowed_start = false;
-            required_start = false;
-        }
-
-        if (initial == InitialType::exact || initial == InitialType::approx || causality == CausalityType::input){
-            allowed_start = true;
-            required_start = true;
-        }
-
 
         // Incompatible variability/causality settings
         // (a)
@@ -223,20 +191,6 @@ public:
         if (causality == CausalityType::input && (variability == VariabilityType::fixed || variability == VariabilityType::tunable))
             throw std::runtime_error("A fixed or tunable 'input'|'output' have exactly the same properties as a fixed or tunable parameter. For simplicity, only fixed and tunable parameters|calculatedParameters shall be defined.");
 
-
-        this->varbind = varbind;
-
-    }
-
-
-    bool operator<(const FmuVariable& other) const {
-        return this->type != other.type ? this->type < other.type : this->valueReference < other.valueReference;
-    }
-
-    bool operator==(const FmuVariable& other) const {
-        // according to FMI Reference can exist two different variables with same type and same valueReference;
-        // they are called "alias" thus they should be allowed but not considered equal
-        return this->name == other.name;
     }
 
     // Copy assignment operator
@@ -253,92 +207,29 @@ public:
         variability = other.variability;
         initial = other.initial;
         description = other.description;
-        varbind = other.varbind;
-        start = other.start;
-        allowed_start = other.allowed_start;
-        required_start = other.required_start;
         has_start = other.has_start;
 
         return *this;
     }
 
+    virtual ~FmuVariable() {}
 
-    template <class T>
-    void SetValue(const T& val) const {
-        is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind) = val : varns::get<FunGetSet<T>>(this->varbind).second(val);
+
+    bool operator<(const FmuVariable& other) const {
+        return this->type != other.type ? this->type < other.type : this->valueReference < other.valueReference;
     }
 
-
-    template <typename T>
-    void GetValue(T* varptr) const {
-        *varptr = is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind) : varns::get<FunGetSet<T>>(this->varbind).first();
+    bool operator==(const FmuVariable& other) const {
+        // according to FMI Reference can exist two different variables with same type and same valueReference;
+        // they are called "alias" thus they should be allowed but not considered equal
+        return this->name == other.name;
     }
-
-
-    template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
-    void SetStartVal(T startval){
-        if (allowed_start)
-            has_start = true;
-        else
-            return;
-
-        this->start = startval;
-    }
-
-    void SetStartVal(fmi2String startval){
-        if (allowed_start)
-            has_start = true;
-        else
-            return;
-        this->start = std::string(startval);
-    }
-
-
 
 
     bool HasStartVal() const {
         return has_start;
     }
 
-
-
-
-    void ExposeCurrentValueAsStart(){
-        if (required_start){
-
-            varns::visit([this](auto&& arg){
-                    this->setStartFromVar(arg);
-                }, this->varbind);
-
-
-            //if (is_pointer_variant(this->varbind)){
-            //    // check if string TODO: check if this check is needed .-)
-            //    if (varns::holds_alternative<fmi2String*>(this->varbind)) {
-            //        // TODO
-            //        varns::visit([this](auto& arg){ return this->start = arg; }, this->varbind);
-            //    }
-            //    else{
-            //        varns::visit([this](auto& arg){ return this->SetStartVal(*arg); }, this->varbind);
-            //    }
-            //}
-            //else{
-
-            //}
-        }
-    }
-
-
-    std::string GetStartVal_toString() const {
-        if (const fmi2Real* start_ptr = varns::get_if<fmi2Real>(&this->start))
-            return std::to_string(*start_ptr);
-        if (const fmi2Integer* start_ptr = varns::get_if<fmi2Integer>(&this->start))
-            return std::to_string(*start_ptr);
-        if (const fmi2Boolean* start_ptr = varns::get_if<fmi2Boolean>(&this->start))
-            return std::to_string(*start_ptr);
-        if (const std::string* start_ptr = varns::get_if<std::string>(&this->start))
-            return *start_ptr;
-        return "";
-    }
 
     bool IsSetAllowed(fmi2Type fmi_type, FmuMachineStateType fmu_machine_state) const {
 
@@ -414,38 +305,9 @@ protected:
     InitialType initial;
     std::string description = "";
 
-
-
-
-    bool allowed_start = true;
-    bool required_start = false;
     bool has_start = false;
 
 
-    VarbindType varbind;
-    StartType start;
-
-
-    // TODO: in C++17 should be possible to either use constexpr or use lambda with 'overload' keyword
-    template <typename T>
-    void setStartFromVar(FunGetSet<T> funPair){
-        if (allowed_start)
-            has_start = true;
-        else
-            return;
-
-        this->start = funPair.first();
-    }
-
-    template <typename T>
-    void setStartFromVar(T* var_ptr){
-        if (allowed_start)
-            has_start = true;
-        else
-            return;
-
-        this->start = *var_ptr;
-    }
 
 };
 

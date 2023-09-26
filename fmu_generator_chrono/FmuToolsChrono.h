@@ -39,25 +39,25 @@ namespace chrono {
 ///
 /// This is a class for serializing to FmuComponentBase
 ///
-/// 
+///
 
 
-//const std::unordered_map<chrono::ChVariabilityType, FmuVariable::VariabilityType, std::string> VariabilityType_conv = {
-//    {chrono::ChVariabilityType::constant, FmuVariable::VariabilityType::constant},
-//    {chrono::ChVariabilityType::fixed, FmuVariable::VariabilityType::fixed},
-//    {chrono::ChVariabilityType::tunable, FmuVariable::VariabilityType::tunable},
-//    {chrono::ChVariabilityType::discrete, FmuVariable::VariabilityType::discrete},
-//    {chrono::ChVariabilityType::continuous, FmuVariable::VariabilityType::continuous}
-//};
-//
-//const std::unordered_map<chrono::ChCausalityType, FmuVariable::CausalityType> CausalityType_conv = {
-//    {chrono::ChCausalityType::parameter, FmuVariable::CausalityType::parameter},
-//    {chrono::ChCausalityType::calculatedParameter, FmuVariable::CausalityType::calculatedParameter},
-//    {chrono::ChCausalityType::input, FmuVariable::CausalityType::input},
-//    {chrono::ChCausalityType::output, FmuVariable::CausalityType::output},
-//    {chrono::ChCausalityType::local, FmuVariable::CausalityType::local},
-//    {chrono::ChCausalityType::independent, FmuVariable::CausalityType::independent}
-//};
+const std::unordered_map<chrono::ChVariabilityType, FmuVariable::VariabilityType> VariabilityType_conv = {
+    {chrono::ChVariabilityType::constant, FmuVariable::VariabilityType::constant},
+    {chrono::ChVariabilityType::fixed, FmuVariable::VariabilityType::fixed},
+    {chrono::ChVariabilityType::tunable, FmuVariable::VariabilityType::tunable},
+    {chrono::ChVariabilityType::discrete, FmuVariable::VariabilityType::discrete},
+    {chrono::ChVariabilityType::continuous, FmuVariable::VariabilityType::continuous}
+};
+
+const std::unordered_map<chrono::ChCausalityType, FmuVariable::CausalityType> CausalityType_conv = {
+    {chrono::ChCausalityType::parameter, FmuVariable::CausalityType::parameter},
+    {chrono::ChCausalityType::calculatedParameter, FmuVariable::CausalityType::calculatedParameter},
+    {chrono::ChCausalityType::input, FmuVariable::CausalityType::input},
+    {chrono::ChCausalityType::output, FmuVariable::CausalityType::output},
+    {chrono::ChCausalityType::local, FmuVariable::CausalityType::local},
+    {chrono::ChCausalityType::independent, FmuVariable::CausalityType::independent}
+};
 
 // TODO expand serialization to have description
 
