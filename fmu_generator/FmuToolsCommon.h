@@ -13,44 +13,6 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-struct UnitDefinitionType{
-
-    UnitDefinitionType(const std::string& _name = "1"): name(_name){}
-
-    UnitDefinitionType(const std::string& _name, int _kg, int _m, int _s, int _A, int _K, int _mol, int _cd, int _rad):
-        name(_name),
-        kg(_kg),
-        m(_m),
-        s(_s),
-        A(_A),
-        K(_K),
-        mol(_mol),
-        cd(_cd),
-        rad(_rad){}
-
-    virtual ~UnitDefinitionType(){}
-
-    std::string name;
-    int kg = 0;
-    int m = 0;
-    int s = 0;
-    int A = 0;
-    int K = 0;
-    int mol = 0;
-    int cd = 0;
-    int rad = 0;
-
-    struct Hash {
-        size_t operator()(const UnitDefinitionType& p) const {
-            return std::hash<std::string>()(p.name);
-        }
-    };
-
-    bool operator==(const UnitDefinitionType& other) const {
-        return name == other.name;
-    }
-
-};
 
 
 enum class FmuMachineStateType{

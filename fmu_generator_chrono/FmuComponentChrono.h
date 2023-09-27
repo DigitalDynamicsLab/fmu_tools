@@ -7,6 +7,9 @@
 
 #include <chrono/physics/ChSystemNSC.h>
 #include <chrono/physics/ChBodyEasy.h>
+#include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
+#include "chrono/core/ChRealtimeStep.h"
+
 
 using namespace chrono;
 
@@ -29,11 +32,14 @@ protected:
     virtual void _enterInitializationMode() override;
     virtual void _exitInitializationMode() override;
 
-    virtual bool is_cosimulation_available() const override {return true;}
-    virtual bool is_modelexchange_available() const override {return false;}
+    virtual bool is_cosimulation_available() const override { return true;}
+    virtual bool is_modelexchange_available() const override { return false;}
 
     // Problem-specific data members   
     ChSystemNSC sys;
+    std::shared_ptr<chrono::irrlicht::ChVisualSystemIrrlicht> vis;
+    ChRealtimeStepTimer realtime_timer;
+
 
 
     double x_tt;

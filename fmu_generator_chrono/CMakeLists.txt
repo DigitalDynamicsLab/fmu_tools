@@ -85,16 +85,16 @@ IF (NOT EXISTS "${CMAKE_SOURCE_DIR}/fmu_host.cpp")
 endif()
 target_sources(fmu_host PRIVATE fmu_host.cpp)
 
-# # Copy dependencies
-# string(REPLACE ";" "\" \"" CHRONO_DLLS_SPACEDELIM "${CHRONO_DLLS}")
-# SET(CHRONO_DLLS_SPACEDELIM "\"${CHRONO_DLLS_SPACEDELIM}\"")
-# add_custom_target(COPY_DEPENDENCIES
-#   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CHRONO_DLLS_SPACEDELIM}" "${FMU_RUNTIME_OUTPUT_DIRECTORY}"
-#   COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
-# )
+# Copy dependencies
+string(REPLACE ";" "\" \"" CHRONO_DLLS_SPACEDELIM "${CHRONO_DLLS}")
+SET(CHRONO_DLLS_SPACEDELIM "\"${CHRONO_DLLS_SPACEDELIM}\"")
+add_custom_target(COPY_DEPENDENCIES
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CHRONO_DLLS_SPACEDELIM}" "${FMU_RUNTIME_OUTPUT_DIRECTORY}"
+  COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
+)
 
-# add_dependencies(fmu_modeldescription_generator COPY_DEPENDENCIES)
-# add_dependencies(PACK_FMU COPY_DEPENDENCIES)
+add_dependencies(fmu_modeldescription_generator COPY_DEPENDENCIES)
+add_dependencies(PACK_FMU COPY_DEPENDENCIES)
 
 # Enable testing
 if(TESTING_ENABLED)

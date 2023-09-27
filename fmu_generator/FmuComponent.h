@@ -31,9 +31,17 @@ public:
         auto& fmu_M =   addFmuVariable(&M,    "M",   FmuVariable::Type::FMU_REAL, "kg", "cart mass",       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
         
-        /// FMU_ACTION: you can also pass std::functions that retrieve a variable value, but limitations apply!
+        /// FMU_ACTION: you can also pass std::functions to get/set the value of the variable if queried
+        //addFmuVariable(std::make_pair(
+        //    std::function<fmi2Real()>([this]() -> fmi2Real {
+        //        return (0.5*(this->m*this->len*this->len/3)*(this->q_t[2]*this->q_t[2]));}),
+        //    std::function<void(fmi2Real)>([this](fmi2Real) {})),
+        //    "kineticEnergy",    FmuVariable::Type::FMU_REAL, "J",    "kinetic energy");
 
-        addFmuVariable(std::make_pair(std::function<fmi2Real()>([this]() -> fmi2Real { return (0.5*(this->m*this->len*this->len/3)*(this->q_t[2]*this->q_t[2]));}), std::function<void(fmi2Real)>([this](fmi2Real) {})),   "kineticEnergy",    FmuVariable::Type::FMU_REAL, "J",    "kinetic energy");
+        // same result is achieved through helper function 'MAKE_FUN_PAIR'
+        addFmuVariable(MAKE_GETSET_PAIR(fmi2Real,
+            { return (0.5*(this->m*this->len*this->len/3)*(this->q_t[2]*this->q_t[2]));},
+            {}),   "kineticEnergy",    FmuVariable::Type::FMU_REAL, "J",    "kinetic energy");
 
 
         // FMU_ACTION: start value will be automatically grabbed from 'len' during addFmuVariable;

@@ -23,15 +23,57 @@
     #include "TypesVariantsCustom.h"
 #endif
 
-bool is_pointer_variant(const FmuVariableBindType& myVariant);
+
+
+
+struct UnitDefinitionType{
+
+    UnitDefinitionType(const std::string& _name = "1"): name(_name){}
+
+    UnitDefinitionType(const std::string& _name, int _kg, int _m, int _s, int _A, int _K, int _mol, int _cd, int _rad):
+        name(_name),
+        kg(_kg),
+        m(_m),
+        s(_s),
+        A(_A),
+        K(_K),
+        mol(_mol),
+        cd(_cd),
+        rad(_rad){}
+
+    virtual ~UnitDefinitionType(){}
+
+    std::string name;
+    int kg = 0;
+    int m = 0;
+    int s = 0;
+    int A = 0;
+    int K = 0;
+    int mol = 0;
+    int cd = 0;
+    int rad = 0;
+
+    struct Hash {
+        size_t operator()(const UnitDefinitionType& p) const {
+            return std::hash<std::string>()(p.name);
+        }
+    };
+
+    bool operator==(const UnitDefinitionType& other) const {
+        return name == other.name;
+    }
+
+};
 
 
 extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void FMI2_Export createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid);
+    void FMI2_Export createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid);
 
 #ifdef __cplusplus
 }
@@ -54,9 +96,20 @@ static const UnitDefinitionType UD_rad_s  ("rad/s",  0, 0, -1, 0, 0, 0, 0, 1 );
 static const UnitDefinitionType UD_rad_s2 ("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1 );
 
 
+#define MAKE_GETSET_PAIR(returnType, codeGet, codeSet) \
+    std::make_pair(std::function<returnType()>([this]() -> returnType  \
+        codeGet \
+    ), \
+    std::function<void(returnType)>([this](returnType val)  \
+        codeSet \
+    ))
 
 template<class T>
 using FunGetSet = std::pair<std::function<T(void)>, std::function<void(T)>>;
+
+
+bool is_pointer_variant(const FmuVariableBindType& myVariant);
+
 
 class FmuVariableExport : public FmuVariable {
 public:
@@ -65,7 +118,6 @@ public:
     using VarbindType = FmuVariableBindType;
     using StartType = FmuVariableStartType;
 
-    //FmuVariable() : FmuVariable("", , FmuVariable::Type::FMU_REAL){}
 
     FmuVariableExport(
         const VarbindType& varbind,
@@ -95,21 +147,12 @@ public:
     }
 
 
-    FmuVariableExport(const FmuVariableExport& other) {
+    FmuVariableExport(const FmuVariableExport& other) : FmuVariable(other) {
         
-        type = other.type;
-        name = other.name;
-        valueReference = other.valueReference;
-        unitname = other.unitname;
-        causality = other.causality;
-        variability = other.variability;
-        initial = other.initial;
-        description = other.description;
         varbind = other.varbind;
         start = other.start;
         allowed_start = other.allowed_start;
         required_start = other.required_start;
-        has_start = other.has_start;
 
     }
 
@@ -120,19 +163,12 @@ public:
             return *this; // Self-assignment guard
         }
 
-        type = other.type;
-        name = other.name;
-        valueReference = other.valueReference;
-        unitname = other.unitname;
-        causality = other.causality;
-        variability = other.variability;
-        initial = other.initial;
-        description = other.description;
+        FmuVariable::operator=(other);
+
         varbind = other.varbind;
         start = other.start;
         allowed_start = other.allowed_start;
         required_start = other.required_start;
-        has_start = other.has_start;
 
         return *this;
     }
@@ -195,6 +231,11 @@ public:
 
 
     std::string GetStartVal_toString() const {
+
+        // TODO: C++17 would allow the overload operator in lambda
+        //std::string start_string;
+        //varns::visit([&start_string](auto&& arg) -> std::string {return start_string = std::to_string(*start_ptr)});
+
         if (const fmi2Real* start_ptr = varns::get_if<fmi2Real>(&this->start))
             return std::to_string(*start_ptr);
         if (const fmi2Integer* start_ptr = varns::get_if<fmi2Integer>(&this->start))
@@ -253,7 +294,6 @@ public:
         fmuMachineState(FmuMachineStateType::instantiated)
     {
 
-        initializeType(_fmuType);
 
         unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
 

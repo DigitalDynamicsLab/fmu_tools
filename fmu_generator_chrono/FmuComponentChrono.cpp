@@ -12,6 +12,7 @@
 FmuComponent::FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
         FmuComponentBase(_instanceName, _fmuType, _fmuGUID)
 {
+    initializeType(_fmuType);
 
     SetChronoDataPath(CHRONO_DATA_DIR);
 
@@ -60,6 +61,16 @@ void FmuComponent::_exitInitializationMode() {
 
     sys.DoFullAssembly();
 
+    //vis = chrono_types::make_shared<irrlicht::ChVisualSystemIrrlicht>();
+    //vis->AttachSystem(&sys);
+    //vis->SetWindowSize(800, 600);
+    //vis->SetWindowTitle("Simple slider-crank example");
+    //vis->Initialize();
+    ////vis->AddLogo();
+    ////vis->AddSkyBox();
+    //vis->AddCamera(ChVector<>(0, 0, -6));
+    //vis->AddTypicalLights();
+
     updateVarsCallbacks.push_back([this](){ x_tt = this->sys.SearchBodyID(10)->GetPos_dtdt().x(); });
     updateVarsCallbacks.push_back([this](){ x_t = this->sys.SearchBodyID(10)->GetPos_dt().x(); });
     updateVarsCallbacks.push_back([this](){ x = this->sys.SearchBodyID(10)->GetPos().x(); });
@@ -75,11 +86,27 @@ fmi2Status FmuComponent::_doStep(fmi2Real currentCommunicationPoint, fmi2Real co
     while (time < currentCommunicationPoint + communicationStepSize){
         fmi2Real _stepSize = std::min((currentCommunicationPoint + communicationStepSize - time), std::min(communicationStepSize, stepSize));
 
+        if (vis)
+        {        
+            vis->BeginScene();
+            vis->Render();
+        }
+
         sys.DoStepDynamics(_stepSize);
         sendToLog("Step at time: " + std::to_string(time) + " with timestep: " + std::to_string(_stepSize) + "ms succeeded.\n", fmi2Status::fmi2OK, "logAll");
         updateVars();
 
         time = time + _stepSize;
+
+        realtime_timer.Spin(_stepSize);
+
+        
+        if (vis)
+        {        
+            vis->EndScene();
+        }
+
+
 
 
     }
