@@ -13,6 +13,7 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <functional>
 
 
 #include "variant/variant_guard.hpp"

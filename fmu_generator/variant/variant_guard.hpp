@@ -3,7 +3,7 @@
 
 #if _HAS_CXX17
     #include <variant>
-    namespace varns = std::variant;
+    namespace varns = std;
 #else
     #include "variant.hpp"
     namespace varns = mpark;

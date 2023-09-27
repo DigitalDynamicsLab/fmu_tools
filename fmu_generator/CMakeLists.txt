@@ -7,19 +7,23 @@ cmake_policy(SET CMP0091 NEW) # MSVC runtime library flags are selected by an ab
 project(fmu_generator)
 SET(CMAKE_SHARED_LIBRARY_PREFIX "")
 
-# Set the minimum required C++ standard to C++14
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Set the minimum required C++ standard to C++14, allow C++17 if available
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED OFF)
+set(CMAKE_CXX_STANDARD 17)
 
-# Check if the compiler supports C++17
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX17)
+MESSAGE(STATUS "CMAKE_CXX_STANDARD: ${CMAKE_CXX_STANDARD}")
 
-if(COMPILER_SUPPORTS_CXX17)
-    # Enable C++17 if supported
-    set(CMAKE_CXX_STANDARD 17)
-endif()
+# # # Check if the compiler supports C++17
+# include(CheckCXXCompilerFlag)
+# CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX17)
+
+# if(COMPILER_SUPPORTS_CXX17)
+#     # Enable C++17 if supported
+#     set(CMAKE_CXX_STANDARD 17)
+# endif()
 
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")

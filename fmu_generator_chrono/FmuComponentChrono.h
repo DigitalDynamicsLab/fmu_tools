@@ -7,8 +7,12 @@
 
 #include <chrono/physics/ChSystemNSC.h>
 #include <chrono/physics/ChBodyEasy.h>
-#include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 #include "chrono/core/ChRealtimeStep.h"
+
+#ifdef CHRONO_IRRLICHT
+#include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
+#endif
+
 
 
 using namespace chrono;
@@ -37,8 +41,14 @@ protected:
 
     // Problem-specific data members   
     ChSystemNSC sys;
-    std::shared_ptr<chrono::irrlicht::ChVisualSystemIrrlicht> vis;
+    
     ChRealtimeStepTimer realtime_timer;
+
+#ifdef CHRONO_IRRLICHT
+    std::shared_ptr<chrono::irrlicht::ChVisualSystemIrrlicht> vis;
+#endif
+
+
 
 
 
