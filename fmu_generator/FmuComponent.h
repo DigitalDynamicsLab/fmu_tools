@@ -75,8 +75,11 @@ public:
 
 protected:
 
+    /// FMU_ACTION: override the base methods so to retrieve the proper answer
     virtual bool is_cosimulation_available() const override {return true;}
     virtual bool is_modelexchange_available() const override {return false;}
+
+
 
     // Problem-specific data members   
     std::array<double, 4> q;
@@ -91,17 +94,11 @@ protected:
     std::array<double, 4> k3 = {0,0,0,0};
     std::array<double, 4> k4 = {0,0,0,0};
 
-    /// FMU_ACTION: set flags accordingly to mode availability
     const bool cosim_available = true;
     const bool modelexchange_available = false;
 
 
 };
 
-
-// FMU_ACTION:: implement the following functions
-FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID){
-    return new FmuComponent(instanceName, fmuType, fmuGUID);
-}
 
 

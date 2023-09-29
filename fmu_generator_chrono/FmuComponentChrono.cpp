@@ -61,15 +61,15 @@ void FmuComponent::_exitInitializationMode() {
 
     sys.DoFullAssembly();
 
-    //vis = chrono_types::make_shared<irrlicht::ChVisualSystemIrrlicht>();
-    //vis->AttachSystem(&sys);
-    //vis->SetWindowSize(800, 600);
-    //vis->SetWindowTitle("Simple slider-crank example");
-    //vis->Initialize();
-    ////vis->AddLogo();
-    ////vis->AddSkyBox();
-    //vis->AddCamera(ChVector<>(0, 0, -6));
-    //vis->AddTypicalLights();
+    vis = chrono_types::make_shared<irrlicht::ChVisualSystemIrrlicht>();
+    vis->AttachSystem(&sys);
+    vis->SetWindowSize(800, 600);
+    vis->SetWindowTitle("Simple slider-crank example");
+    vis->Initialize();
+    //vis->AddLogo();
+    //vis->AddSkyBox();
+    vis->AddCamera(ChVector<>(0, 0, -6));
+    vis->AddTypicalLights();
 
     updateVarsCallbacks.push_back([this](){ x_tt = this->sys.SearchBodyID(10)->GetPos_dtdt().x(); });
     updateVarsCallbacks.push_back([this](){ x_t = this->sys.SearchBodyID(10)->GetPos_dt().x(); });

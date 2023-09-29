@@ -10,6 +10,13 @@
 #include <math.h>
 
 
+
+// FMU_ACTION:: implement the following functions
+FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID){
+    return new FmuComponent(instanceName, fmuType, fmuGUID);
+}
+
+
 std::array<double, 4> operator*(double lhs, const std::array<double, 4>& rhs)
 {
     std::array<double, 4> temp;
