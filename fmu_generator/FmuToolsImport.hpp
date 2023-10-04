@@ -234,6 +234,8 @@ public:
     }
 
     void Load(const std::string& filepath, const std::string& unzipdir = fs::temp_directory_path().generic_string() + std::string("/_fmu_temp")) {
+        
+        std::cout << "Unzipping FMU: " << filepath << " in: " << unzipdir << std::endl;
         std::error_code ec;
         fs::remove_all(unzipdir, ec);
         fs::create_directories(unzipdir);
@@ -349,15 +351,15 @@ public:
                 throw std::runtime_error("Cannot find 'name' property in variable.\n");
 
             if (auto variables_type = variable_node->first_node("Real"))
-                mvar_type = FmuVariable::Type::FMU_REAL;
+                mvar_type = FmuVariable::Type::Real;
             else if (auto variables_type = variable_node->first_node("String"))
-                mvar_type = FmuVariable::Type::FMU_STRING;
+                mvar_type = FmuVariable::Type::String;
             else if (auto variables_type = variable_node->first_node("Integer"))
-                mvar_type = FmuVariable::Type::FMU_INTEGER;
+                mvar_type = FmuVariable::Type::Integer;
             else if (auto variables_type = variable_node->first_node("Boolean"))
-                mvar_type = FmuVariable::Type::FMU_BOOLEAN;
+                mvar_type = FmuVariable::Type::Boolean;
             else
-                mvar_type = FmuVariable::Type::FMU_REAL;
+                mvar_type = FmuVariable::Type::Real;
 
 
             fmi2ValueReference valref;
@@ -658,19 +660,19 @@ public:
     fmi2Status GetVariable(fmi2ValueReference vr, T& value, FmuVariable::Type vartype) noexcept(false) {
         switch (vartype)
         {
-        case FmuVariable::Type::FMU_REAL:
+        case FmuVariable::Type::Real:
             this->_fmi2GetReal(this->component, &vr, 1, &value);
             break;
-        case FmuVariable::Type::FMU_INTEGER:
+        case FmuVariable::Type::Integer:
             this->_fmi2GetInteger(this->component, &vr, 1, &value);
             break;
-        case FmuVariable::Type::FMU_BOOLEAN:
+        case FmuVariable::Type::Boolean:
             this->_fmi2GetBoolean(this->component, &vr, 1, &value);
             break;
-        case FmuVariable::Type::FMU_STRING:
+        case FmuVariable::Type::String:
             this->_fmi2GetString(this->component, &vr, 1, &value);
             break;
-        case FmuVariable::Type::FMU_UNKNOWN:
+        case FmuVariable::Type::Unknown:
             throw std::runtime_error("Fmu Variable type not initialized.")
             break;
         default:
@@ -683,19 +685,19 @@ public:
     fmi2Status SetVariable(fmi2ValueReference vr, const T& value, FmuVariable::Type vartype) noexcept(false) {
         switch (vartype)
         {
-        case FmuVariable::Type::FMU_REAL:
+        case FmuVariable::Type::Real:
             this->_fmi2SetReal(this->component, &vr, 1, &value);
             break;
-        case FmuVariable::Type::FMU_INTEGER:
+        case FmuVariable::Type::Integer:
             this->_fmi2SetInteger(this->component, &vr, 1, &value);
             break;
-        case FmuVariable::Type::FMU_BOOLEAN:
+        case FmuVariable::Type::Boolean:
             this->_fmi2SetBoolean(this->component, &vr, 1, &value);
             break;
-        case FmuVariable::Type::FMU_STRING:
+        case FmuVariable::Type::String:
             this->_fmi2SetString(this->component, &vr, 1, &value);
             break;
-        case FmuVariable::Type::FMU_UNKNOWN:
+        case FmuVariable::Type::Unknown:
             throw std::runtime_error("Fmu Variable type not initialized.")
             break;
         default:

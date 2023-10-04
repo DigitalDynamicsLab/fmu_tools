@@ -39,6 +39,9 @@ void createModelDescription(const std::string& path, fmi2Type fmutype, fmi2Strin
 }
 
 void FmuComponentBase::ExportModelDescription(std::string path){
+
+    _preModelDescriptionExport();
+
     // Create the XML document
     rapidxml::xml_document<>* doc_ptr = new rapidxml::xml_document<>();
 
@@ -137,11 +140,11 @@ void FmuComponentBase::ExportModelDescription(std::string path){
 
     //TODO: move elsewhere
     const std::unordered_map<FmuVariable::Type, std::string> Type_strings = {
-        {FmuVariable::Type::FMU_REAL, "Real"},
-        {FmuVariable::Type::FMU_INTEGER, "Integer"},
-        {FmuVariable::Type::FMU_BOOLEAN, "Boolean"},
-        {FmuVariable::Type::FMU_UNKNOWN, "Unknown"},
-        {FmuVariable::Type::FMU_STRING, "String"}
+        {FmuVariable::Type::Real, "Real"},
+        {FmuVariable::Type::Integer, "Integer"},
+        {FmuVariable::Type::Boolean, "Boolean"},
+        {FmuVariable::Type::Unknown, "Unknown"},
+        {FmuVariable::Type::String, "String"}
     };
 
     const std::unordered_map<FmuVariable::InitialType, std::string> InitialType_strings = {
@@ -183,7 +186,7 @@ void FmuComponentBase::ExportModelDescription(std::string path){
         modelVarsNode->append_node(scalarVarNode);
 
         rapidxml::xml_node<>* unitNode = doc_ptr->allocate_node(rapidxml::node_element, Type_strings.at(it->GetType()).c_str());
-        if (it->GetType() == FmuVariable::Type::FMU_REAL)
+        if (it->GetType() == FmuVariable::Type::Real)
             unitNode->append_attribute(doc_ptr->allocate_attribute("unit", it->GetUnitName().c_str()));
         if (it->HasStartVal()){
             stringbuf.push_back(it->GetStartVal_toString());
@@ -206,6 +209,8 @@ void FmuComponentBase::ExportModelDescription(std::string path){
     outFile.close();
 
     delete doc_ptr;
+
+     _postModelDescriptionExport();
 }
 
 std::set<FmuVariableExport>::iterator FmuComponentBase::findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype){
@@ -213,6 +218,13 @@ std::set<FmuVariableExport>::iterator FmuComponentBase::findByValrefType(fmi2Val
         return var.GetValueReference() == vr && var.GetType() == vartype;
     };
     return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
+}
+
+std::set<FmuVariableExport>::iterator FmuComponentBase::findByName(const std::string& name){
+    auto predicate_samename = [name](const FmuVariable& var) {
+        return !var.GetName().compare(name);
+    };
+    return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
 }
             
 //////////////// FMU FUNCTIONS /////////////////
@@ -268,37 +280,37 @@ fmi2Status fmi2Reset(fmi2Component c){ return fmi2Status::fmi2OK; }
 
 
 fmi2Status fmi2GetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Real value[]){
-    return reinterpret_cast<FmuComponentBase*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_REAL);
+    return reinterpret_cast<FmuComponentBase*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::Real);
 }
 
 fmi2Status fmi2GetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Integer value[]){
-    return reinterpret_cast<FmuComponentBase*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
+    return reinterpret_cast<FmuComponentBase*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::Integer);
 }
 
 fmi2Status fmi2GetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2Boolean value[]){
-    return reinterpret_cast<FmuComponentBase*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
+    return reinterpret_cast<FmuComponentBase*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::Boolean);
 }
 
 fmi2Status fmi2GetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, fmi2String value[]){
-    return reinterpret_cast<FmuComponentBase*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::FMU_STRING);
+    return reinterpret_cast<FmuComponentBase*>(c)->fmi2GetVariable(vr, nvr, value, FmuVariable::Type::String);
 }
 
 
 
 fmi2Status fmi2SetReal(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Real value[]){
-    return reinterpret_cast<FmuComponentBase*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_REAL);
+    return reinterpret_cast<FmuComponentBase*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::Real);
 }
 
 fmi2Status fmi2SetInteger(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Integer value[]){
-    return reinterpret_cast<FmuComponentBase*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_INTEGER);
+    return reinterpret_cast<FmuComponentBase*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::Integer);
 }
 
 fmi2Status fmi2SetBoolean(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2Boolean value[]){
-    return reinterpret_cast<FmuComponentBase*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_BOOLEAN);
+    return reinterpret_cast<FmuComponentBase*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::Boolean);
 }
 
 fmi2Status fmi2SetString(fmi2Component c, const fmi2ValueReference vr[], size_t nvr, const fmi2String value[]){
-    return reinterpret_cast<FmuComponentBase*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::FMU_STRING);
+    return reinterpret_cast<FmuComponentBase*>(c)->fmi2SetVariable(vr, nvr, value, FmuVariable::Type::String);
 }
 
 fmi2Status fmi2GetFMUstate(fmi2Component c, fmi2FMUstate* FMUstate){ return fmi2Status::fmi2OK; }

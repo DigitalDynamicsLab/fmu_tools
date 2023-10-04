@@ -40,7 +40,32 @@ namespace chrono {
 /// This is a class for serializing to FmuComponentBase
 ///
 ///
+/// 
 
+#define ADD_BVAL_AS_FMU_GETSET(returnType, codeGet, codeSet) \
+    _fmucomp->addFmuVariable(std::make_pair(std::function<fmi2##returnType(void)>([&bVal]() -> fmi2##returnType  \
+        codeGet \
+    ), \
+    std::function<void(fmi2##returnType)>([&bVal](fmi2##returnType val)  \
+        codeSet \
+    )), \
+    current_parent_fullname + "." + bVal.name(), \
+    FmuVariable::Type::##returnType, \
+    "", \
+    "", \
+    CausalityType_conv.at(bVal.GetCausality()), \
+    VariabilityType_conv.at(bVal.GetVariability()) \
+    );
+
+#define ADD_BVAL_AS_FMU_POINTER(returnType) \
+    _fmucomp->addFmuVariable(&(bVal.value()), \
+    current_parent_fullname + "." + bVal.name(), \
+    FmuVariable::Type::##returnType, \
+    "", \
+    "", \
+    CausalityType_conv.at(bVal.GetCausality()), \
+    VariabilityType_conv.at(bVal.GetVariability()) \
+    );
 
 const std::unordered_map<chrono::ChVariabilityType, FmuVariable::VariabilityType> VariabilityType_conv = {
     {chrono::ChVariabilityType::constant, FmuVariable::VariabilityType::constant},
@@ -62,60 +87,69 @@ const std::unordered_map<chrono::ChCausalityType, FmuVariable::CausalityType> Ca
 // TODO expand serialization to have description
 
 
-class ChArchiveFmuModelDescription : public ChArchiveOut {
+class ChArchiveFmu : public ChArchiveOut {
   public:
-    ChArchiveFmuModelDescription(FmuComponentBase& fmucomp) {
+    ChArchiveFmu(FmuComponentBase& fmucomp) {
         _fmucomp = &fmucomp;
 
         tablevel = 0;
         nitems.push(0);
-        is_array.push(false);
+        is_array.push_back(false);
     };
 
-    virtual ~ChArchiveFmuModelDescription() {
+    virtual ~ChArchiveFmu() {
         nitems.pop();
-        is_array.pop();
+        is_array.pop_back();
     };
 
 
     virtual void out(ChNameValue<bool> bVal) {
-
+        ADD_BVAL_AS_FMU_GETSET(Boolean, { return static_cast<int>(bVal.value()); }, {bVal.value() = val;})
 
         ++nitems.top();
     }
     virtual void out(ChNameValue<int> bVal) {
+        ADD_BVAL_AS_FMU_POINTER(Integer)
         
         ++nitems.top();
     }
     virtual void out(ChNameValue<double> bVal) {
+        ADD_BVAL_AS_FMU_POINTER(Real)
 
         ++nitems.top();
     }
     virtual void out(ChNameValue<float> bVal) {
+        ADD_BVAL_AS_FMU_GETSET(Real, { return static_cast<double>(bVal.value()); }, {bVal.value() = static_cast<float>(val);})
 
         ++nitems.top();
     }
     virtual void out(ChNameValue<char> bVal) {
+        ADD_BVAL_AS_FMU_GETSET(Integer, { return static_cast<fmi2Integer>(bVal.value()); }, {bVal.value() = val;})
 
         ++nitems.top();
     }
     virtual void out(ChNameValue<unsigned int> bVal) {
+        ADD_BVAL_AS_FMU_GETSET(Integer, { return static_cast<fmi2Integer>(bVal.value()); }, {bVal.value() = val;})
 
         ++nitems.top();
     }
     virtual void out(ChNameValue<const char*> bVal) {
+        // TODO
 
         ++nitems.top();
     }
     virtual void out(ChNameValue<std::string> bVal) {
+        // TODO
 
         ++nitems.top();
     }
     virtual void out(ChNameValue<unsigned long> bVal) {
+        // TODO
 
         ++nitems.top();
     }
     virtual void out(ChNameValue<unsigned long long> bVal) {
+        // TODO
 
         ++nitems.top();
     }
@@ -125,40 +159,47 @@ class ChArchiveFmuModelDescription : public ChArchiveOut {
     }
 
     virtual void out_array_pre(ChValue& bVal, size_t msize) {
+        pushLevelName(bVal.name());
+
         ++tablevel;
         nitems.push(0);
-        is_array.push(true);
+        is_array.push_back(true);
+
     }
     virtual void out_array_between(ChValue& bVal, size_t msize) {}
     virtual void out_array_end(ChValue& bVal, size_t msize) {
         --tablevel;
         nitems.pop();
-        is_array.pop();
+        is_array.pop_back();
         ++nitems.top();
+        popLevelName();
+
     }
 
     // for custom c++ objects:
     virtual void out(ChValue& bVal, bool tracked, size_t obj_ID) {
+        pushLevelName(bVal.name());
+
         ++tablevel;
         nitems.push(0);
-        is_array.push(false);
-
-        parent_names.push(bVal.name());
+        is_array.push_back(false);
 
         bVal.CallArchiveOut(*this);
 
         --tablevel;
         nitems.pop();
-        is_array.pop();
+        is_array.pop_back();
 
         ++nitems.top();
+        popLevelName();
     }
 
     virtual void out_ref(ChValue& bVal, bool already_inserted, size_t obj_ID, size_t ext_ID) {
-        //const char* classname = bVal.GetClassRegisteredName().c_str();
+        const char* classname = bVal.GetClassRegisteredName().c_str();
 
         //// if (is_array.top() == false) {
         //(*ostream) << "<" << bVal.name();
+
 
         //if (strlen(classname) > 0) {
         //    (*ostream) << " _type=\"" << classname << "\"";
@@ -177,23 +218,37 @@ class ChArchiveFmuModelDescription : public ChArchiveOut {
         //}
 
         //(*ostream) << ">\n";
-        ////}
-
-        //++tablevel;
-        //nitems.push(0);
-        //is_array.push(false);
-
-        //if (!already_inserted) {
-        //    // New Object, we have to full serialize it
-        //    bVal.CallArchiveOutConstructor(*this);
-        //    bVal.CallArchiveOut(*this);
         //}
+        
+        pushLevelName(bVal.name());
 
-        //--tablevel;
-        //nitems.pop();
-        //is_array.pop();
 
-        //++nitems.top();
+        ++tablevel;
+        nitems.push(0);
+        is_array.push_back(false);
+
+        if (!already_inserted) {
+
+            // New Object, we have to full serialize it
+
+            bVal.CallArchiveOutConstructor(*this);
+            bVal.CallArchiveOut(*this);
+
+
+        }
+
+
+
+        --tablevel;
+        nitems.pop();
+
+        is_array.pop_back();
+
+        ++nitems.top();
+        
+        popLevelName();
+
+
 
         //// if (is_array.top() == false){
         //(*ostream) << "</" << bVal.name() << ">\n";
@@ -201,12 +256,35 @@ class ChArchiveFmuModelDescription : public ChArchiveOut {
     }
 
   protected:
+
+    void pushLevelName(const std::string& newLevelName){
+        parent_names.push_back(is_array.back() ? ("[" + newLevelName + "]") : newLevelName);
+        updateCurrentParentFullname();
+    }
+
+    void popLevelName(){
+        parent_names.pop_back();
+        updateCurrentParentFullname();
+    }
+
+    void updateCurrentParentFullname(){
+        current_parent_fullname = "";
+        for (size_t i = 0; i < parent_names.size(); ++i) {
+            current_parent_fullname += parent_names[i]; // Concatenate the i-th element
+
+            if ((i < parent_names.size() - 1) && (!is_array.at(i+1))) {
+                current_parent_fullname += "."; // Add a dot separator if it's not the last element
+            }
+        }
+    }
+
+
     int tablevel;
     FmuComponentBase* _fmucomp;
     std::stack<int> nitems;
-    std::stack<bool> is_array;
-    std::stack<std::string> parent_names;
-    std::string current_parent_name;
+    std::deque<bool> is_array;
+    std::deque<std::string> parent_names;
+    std::string current_parent_fullname;
 };
 //
 /////
@@ -234,7 +312,7 @@ class ChArchiveFmuModelDescription : public ChArchiveOut {
 //
 //        level = &document;  //.first_node();
 //        levels.push(level);
-//        is_array.push(false);
+//        is_array.push_back(false);
 //
 //        can_tolerate_missing_tokens = true;
 //        try_tolerate_missing_tokens = false;
@@ -383,7 +461,7 @@ class ChArchiveFmuModelDescription : public ChArchiveOut {
 //
 //        this->levels.push(mval);
 //        this->level = this->levels.top();
-//        this->is_array.push(true);
+//        this->is_array.push_back(true);
 //        this->array_index.push(0);
 //        return true;
 //    }
@@ -392,7 +470,7 @@ class ChArchiveFmuModelDescription : public ChArchiveOut {
 //    virtual void in_array_end(const char* name) override {
 //        this->levels.pop();
 //        this->level = this->levels.top();
-//        this->is_array.pop();
+//        this->is_array.pop_back();
 //        this->array_index.pop();
 //    }
 //
@@ -405,7 +483,7 @@ class ChArchiveFmuModelDescription : public ChArchiveOut {
 //        
 //        this->levels.push(mval);
 //        this->level = this->levels.top();
-//        this->is_array.push(false);
+//        this->is_array.push_back(false);
 //
 //        size_t obj_ID = 0;
 //        if (rapidxml::xml_attribute<>* midval = level->first_attribute("_object_ID")) {
@@ -425,7 +503,7 @@ class ChArchiveFmuModelDescription : public ChArchiveOut {
 //
 //        this->levels.pop();
 //        this->level = this->levels.top();
-//        this->is_array.pop();
+//        this->is_array.pop_back();
 //        return true;
 //    }
 //
@@ -440,7 +518,7 @@ class ChArchiveFmuModelDescription : public ChArchiveOut {
 //        if (mval) {
 //            this->levels.push(mval);
 //            this->level = this->levels.top();
-//            this->is_array.push(false);
+//            this->is_array.push_back(false);
 //
 //            if (bVal.value().IsPolymorphic()) {
 //                if (rapidxml::xml_attribute<>* mtypeval = level->first_attribute("_type")) {
@@ -511,7 +589,7 @@ class ChArchiveFmuModelDescription : public ChArchiveOut {
 //            }
 //            this->levels.pop();
 //            this->level = this->levels.top();
-//            this->is_array.pop();
+//            this->is_array.pop_back();
 //        }
 //
 //        *ptr = new_ptr;

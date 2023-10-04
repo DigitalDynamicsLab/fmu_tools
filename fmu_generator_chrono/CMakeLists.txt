@@ -24,6 +24,9 @@ if(APPLE)
     set(CMAKE_MACOSX_BUNDLE ON)
 endif()
 
+add_compile_definitions(CH_STATIC)
+
+
 include_directories(${CHRONO_INCLUDE_DIRS})
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
@@ -40,6 +43,7 @@ if(MSVC)
     add_compile_options(/wd4251)                   # class needs to have dll-interface
 endif()
 
+add_DLL_copy_command()
 
 #########################
 # Fetching fmu_generator
@@ -85,16 +89,16 @@ IF (NOT EXISTS "${CMAKE_SOURCE_DIR}/fmu_host.cpp")
 endif()
 target_sources(fmu_host PRIVATE fmu_host.cpp)
 
-# Copy dependencies
-string(REPLACE ";" "\" \"" CHRONO_DLLS_SPACEDELIM "${CHRONO_DLLS}")
-SET(CHRONO_DLLS_SPACEDELIM "\"${CHRONO_DLLS_SPACEDELIM}\"")
-add_custom_target(COPY_DEPENDENCIES
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CHRONO_DLLS_SPACEDELIM}" "${FMU_RUNTIME_OUTPUT_DIRECTORY}"
-  COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
-)
+# # Copy dependencies
+# string(REPLACE ";" "\" \"" CHRONO_DLLS_SPACEDELIM "${CHRONO_DLLS}")
+# SET(CHRONO_DLLS_SPACEDELIM "\"${CHRONO_DLLS_SPACEDELIM}\"")
+# add_custom_target(COPY_DEPENDENCIES
+#   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CHRONO_DLLS_SPACEDELIM}" "${FMU_RUNTIME_OUTPUT_DIRECTORY}"
+#   COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
+# )
 
-add_dependencies(fmu_modeldescription_generator COPY_DEPENDENCIES)
-add_dependencies(PACK_FMU COPY_DEPENDENCIES)
+add_dependencies(fmu_modeldescription_generator COPY_DLLS)
+add_dependencies(PACK_FMU COPY_DLLS)
 
 # Enable testing
 if(TESTING_ENABLED)

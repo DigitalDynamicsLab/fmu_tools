@@ -75,14 +75,14 @@ public:
     std::string initial;
 
     enum class e_fmu_variable_type {
-        FMU_UNKNOWN,
-        FMU_REAL,
-        FMU_INTEGER,
-        FMU_BOOLEAN,
-        FMU_STRING
+        Unknown,
+        Real,
+        Integer,
+        Boolean,
+        String
     };
 
-    e_fmu_variable_type type = e_fmu_variable_type::FMU_UNKNOWN;
+    e_fmu_variable_type type = e_fmu_variable_type::Unknown;
 
     FMU_variable()
     {
@@ -358,16 +358,16 @@ public:
             // fetch type from sub node
 
             if (auto variables_type = variable_node->first_node("Real"))
-                mvar.type = FMU_variable::e_fmu_variable_type::FMU_REAL;
+                mvar.type = FMU_variable::e_fmu_variable_type::Real;
 
             if (auto variables_type = variable_node->first_node("String"))
-                mvar.type = FMU_variable::e_fmu_variable_type::FMU_STRING;
+                mvar.type = FMU_variable::e_fmu_variable_type::String;
 
             if (auto variables_type = variable_node->first_node("Integer"))
-                mvar.type = FMU_variable::e_fmu_variable_type::FMU_INTEGER;
+                mvar.type = FMU_variable::e_fmu_variable_type::Integer;
 
             if (auto variables_type = variable_node->first_node("Boolean"))
-                mvar.type = FMU_variable::e_fmu_variable_type::FMU_BOOLEAN;
+                mvar.type = FMU_variable::e_fmu_variable_type::Boolean;
 
             flat_variables[mvar.name] = mvar;
 

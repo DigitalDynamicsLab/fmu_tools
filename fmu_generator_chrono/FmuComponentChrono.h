@@ -31,10 +31,10 @@ public:
 
 protected:
 
-
-
-    virtual void _enterInitializationMode() override;
     virtual void _exitInitializationMode() override;
+
+    virtual void _preModelDescriptionExport() override;
+    virtual void _postModelDescriptionExport() override;
 
     virtual bool is_cosimulation_available() const override { return true;}
     virtual bool is_modelexchange_available() const override { return false;}

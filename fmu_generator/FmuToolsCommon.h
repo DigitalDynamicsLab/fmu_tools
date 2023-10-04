@@ -41,11 +41,11 @@ public:
 
 
     enum class Type{
-        FMU_REAL = 0, // numbering gives the order in which each type is printed in the modelDescription.xml
-        FMU_INTEGER = 1,
-        FMU_BOOLEAN = 2,
-        FMU_STRING = 3,
-        FMU_UNKNOWN = 4
+        Real = 0, // numbering gives the order in which each type is printed in the modelDescription.xml
+        Integer = 1,
+        Boolean = 2,
+        String = 3,
+        Unknown = 4
     };
 
     enum class CausalityType{
@@ -73,7 +73,7 @@ public:
     };
 
 
-    FmuVariable() : FmuVariable("", FmuVariable::Type::FMU_REAL){}
+    FmuVariable() : FmuVariable("", FmuVariable::Type::Real){}
 
 
     FmuVariable(const FmuVariable& other) {
@@ -220,19 +220,19 @@ public:
     static std::string Type_toString(Type type){
         switch (type)
         {
-        case FmuVariable::Type::FMU_REAL:
+        case FmuVariable::Type::Real:
             return "Real";
             break;
-        case FmuVariable::Type::FMU_INTEGER:
+        case FmuVariable::Type::Integer:
             return "Integer";
             break;
-        case FmuVariable::Type::FMU_BOOLEAN:
+        case FmuVariable::Type::Boolean:
             return "Boolean";
             break;
-        case FmuVariable::Type::FMU_UNKNOWN:
+        case FmuVariable::Type::Unknown:
             return "Unknown";
             break;
-        case FmuVariable::Type::FMU_STRING:
+        case FmuVariable::Type::String:
             return "String";
             break;
         default:
@@ -258,7 +258,7 @@ public:
 
 
 protected:
-    Type type = Type::FMU_UNKNOWN;
+    Type type = Type::Unknown;
     std::string name;
     fmi2ValueReference valueReference = 0;
     std::string unitname = "1";

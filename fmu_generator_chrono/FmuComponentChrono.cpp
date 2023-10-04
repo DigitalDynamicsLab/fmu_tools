@@ -7,6 +7,7 @@
 #include <map>
 #include <algorithm>
 #include <chrono/core/ChVector.h>
+#include <chrono/serialization/ChArchive.h>
 #include "FmuToolsChrono.h"
 
 FmuComponent::FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
@@ -16,28 +17,22 @@ FmuComponent::FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2Stri
 
     SetChronoDataPath(CHRONO_DATA_DIR);
 
-
-
     /// FMU_ACTION: declare relevant variables
-    addFmuVariable(&x_tt,            "x_tt",     FmuVariable::Type::FMU_REAL, "m/s2",   "cart acceleration");
-    addFmuVariable(&x_t,             "x_t",      FmuVariable::Type::FMU_REAL, "m/s",    "cart velocity");
-    addFmuVariable(&x,               "x",        FmuVariable::Type::FMU_REAL, "m",      "cart position");
-    addFmuVariable(&theta_tt,        "theta_tt", FmuVariable::Type::FMU_REAL, "rad/s2", "pendulum ang acceleration");
-    addFmuVariable(&theta_t,         "theta_t",  FmuVariable::Type::FMU_REAL, "rad/s",  "pendulum ang velocity");
-    addFmuVariable(&theta,           "theta",    FmuVariable::Type::FMU_REAL, "rad",    "pendulum angle");
-    addFmuVariable(&pendulum_length, "pendulum_length", FmuVariable::Type::FMU_REAL, "m",  "pendulum length", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
-    addFmuVariable(&cart_mass,       "cart_mass",   FmuVariable::Type::FMU_REAL, "kg", "pendulum mass", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
-    addFmuVariable(&pendulum_mass,   "pendulum_mass",   FmuVariable::Type::FMU_REAL, "kg", "cart mass", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    addFmuVariable(&x_tt,            "x_tt",            FmuVariable::Type::Real, "m/s2",   "cart acceleration");
+    addFmuVariable(&x_t,             "x_t",             FmuVariable::Type::Real, "m/s",    "cart velocity");
+    addFmuVariable(&x,               "x",               FmuVariable::Type::Real, "m",      "cart position");
+    addFmuVariable(&theta_tt,        "theta_tt",        FmuVariable::Type::Real, "rad/s2", "pendulum ang acceleration");
+    addFmuVariable(&theta_t,         "theta_t",         FmuVariable::Type::Real, "rad/s",  "pendulum ang velocity");
+    addFmuVariable(&theta,           "theta",           FmuVariable::Type::Real, "rad",    "pendulum angle");
+    addFmuVariable(&pendulum_length, "pendulum_length", FmuVariable::Type::Real, "m",      "pendulum length", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    addFmuVariable(&cart_mass,       "cart_mass",       FmuVariable::Type::Real, "kg",     "pendulum mass", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    addFmuVariable(&pendulum_mass,   "pendulum_mass",   FmuVariable::Type::Real, "kg",     "cart mass", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
-};
-
-void FmuComponent::_enterInitializationMode() {
-    sys.Clear();
-};
-
-void FmuComponent::_exitInitializationMode() {
     auto ground = chrono_types::make_shared<ChBody>();
+    ground->SetBodyFixed(true);
     sys.Add(ground);
+
+    // Cart is moving along X axis, Pendulum rotates along Z axis
 
     auto cart = chrono_types::make_shared<ChBodyEasyBox>(0.2, 0.1, 0.1, 750, true, false);
     cart->SetIdentifier(10);
@@ -50,12 +45,12 @@ void FmuComponent::_exitInitializationMode() {
     sys.Add(pendulum);
 
     auto cart_prism = chrono_types::make_shared<ChLinkLockPrismatic>();
-    cart_prism->Initialize(cart, ground, ChCoordsys<>(VNULL, Q_from_AngY(90*CH_C_DEG_TO_RAD)));
+    cart_prism->Initialize(cart, ground, ChCoordsys<>(VNULL, Q_ROTATE_Z_TO_X));
     cart_prism->SetName("cart_prism");
     sys.Add(cart_prism);
 
     auto pendulum_rev = chrono_types::make_shared<ChLinkRevolute>();
-    pendulum_rev->Initialize(pendulum, ground, ChFrame<>(VNULL, QUNIT));
+    pendulum_rev->Initialize(pendulum, cart, true, ChFrame<>(VNULL, QUNIT), ChFrame<>(ChVector<>(0, +pendulum_length/2, 0), QUNIT));
     pendulum_rev->SetName("pendulum_rev");
     sys.Add(pendulum_rev);
 
@@ -64,21 +59,32 @@ void FmuComponent::_exitInitializationMode() {
     vis = chrono_types::make_shared<irrlicht::ChVisualSystemIrrlicht>();
     vis->AttachSystem(&sys);
     vis->SetWindowSize(800, 600);
-    vis->SetWindowTitle("Simple slider-crank example");
+    vis->SetWindowTitle("CartPendulumFMU");
     vis->Initialize();
-    //vis->AddLogo();
-    //vis->AddSkyBox();
-    vis->AddCamera(ChVector<>(0, 0, -6));
+    vis->AddLogo();
+    vis->AddSkyBox();
+    vis->AddCamera(ChVector<>(-0.5, -0.5, -1.0));
     vis->AddTypicalLights();
 
     updateVarsCallbacks.push_back([this](){ x_tt = this->sys.SearchBodyID(10)->GetPos_dtdt().x(); });
     updateVarsCallbacks.push_back([this](){ x_t = this->sys.SearchBodyID(10)->GetPos_dt().x(); });
     updateVarsCallbacks.push_back([this](){ x = this->sys.SearchBodyID(10)->GetPos().x(); });
+};
 
-    //updateVarsCallbacks.push_back([this](){
-    //    ChCoordsys<> rel_ref = std::dynamic_pointer_cast<ChLinkRevolute>(this->sys.SearchLink("cart_prism"))->GetLinkRelativeCoords();
-    //    this->theta = std::atan2(rel_ref.rot.GetXaxis() ^ ChVector<>(0,1,0), rel_ref.rot.GetXaxis() ^ ChVector<>(1,0,0));
-    //    });
+void FmuComponent::_preModelDescriptionExport() {
+    _exitInitializationMode();
+    ChArchiveFmu archive_fmu(*this);
+    archive_fmu << CHNVP(sys);
+}
+
+void FmuComponent::_postModelDescriptionExport() {
+
+}
+
+
+void FmuComponent::_exitInitializationMode() {
+
+    sys.DoFullAssembly();
 };
 
 fmi2Status FmuComponent::_doStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) {

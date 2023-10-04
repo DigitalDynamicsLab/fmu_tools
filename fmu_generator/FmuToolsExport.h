@@ -174,6 +174,10 @@ public:
         return *this;
     }
 
+    
+    void Bind(VarbindType newvarbind){
+        varbind = newvarbind;
+    }
 
     template <class T>
     void SetValue(const T& val) const {
@@ -297,8 +301,9 @@ public:
 
 
         unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
+        unitDefinitions[""] = UnitDefinitionType(""); // guarantee the existence of the unassigned unit
 
-        addFmuVariable(&time, "time", FmuVariable::Type::FMU_REAL, "s", "time");
+        addFmuVariable(&time, "time", FmuVariable::Type::Real, "s", "time");
 
         if(std::string(_fmuGUID).compare(fmuGUID) && ENABLE_GUID_CHECK)
             throw std::runtime_error("GUID used for instantiation not matching with source.");
@@ -403,16 +408,17 @@ public:
 
     template <class T>
     fmi2Status fmi2SetVariable(const fmi2ValueReference vr[], size_t nvr, const T value[], FmuVariable::Type vartype) {
-    for (size_t s = 0; s<nvr; ++s){
-        std::set<FmuVariableExport>::iterator it = this->findByValrefType(vr[s], vartype);
-        if (it != this->scalarVariables.end() && it->IsSetAllowed(this->fmuType, this->fmuMachineState)){
-            it->SetValue(value[s]);
+        for (size_t s = 0; s<nvr; ++s){
+            std::set<FmuVariableExport>::iterator it = this->findByValrefType(vr[s], vartype);
+            if (it != this->scalarVariables.end() && it->IsSetAllowed(this->fmuType, this->fmuMachineState)){
+                it->SetValue(value[s]);
+            }
+            else
+                return fmi2Status::fmi2Error; // requested a variable that does not exist or that cannot be set
         }
-        else
-            return fmi2Status::fmi2Error; // requested a variable that does not exist or that cannot be set
+        return fmi2Status::fmi2OK;
     }
-    return fmi2Status::fmi2OK;
-}
+
 
     // DEV: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the reason is that:
     // e.g. both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any possible splitting depending on type
@@ -420,9 +426,9 @@ public:
     // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
     // At least, in this way, we do not have any redundant code at least
     const FmuVariable& addFmuVariable(
-            FmuVariableExport::VarbindType varbind,
+            const FmuVariableExport::VarbindType& varbind,
             std::string name,
-            FmuVariable::Type scalartype = FmuVariable::Type::FMU_REAL,
+            FmuVariable::Type scalartype = FmuVariable::Type::Real,
             std::string unitname = "",
             std::string description = "",
             FmuVariable::CausalityType causality = FmuVariable::CausalityType::local,
@@ -474,15 +480,29 @@ public:
         return *(ret.first);
     }
 
+    bool rebindVariable(FmuVariableExport::VarbindType varbind, std::string name){
+        std::set<FmuVariableExport>::iterator it = this->findByName(name);
+        if (it != scalarVariables.end()){
+
+            FmuVariableExport newvar(*it);
+            newvar.Bind(varbind);
+            scalarVariables.erase(*it);
+
+            std::pair<std::set<FmuVariableExport>::iterator, bool> ret = scalarVariables.insert(newvar);
+
+            return ret.second;
+        }
+    }
 
 protected:
-
     virtual fmi2Status _doStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) = 0;
 
+    virtual void _preModelDescriptionExport() {}
+    virtual void _postModelDescriptionExport() {}
 
-    virtual void _enterInitializationMode() = 0;
+    virtual void _enterInitializationMode() {}
 
-    virtual void _exitInitializationMode() = 0;
+    virtual void _exitInitializationMode() {}
 
     void initializeType(fmi2Type _fmuType){
         switch (_fmuType)
@@ -530,6 +550,7 @@ protected:
     std::unordered_map<std::string, UnitDefinitionType> unitDefinitions;
 
     std::set<FmuVariableExport>::iterator findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype);
+    std::set<FmuVariableExport>::iterator FmuComponentBase::findByName(const std::string& name);
 
     std::list<std::function<void(void)>> updateVarsCallbacks;
 

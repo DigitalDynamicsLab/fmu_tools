@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
      //std::cout << "FMU variable 1 has value: "   << m_str << "\n";
     {
         fmi2ValueReference valref = 8;
-        fmi2Real m_in = 15;
+        fmi2Real m_in = 0.75;
         my_fmu._fmi2SetReal(my_fmu.component, &valref, 1, &m_in);
 
         fmi2Real m_out;
