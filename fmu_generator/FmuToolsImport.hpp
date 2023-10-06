@@ -27,7 +27,7 @@
 #include "filesystem.hpp"
 
 #define LOAD_FMI_FUNCTION(funcName) \
-    this->_##funcName = (##funcName##TYPE*)get_function_ptr(this->dynlib_handle, #funcName); \
+    this->_##funcName = ( funcName##TYPE* ) get_function_ptr( this->dynlib_handle, #funcName ); \
     if (!this->_##funcName) \
         throw std::runtime_error(std::string(std::string("Could not find ") + std::string(#funcName) + std::string(" in the FMU library. Wrong or outdated FMU?")));
 
@@ -673,10 +673,10 @@ public:
             this->_fmi2GetString(this->component, &vr, 1, &value);
             break;
         case FmuVariable::Type::Unknown:
-            throw std::runtime_error("Fmu Variable type not initialized.")
+            throw std::runtime_error("Fmu Variable type not initialized.");
             break;
         default:
-            throw std::runtime_error("Fmu Variable type not valid.")
+            throw std::runtime_error("Fmu Variable type not valid.");
             break;
         }
     }
@@ -698,22 +698,22 @@ public:
             this->_fmi2SetString(this->component, &vr, 1, &value);
             break;
         case FmuVariable::Type::Unknown:
-            throw std::runtime_error("Fmu Variable type not initialized.")
+            throw std::runtime_error("Fmu Variable type not initialized.");
             break;
         default:
-            throw std::runtime_error("Fmu Variable type not valid.")
+            throw std::runtime_error("Fmu Variable type not valid.");
             break;
         }
     }
 
     template <class T>
     fmi2Status GetVariable(std::string varname, T& value, FmuVariable::Type vartype) noexcept(false) {
-        GetVariable(scalarVariables.at(varname).GetValueReference(), value, vartype);
+        return GetVariable(scalarVariables.at(varname).GetValueReference(), value, vartype);
     }
 
     template <class T>
     fmi2Status SetVariable(std::string varname, const T& value, FmuVariable::Type vartype) noexcept(false) {
-        SetVariable(scalarVariables.at(varname).GetValueReference(), value, vartype);
+        return SetVariable(scalarVariables.at(varname).GetValueReference(), value, vartype);
     }
 
     
