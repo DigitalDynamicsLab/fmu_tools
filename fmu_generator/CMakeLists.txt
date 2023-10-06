@@ -236,8 +236,7 @@ IF (BUILD_TESTING)
     # # -------------------------------------------------
     # # Testing
     # # -------------------------------------------------
-    list(FIND TESTING_ENABLED_OS ${FMI_PLATFORM} ENABLE_TESTING_FLAG)
-    IF(ENABLE_TESTING_FLAG EQUAL 0)
+    IF(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
         SET(TESTING_ENABLED ON)
         MESSAGE(STATUS "Testing enabled.")
         ## Call fmuChecker on the FMU, parse its output
