@@ -26,8 +26,8 @@
 #include <fstream>
 
 // fmu_generator includes
-#include "rapidxml_ext.hpp"
-#include "FmuToolsExport.h"
+//#include "rapidxml_ext.hpp"
+//#include "FmuToolsExport.h"
 #include <stack>
 #include <fstream>
 #include <iostream>
@@ -46,10 +46,10 @@ namespace chrono {
     _fmucomp->addFmuVariable(std::make_pair(std::function<fmi2##returnType(void)>([&bVal]() -> fmi2##returnType  \
         codeGet \
     ), \
-    std::function<void(fmi2##returnType)>([&bVal](fmi2##returnType val)  \
+    std::function<void(fmi2##returnType)>([&bVal](fmi2##returnType val) \
         codeSet \
     )), \
-    current_parent_fullname + "." + bVal.name(), \
+    current_parent_fullname + bVal.name(), \
     FmuVariable::Type::##returnType, \
     "", \
     "", \
@@ -59,7 +59,7 @@ namespace chrono {
 
 #define ADD_BVAL_AS_FMU_POINTER(returnType) \
     _fmucomp->addFmuVariable(&(bVal.value()), \
-    current_parent_fullname + "." + bVal.name(), \
+    current_parent_fullname + bVal.name(), \
     FmuVariable::Type::##returnType, \
     "", \
     "", \
@@ -239,7 +239,7 @@ class ChArchiveFmu : public ChArchiveOut {
             // add a dot separator to separate from the following, except if:
             // - there is no following name
             // - the current 
-            if ((i < parent_names.size() - 1) && (!is_array.at(i))) {
+            if (i<is_array.size()-1 && !is_array.at(i+1)) {
                 current_parent_fullname += ".";
             }
         }
