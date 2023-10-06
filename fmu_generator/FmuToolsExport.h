@@ -180,7 +180,10 @@ public:
 
     template <class T>
     void SetValue(const T& val) const {
-        is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind) = val : varns::get<FunGetSet<T>>(this->varbind).second(val);
+        if (is_pointer_variant(this->varbind))
+            *varns::get<T*>(this->varbind) = val;
+        else
+            varns::get<FunGetSet<T>>(this->varbind).second(val);
     }
 
 
