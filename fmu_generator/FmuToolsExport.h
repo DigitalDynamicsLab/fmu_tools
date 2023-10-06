@@ -14,9 +14,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <functional>
+#include <list>
 
-
-#include "variant/variant_guard.hpp"
 
 #ifndef FMITYPESPLATFORM_CUSTOM
     #include "TypesVariantsDefault.h"
@@ -550,7 +549,7 @@ protected:
     std::unordered_map<std::string, UnitDefinitionType> unitDefinitions;
 
     std::set<FmuVariableExport>::iterator findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype);
-    std::set<FmuVariableExport>::iterator FmuComponentBase::findByName(const std::string& name);
+    std::set<FmuVariableExport>::iterator findByName(const std::string& name);
 
     std::list<std::function<void(void)>> updateVarsCallbacks;
 

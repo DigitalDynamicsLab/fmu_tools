@@ -167,6 +167,7 @@ class ChArchiveFmu : public ChArchiveOut {
 
     }
     virtual void out_array_between(ChValue& bVal, size_t msize) {}
+
     virtual void out_array_end(ChValue& bVal, size_t msize) {
         --tablevel;
         nitems.pop();
@@ -195,49 +196,18 @@ class ChArchiveFmu : public ChArchiveOut {
     }
 
     virtual void out_ref(ChValue& bVal, bool already_inserted, size_t obj_ID, size_t ext_ID) {
-        const char* classname = bVal.GetClassRegisteredName().c_str();
-
-        //// if (is_array.top() == false) {
-        //(*ostream) << "<" << bVal.name();
-
-
-        //if (strlen(classname) > 0) {
-        //    (*ostream) << " _type=\"" << classname << "\"";
-        //}
-
-        //if (!already_inserted) {
-        //    (*ostream) << " _object_ID=\"" << obj_ID << "\"";
-        //}
-        //if (already_inserted) {
-        //    if (obj_ID || bVal.IsNull()) {
-        //        (*ostream) << " _reference_ID=\"" << obj_ID << "\"";
-        //    }
-        //    if (ext_ID) {
-        //        (*ostream) << " _external_ID=\"" << ext_ID << "\"";
-        //    }
-        //}
-
-        //(*ostream) << ">\n";
-        //}
         
         pushLevelName(bVal.name());
-
 
         ++tablevel;
         nitems.push(0);
         is_array.push_back(false);
 
         if (!already_inserted) {
-
             // New Object, we have to full serialize it
-
             bVal.CallArchiveOutConstructor(*this);
             bVal.CallArchiveOut(*this);
-
-
         }
-
-
 
         --tablevel;
         nitems.pop();
@@ -247,12 +217,6 @@ class ChArchiveFmu : public ChArchiveOut {
         ++nitems.top();
         
         popLevelName();
-
-
-
-        //// if (is_array.top() == false){
-        //(*ostream) << "</" << bVal.name() << ">\n";
-        ////}
     }
 
   protected:
@@ -270,10 +234,13 @@ class ChArchiveFmu : public ChArchiveOut {
     void updateCurrentParentFullname(){
         current_parent_fullname = "";
         for (size_t i = 0; i < parent_names.size(); ++i) {
-            current_parent_fullname += parent_names[i]; // Concatenate the i-th element
+            current_parent_fullname += parent_names[i];
 
-            if ((i < parent_names.size() - 1) && (!is_array.at(i+1))) {
-                current_parent_fullname += "."; // Add a dot separator if it's not the last element
+            // add a dot separator to separate from the following, except if:
+            // - there is no following name
+            // - the current 
+            if ((i < parent_names.size() - 1) && (!is_array.at(i))) {
+                current_parent_fullname += ".";
             }
         }
     }
