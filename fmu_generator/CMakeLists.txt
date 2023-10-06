@@ -14,18 +14,6 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED OFF)
 set(CMAKE_CXX_STANDARD 17)
 
-MESSAGE(STATUS "CMAKE_CXX_STANDARD: ${CMAKE_CXX_STANDARD}")
-
-# # # Check if the compiler supports C++17
-# include(CheckCXXCompilerFlag)
-# CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX17)
-
-# if(COMPILER_SUPPORTS_CXX17)
-#     # Enable C++17 if supported
-#     set(CMAKE_CXX_STANDARD 17)
-# endif()
-
-
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
@@ -239,6 +227,7 @@ IF (BUILD_TESTING)
     IF(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
         SET(TESTING_ENABLED ON)
         MESSAGE(STATUS "Testing enabled.")
+        
         ## Call fmuChecker on the FMU, parse its output
         SET(FMUCHECKER_LOG "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_log.txt")
         SET(FMUCHECKER_RESULTS "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_results.txt")
