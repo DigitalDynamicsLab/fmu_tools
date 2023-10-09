@@ -1,4 +1,4 @@
-# Fmu Generator
+# Fmu Tools
 The `fmu_tools` library offers a set of utilities to import/export any existing model from/into an FMU.
 
 For the FMU export, the library, mainly through its main class `FmuComponentBase`, provides a higher C++ layer that:
