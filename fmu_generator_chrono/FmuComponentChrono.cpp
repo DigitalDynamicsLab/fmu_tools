@@ -18,15 +18,15 @@ FmuComponent::FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2Stri
     SetChronoDataPath(CHRONO_DATA_DIR);
 
     /// FMU_ACTION: declare relevant variables
-    addFmuVariable(&x_tt,            "x_tt",            FmuVariable::Type::Real, "m/s2",   "cart acceleration");
-    addFmuVariable(&x_t,             "x_t",             FmuVariable::Type::Real, "m/s",    "cart velocity");
-    addFmuVariable(&x,               "x",               FmuVariable::Type::Real, "m",      "cart position");
-    addFmuVariable(&theta_tt,        "theta_tt",        FmuVariable::Type::Real, "rad/s2", "pendulum ang acceleration");
-    addFmuVariable(&theta_t,         "theta_t",         FmuVariable::Type::Real, "rad/s",  "pendulum ang velocity");
-    addFmuVariable(&theta,           "theta",           FmuVariable::Type::Real, "rad",    "pendulum angle");
-    addFmuVariable(&pendulum_length, "pendulum_length", FmuVariable::Type::Real, "m",      "pendulum length", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
-    addFmuVariable(&cart_mass,       "cart_mass",       FmuVariable::Type::Real, "kg",     "pendulum mass", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
-    addFmuVariable(&pendulum_mass,   "pendulum_mass",   FmuVariable::Type::Real, "kg",     "cart mass", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    AddFmuVariable(&x_tt,            "x_tt",            FmuVariable::Type::Real, "m/s2",   "cart acceleration");
+    AddFmuVariable(&x_t,             "x_t",             FmuVariable::Type::Real, "m/s",    "cart velocity");
+    AddFmuVariable(&x,               "x",               FmuVariable::Type::Real, "m",      "cart position");
+    AddFmuVariable(&theta_tt,        "theta_tt",        FmuVariable::Type::Real, "rad/s2", "pendulum ang acceleration");
+    AddFmuVariable(&theta_t,         "theta_t",         FmuVariable::Type::Real, "rad/s",  "pendulum ang velocity");
+    AddFmuVariable(&theta,           "theta",           FmuVariable::Type::Real, "rad",    "pendulum angle");
+    AddFmuVariable(&pendulum_length, "pendulum_length", FmuVariable::Type::Real, "m",      "pendulum length", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    AddFmuVariable(&cart_mass,       "cart_mass",       FmuVariable::Type::Real, "kg",     "pendulum mass", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    AddFmuVariable(&pendulum_mass,   "pendulum_mass",   FmuVariable::Type::Real, "kg",     "cart mass", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
     auto ground = chrono_types::make_shared<ChBody>();
     ground->SetBodyFixed(true);

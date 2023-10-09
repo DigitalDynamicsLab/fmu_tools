@@ -20,36 +20,36 @@ public:
         addUnitDefinition(UD_J);
 
         /// FMU_ACTION: declare relevant variables
-        addFmuVariable(&q_t[0], "x_tt",     FmuVariable::Type::Real, "m/s2",   "cart acceleration");
-        addFmuVariable(&q[0],   "x_t",      FmuVariable::Type::Real, "m/s",    "cart velocity");
-        addFmuVariable(&q[1],   "x",        FmuVariable::Type::Real, "m",      "cart position");
-        addFmuVariable(&q_t[2], "theta_tt", FmuVariable::Type::Real, "rad/s2", "pendulum ang acceleration");
-        addFmuVariable(&q[2],   "theta_t",  FmuVariable::Type::Real, "rad/s",  "pendulum ang velocity");
-        addFmuVariable(&q[3],   "theta",    FmuVariable::Type::Real, "rad",    "pendulum angle");
-        auto& fmu_len = addFmuVariable(&len,  "len", FmuVariable::Type::Real, "m",  "pendulum length", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
-        auto& fmu_m =   addFmuVariable(&m,    "m",   FmuVariable::Type::Real, "kg", "pendulum mass",   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
-        auto& fmu_M =   addFmuVariable(&M,    "M",   FmuVariable::Type::Real, "kg", "cart mass",       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+        AddFmuVariable(&q_t[0], "x_tt",     FmuVariable::Type::Real, "m/s2",   "cart acceleration");
+        AddFmuVariable(&q[0],   "x_t",      FmuVariable::Type::Real, "m/s",    "cart velocity");
+        AddFmuVariable(&q[1],   "x",        FmuVariable::Type::Real, "m",      "cart position");
+        AddFmuVariable(&q_t[2], "theta_tt", FmuVariable::Type::Real, "rad/s2", "pendulum ang acceleration");
+        AddFmuVariable(&q[2],   "theta_t",  FmuVariable::Type::Real, "rad/s",  "pendulum ang velocity");
+        AddFmuVariable(&q[3],   "theta",    FmuVariable::Type::Real, "rad",    "pendulum angle");
+        auto& fmu_len = AddFmuVariable(&len,  "len", FmuVariable::Type::Real, "m",  "pendulum length", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+        auto& fmu_m =   AddFmuVariable(&m,    "m",   FmuVariable::Type::Real, "kg", "pendulum mass",   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+        auto& fmu_M =   AddFmuVariable(&M,    "M",   FmuVariable::Type::Real, "kg", "cart mass",       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
         
         /// FMU_ACTION: you can also pass std::functions to get/set the value of the variable if queried
-        //addFmuVariable(std::make_pair(
+        //AddFmuVariable(std::make_pair(
         //    std::function<fmi2Real()>([this]() -> fmi2Real {
         //        return (0.5*(this->m*this->len*this->len/3)*(this->q_t[2]*this->q_t[2]));}),
         //    std::function<void(fmi2Real)>([this](fmi2Real) {})),
         //    "kineticEnergy",    FmuVariable::Type::Real, "J",    "kinetic energy");
 
         // same result is achieved through helper function 'MAKE_FUN_PAIR'
-        addFmuVariable(MAKE_GETSET_PAIR(fmi2Real,
+        AddFmuVariable(MAKE_GETSET_PAIR(fmi2Real,
             { return (0.5*(this->m*this->len*this->len/3)*(this->q_t[2]*this->q_t[2]));},
             {}),   "kineticEnergy",    FmuVariable::Type::Real, "J",    "kinetic energy");
 
 
-        // FMU_ACTION: start value will be automatically grabbed from 'len' during addFmuVariable;
-        // use the following statement only if the start value is not already in 'len' when called addFmuVariable
+        // FMU_ACTION: start value will be automatically grabbed from 'len' during AddFmuVariable;
+        // use the following statement only if the start value is not already in 'len' when called AddFmuVariable
         //fmu_len.SetStartVal(len);
 
 
-        auto& fmu_approximateOn = addFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::Boolean, "1", "use approximated model", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+        auto& fmu_approximateOn = AddFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::Boolean, "1", "use approximated model", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
         // Additional commands
         q = {0, 0, 0, 3.14159265358979323846/4};

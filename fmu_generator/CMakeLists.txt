@@ -167,7 +167,7 @@ ELSE()
 ENDIF()
 target_link_libraries(fmu_modeldescription_generator PUBLIC FmuComponent)
 
-
+# fmu_modeldescription_generator must reside in the sama place as the FmuComponent artifact so that it is in the same folder as the shared library
 set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})

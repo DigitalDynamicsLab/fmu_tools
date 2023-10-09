@@ -305,7 +305,7 @@ public:
         unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
         unitDefinitions[""] = UnitDefinitionType(""); // guarantee the existence of the unassigned unit
 
-        addFmuVariable(&time, "time", FmuVariable::Type::Real, "s", "time");
+        AddFmuVariable(&time, "time", FmuVariable::Type::Real, "s", "time");
 
         if(std::string(_fmuGUID).compare(fmuGUID) && ENABLE_GUID_CHECK)
             throw std::runtime_error("GUID used for instantiation not matching with source.");
@@ -427,7 +427,7 @@ public:
     // if we accept to have both fmi2Integer and fmi2Boolean considered as the same type we can drop the 'scalartype' argument
     // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
     // At least, in this way, we do not have any redundant code at least
-    const FmuVariable& addFmuVariable(
+    const FmuVariable& AddFmuVariable(
             const FmuVariableExport::VarbindType& varbind,
             std::string name,
             FmuVariable::Type scalartype = FmuVariable::Type::Real,
@@ -454,8 +454,7 @@ public:
 
         // create new variable
         // check if same-name variable exists
-        auto predicate_samename = [name](const FmuVariable& var) { return var.GetName() == name; };
-        auto it = std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
+        std::set<FmuVariableExport>::iterator it = this->findByName(name);
         if (it!=scalarVariables.end())
             throw std::runtime_error("Cannot add two Fmu variables with the same name.");
 
@@ -482,7 +481,7 @@ public:
         return *(ret.first);
     }
 
-    bool rebindVariable(FmuVariableExport::VarbindType varbind, std::string name){
+    bool RebindVariable(FmuVariableExport::VarbindType varbind, std::string name){
         std::set<FmuVariableExport>::iterator it = this->findByName(name);
         if (it != scalarVariables.end()){
 
