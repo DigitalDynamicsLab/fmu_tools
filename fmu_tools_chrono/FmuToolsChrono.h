@@ -25,7 +25,7 @@
 #include <iostream>
 #include <fstream>
 
-// fmu_generator includes
+// fmu_tools includes
 //#include "rapidxml_ext.hpp"
 //#include "FmuToolsExport.h"
 #include <stack>

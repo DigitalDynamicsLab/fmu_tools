@@ -1,5 +1,5 @@
 # Fmu Generator
-The `fmu_generator` library offers a set of utilities to import/export any existing model from/into an FMU.
+The `fmu_tools` library offers a set of utilities to import/export any existing model from/into an FMU.
 
 For the FMU export, the library, mainly through its main class `FmuComponentBase`, provides a higher C++ layer that:
 - on the outer side: offers to the final user the standard FMU interface 
@@ -21,7 +21,7 @@ For the FMU import, the library offers some auxiliary function to easily access 
 
 A simple use of the library consists in just taking the project and modifying the _FmuComponent.h_ and _FmuComponent.cpp_ based on the user needs.
 
-However, for those that need to import this project into theirs, a second template is offered. In the subfolder `fmu_generator_chrono` a typical usage is showed, in which a third-party library (Chrono) comes into play and a separate CMakeLists is used to fetch the content of the base 'fmu_generator' library.
+However, for those that need to import this project into theirs, a second template is offered. In the subfolder `fmu_tools_chrono` a typical usage is showed, in which a third-party library (Chrono) comes into play and a separate CMakeLists is used to fetch the content of the base 'fmu_tools' library.
 
 
 While the library offers some generic features and tools, users are asked to customize them for their specific problem. This is done by inheriting from `FmuComponentBase`, plus some additional customization. One example is provided by the `FmuComponent` class. The impatient user could also just modify and use it straight away.
@@ -96,7 +96,7 @@ The target `fmu_host` shows how to load and run FMUs. By default, it is set up t
 - [x] test on Win
 - [x] test on Linux (GCC8.5.0)
 - [ ] test on MacOS
-- [x] importing `fmu_generator` into other project
+- [x] importing `fmu_tools` into other project
 
 
 

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 
 
-project(fmu_generator_chrono)
+project(fmu_tools_chrono)
 
-set(FMU_GENERATOR_DIR "${CMAKE_SOURCE_DIR}/../fmu_generator/" CACHE PATH "Path to fmu_generator.")
+set(FMU_GENERATOR_DIR "${CMAKE_SOURCE_DIR}/../fmu_tools/" CACHE PATH "Path to fmu_tools.")
 
 #########################
 # Importing Chrono
@@ -46,9 +46,9 @@ endif()
 add_DLL_copy_command()
 
 #########################
-# Fetching fmu_generator
+# Fetching fmu_tools
 #########################
-MESSAGE(STATUS "-------------- FetchContent(fmu_generator) --------------")
+MESSAGE(STATUS "-------------- FetchContent(fmu_tools) --------------")
 
 include(FetchContent)
 FetchContent_Declare(

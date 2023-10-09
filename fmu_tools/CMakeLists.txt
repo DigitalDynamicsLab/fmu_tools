@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.21)
 cmake_policy(SET CMP0091 NEW) # MSVC runtime library flags are selected by an abstraction i.e. CMAKE_MSVC_RUNTIME_LIBRARY
 
 
-project(fmu_generator)
+project(fmu_tools)
 SET(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 # Set the minimum required C++ standard to C++14, allow C++17 if available
