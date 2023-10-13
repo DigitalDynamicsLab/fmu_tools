@@ -293,24 +293,7 @@ protected:
 class FmuComponentBase{
 
 public:
-    FmuComponentBase(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
-        callbackFunctions({nullptr, nullptr, nullptr, nullptr, nullptr}),
-        instanceName(_instanceName),
-        fmuGUID(FMU_GUID),
-        modelIdentifier(FMU_MODEL_IDENTIFIER),
-        fmuMachineState(FmuMachineStateType::instantiated)
-    {
-
-
-        unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
-        unitDefinitions[""] = UnitDefinitionType(""); // guarantee the existence of the unassigned unit
-
-        AddFmuVariable(&time, "time", FmuVariable::Type::Real, "s", "time");
-
-        if(std::string(_fmuGUID).compare(fmuGUID) && ENABLE_GUID_CHECK)
-            throw std::runtime_error("GUID used for instantiation not matching with source.");
-
-    }
+    FmuComponentBase(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID);
 
     virtual ~FmuComponentBase(){}
 

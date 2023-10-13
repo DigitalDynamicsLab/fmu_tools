@@ -22,8 +22,7 @@ SET(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
 
 set(FMU_MODEL_IDENTIFIER "myFmuIdentifier" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
 SET(FMU_FILENAME "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu")
-MESSAGE(STATUS "FMU to be created: \"${FMU_FILENAME}\"")
-set(ENABLE_GUID_CHECK ON CACHE BOOL "Enable GUID checking.")
+message(STATUS "FMU to be created: \"${FMU_FILENAME}\"")
 
 SET(FMU_UNPACK_DIRECTORY "${FMU_MAIN_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
 
@@ -54,11 +53,11 @@ else()
 endif()
 
 if(UNKNOWN_TARGET_SYSTEM)
-    MESSAGE(WARNING "Cannot retrieve target operating system or architecture. Please specify it manually through TARGET_SYSTEM variable (e.g. win64)")
+    message(WARNING "Cannot retrieve target operating system or architecture. Please specify it manually through TARGET_SYSTEM variable (e.g. win64)")
     set(TARGET_SYSTEM "win64" CACHE STRING "Target operating system and architecture (e.g. win64, linux32, ...)")
     MARK_AS_ADVANCED(CLEAR TARGET_SYSTEM)
 else()
-    MESSAGE(STATUS "Architecture: ${FMI_PLATFORM}")
+    message(STATUS "Architecture: ${FMI_PLATFORM}")
     MARK_AS_ADVANCED(FORCE TARGET_SYSTEM)
 endif()
 
@@ -78,9 +77,9 @@ string(RANDOM LENGTH 4  ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE4)
 string(RANDOM LENGTH 12 ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE5)
 SET(FMU_GUID_NAMESPACE_RANDOM "${FMU_NAMESPACE1}-${FMU_NAMESPACE2}-${FMU_NAMESPACE3}-${FMU_NAMESPACE4}-${FMU_NAMESPACE5}")
 set(FMU_GUID_NAMESPACE ${FMU_GUID_NAMESPACE_RANDOM} CACHE STRING "FMU Namespace used to generated FMU GUID; replace with your own.")
-MESSAGE(STATUS "FMU_GUID_NAMESPACE: ${FMU_GUID_NAMESPACE}")
+message(STATUS "FMU_GUID_NAMESPACE: ${FMU_GUID_NAMESPACE}")
 string(UUID FMU_GUID NAMESPACE ${FMU_GUID_NAMESPACE} NAME ${FMU_MODEL_IDENTIFIER} TYPE SHA1)
-MESSAGE(STATUS "FMU_GUID: ${FMU_GUID}")
+message(STATUS "FMU_GUID: ${FMU_GUID}")
 
 
 
@@ -93,53 +92,41 @@ set(USE_CUSTOM_TYPESPLATFORM OFF CACHE BOOL "Use custom types platform definitio
 
 SET(FMU_SOURCES FmuToolsCommon.h FmuToolsExport.h FmuToolsExport.cpp TypesVariantsDefault.h)
 
-# MESSAGE(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
-# MESSAGE(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
+# message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+# message(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
 
 IF(USE_CUSTOM_TYPESPLATFORM)
-    MESSAGE(STATUS "Using custom 'fmi2TypesPlatform'.")
+    message(STATUS "Using custom 'fmi2TypesPlatform'.")
     target_compile_definitions(FmuComponent PUBLIC FMITYPESPLATFORM_CUSTOM)
     IF (NOT EXISTS "${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h")
-        MESSAGE(STATUS "Created template 'TypesVariantsCustom.h'. Please make your changes there.")
         file(COPY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/TypesVariantsTemplate.h" "${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h")
+        message(STATUS "Created template 'TypesVariantsCustom.h'. Please make your changes there.")
     endif()
     IF (NOT EXISTS "${CMAKE_SOURCE_DIR}/fmi2TypesPlatformCustom.h")
-        MESSAGE(STATUS "Created template 'fmi2TypesPlatformCustom.h'. Please make your changes there.")
         file(COPY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/fmi2_headers/fmi2TypesPlatform.h" "${CMAKE_SOURCE_DIR}/fmi2TypesPlatformCustom.h")
+        message(STATUS "Created template 'fmi2TypesPlatformCustom.h'. Please make your changes there.")
     endif()
     LIST(APPEND FMU_SOURCES ${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h)
 ELSE()
-    MESSAGE(STATUS "Using default fmi2TypesPlatform.")
+    message(STATUS "Using default fmi2TypesPlatform.")
     LIST(APPEND FMU_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/TypesVariantsDefault.h)
 ENDIF()
 
 
 MARK_AS_ADVANCED(USE_EXTERNAL_FMU_COMPONENT_SOURCES)
 IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
-    MESSAGE(STATUS "Using default sources for FmuComponent target.")
+    message(STATUS "Using default sources for FmuComponent target.")
     LIST(APPEND FMU_SOURCES FmuComponent.h FmuComponent.cpp)
 ELSE()
-    MESSAGE(STATUS "Add custom sources to FmuComponent target through 'target_sources(FmuComponent PRIVATE <yoursourcefiles>)'")
+    message(STATUS "Add custom sources to FmuComponent target through 'target_sources(FmuComponent PRIVATE <yoursourcefiles>)'")
 ENDIF()
 
 add_library(FmuComponent SHARED ${FMU_SOURCES})
 
 
-target_include_directories(FmuComponent PRIVATE "variant")
 target_include_directories(FmuComponent PRIVATE "${CMAKE_SOURCES_DIR}")
-target_include_directories(FmuComponent PUBLIC "fmi2_headers")
-target_include_directories(FmuComponent PRIVATE "rapidxml")
 target_compile_definitions(FmuComponent PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
-target_compile_definitions(FmuComponent PRIVATE FMU_OS_SUFFIX="${FMI_PLATFORM}")
 target_compile_definitions(FmuComponent PRIVATE FMU_GUID="${FMU_GUID}")
-IF (ENABLE_GUID_CHECK)
-    MESSAGE(STATUS "GUID check enabled.")
-    target_compile_definitions(FmuComponent PRIVATE ENABLE_GUID_CHECK=1)
-ELSE()
-    MESSAGE(STATUS "GUID check disabled.")
-    target_compile_definitions(FmuComponent PRIVATE ENABLE_GUID_CHECK=0)
-ENDIF()
-
 set_target_properties(FmuComponent PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
 
 
@@ -156,51 +143,31 @@ set_target_properties(FmuComponent PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${F
 # -------------------------------------------------
 # Target: generates modelDescription.xml
 # -------------------------------------------------
-add_executable(fmu_modeldescription_generator fmu_modeldescription_generator.cpp)
-target_compile_definitions(fmu_modeldescription_generator PRIVATE FMU_RUNTIME_OUTPUT_DIRECTORY="${FMU_RUNTIME_OUTPUT_DIRECTORY}")
-target_compile_definitions(fmu_modeldescription_generator PRIVATE FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
-target_compile_definitions(fmu_modeldescription_generator PRIVATE FMU_GUID="${FMU_GUID}")
-IF (ENABLE_GUID_CHECK)
-    target_compile_definitions(fmu_modeldescription_generator PRIVATE ENABLE_GUID_CHECK=1)
-ELSE()
-    target_compile_definitions(fmu_modeldescription_generator PRIVATE ENABLE_GUID_CHECK=0)
-ENDIF()
-target_link_libraries(fmu_modeldescription_generator PUBLIC FmuComponent)
 
-# fmu_modeldescription_generator must reside in the sama place as the FmuComponent artifact so that it is in the same folder as the shared library
-set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_modeldescription_generator PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_modeldescription_generator PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(fmu_modeldescription_generator PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+add_executable(fmu_modeldescription_generator FmuToolsRuntimeLinking.h fmu_modeldescription_generator.cpp)
+add_dependencies(FmuComponent fmu_modeldescription_generator)
 
-
-
-# -------------------------------------------------
-# Create the FMU post-build command
-# -------------------------------------------------
-add_custom_target(PACK_FMU
-	COMMAND $<TARGET_FILE:fmu_modeldescription_generator>
-    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_MODEL_IDENTIFIER}.fmu" "modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
+add_custom_command(TARGET FmuComponent POST_BUILD
+    COMMENT "Generating modelDescription.xml for ${FMU_RUNTIME_OUTPUT_DIRECTORY}/${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX} into ${FMU_MAIN_DIRECTORY}"
+    COMMAND $<TARGET_FILE:fmu_modeldescription_generator> ${FMU_RUNTIME_OUTPUT_DIRECTORY} ${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX} ${FMU_MAIN_DIRECTORY}
+    BYPRODUCTS "${FMU_MAIN_DIRECTORY}/modelDescription.xml"
     WORKING_DIRECTORY ${FMU_MAIN_DIRECTORY}
-    COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
 )
 
-add_dependencies(PACK_FMU fmu_modeldescription_generator)
-add_dependencies(PACK_FMU FmuComponent)
-
+add_custom_command(TARGET FmuComponent POST_BUILD
+    COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
+    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_MODEL_IDENTIFIER}.fmu" "modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
+    BYPRODUCTS "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
+    WORKING_DIRECTORY ${FMU_MAIN_DIRECTORY}
+)
 
 # -------------------------------------------------
 # Target that runs the compiled fmu
 # -------------------------------------------------
-add_executable(fmu_host FmuToolsImport.hpp)
+add_executable(fmu_host)
 IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
     target_sources(fmu_host PRIVATE fmu_host.cpp)
 ENDIF()
-target_include_directories(fmu_host PUBLIC "fmi2_headers")
-target_include_directories(fmu_host PRIVATE "rapidxml")
-target_include_directories(fmu_host PRIVATE "miniz-cpp")
 target_include_directories(fmu_host PRIVATE "${CMAKE_SOURCES_DIR}")
 target_compile_definitions(fmu_host PUBLIC FMU_UNPACK_DIRECTORY="${FMU_UNPACK_DIRECTORY}")
 target_compile_definitions(fmu_host PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
@@ -212,7 +179,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_
     target_link_libraries(fmu_host PRIVATE stdc++fs)
     target_link_libraries(fmu_host PRIVATE ${CMAKE_DL_LIBS})
 endif()
-add_dependencies(fmu_host PACK_FMU)
+add_dependencies(fmu_host FmuComponent)
 
 
 # -------------------------------------------------
@@ -226,14 +193,14 @@ IF (BUILD_TESTING)
     # # -------------------------------------------------
     IF(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
         SET(TESTING_ENABLED ON)
-        MESSAGE(STATUS "Testing enabled.")
+        message(STATUS "Testing enabled.")
         
         ## Call fmuChecker on the FMU, parse its output
         SET(FMUCHECKER_LOG "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_log.txt")
         SET(FMUCHECKER_RESULTS "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_results.txt")
         add_executable(test_parseFmuChecker test_parseFmuChecker.cpp)
         target_compile_definitions(test_parseFmuChecker PRIVATE FMUCHECKER_LOG="${FMUCHECKER_LOG}")
-        add_dependencies(test_parseFmuChecker PACK_FMU)
+        add_dependencies(test_parseFmuChecker FmuComponent)
 
         ## call the execution of fmuChecker
         add_custom_command(TARGET test_parseFmuChecker
@@ -259,11 +226,11 @@ IF (BUILD_TESTING)
         set_tests_properties(build_test_parseFmuChecker PROPERTIES FIXTURES_SETUP fmuChecker_requirements)
         set_tests_properties(TestFmuComponent PROPERTIES FIXTURES_REQUIRED fmuChecker_requirements)
     ELSE()
-        MESSAGE(STATUS "Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
+        message(STATUS "Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
     ENDIF()
 ELSE()
     SET(TESTING_ENABLED OFF)
-    MESSAGE(STATUS "Testing disabled.")
+    message(STATUS "Testing disabled.")
 ENDIF(BUILD_TESTING)
 
 

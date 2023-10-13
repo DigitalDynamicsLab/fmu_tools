@@ -7,7 +7,7 @@
 #include <list>
 #include <iostream>
 #include <fstream>
-#include "rapidxml_ext.hpp"
+#include "rapidxml/rapidxml_ext.hpp"
 
 
 const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = {UD_kg, UD_m, UD_s, UD_A, UD_K, UD_mol, UD_cd, UD_rad, UD_m_s, UD_m_s2, UD_rad_s, UD_rad_s2};
@@ -33,9 +33,27 @@ bool is_pointer_variant(const FmuVariableBindType& myVariant) {
 
 
 void createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid){
-    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmi2Type::fmi2CoSimulation, guid);
+    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmutype, guid);
     fmu->ExportModelDescription(path);
     delete fmu;
+}
+
+FmuComponentBase::FmuComponentBase(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
+    callbackFunctions({nullptr, nullptr, nullptr, nullptr, nullptr}),
+    instanceName(_instanceName),
+    fmuGUID(FMU_GUID),
+    modelIdentifier(FMU_MODEL_IDENTIFIER),
+    fmuMachineState(FmuMachineStateType::instantiated)
+{
+
+    unitDefinitions["1"] = UnitDefinitionType("1"); // guarantee the existence of the default unit
+    unitDefinitions[""] = UnitDefinitionType(""); // guarantee the existence of the unassigned unit
+
+    AddFmuVariable(&time, "time", FmuVariable::Type::Real, "s", "time");
+
+    if(std::string(_fmuGUID).compare(fmuGUID))
+        sendToLog("GUID used for instantiation not matching with source.", fmi2Status::fmi2Warning, "logStatusWarning");
+
 }
 
 void FmuComponentBase::ExportModelDescription(std::string path){

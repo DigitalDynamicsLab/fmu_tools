@@ -1,5 +1,7 @@
 #pragma once
 #include "FmuToolsCommon.h"
+#include "FmuToolsRuntimeLinking.h"
+
 #include "rapidxml/rapidxml.hpp"
 #include <string>
 #include <vector>
@@ -10,17 +12,6 @@
 #include <iostream>
 #include <system_error>
 
-
-#if defined(_MSC_VER) || defined(WIN32) || defined(__MINGW32__)
-#    define WIN32_LEAN_AND_MEAN
-#    include <windows.h>
-#    define DYNLIB_HANDLE HINSTANCE
-#    define get_function_ptr GetProcAddress
-#else
-#    include <dlfcn.h>
-#    define DYNLIB_HANDLE void*
-#    define get_function_ptr dlsym
-#endif
 
 #include "miniz-cpp/zip_file.hpp"
 
@@ -446,19 +437,9 @@ public:
     void LoadSharedLibrary() {
 
         std::string dynlib_dir = this->directory + this->binaries_dir;
-#if WIN32
-        if (!SetDllDirectory(dynlib_dir.c_str()))
-            throw std::runtime_error("Could not locate the binaries directory.");
-#endif
+        std::string dynlib_name = dynlib_dir + "/" + this->info_cosimulation_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
 
-        std::string dynlib_name;
-        dynlib_name = dynlib_dir + "/" + this->info_cosimulation_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
-
-#if WIN32
-        this->dynlib_handle = LoadLibrary(dynlib_name.c_str());
-#else
-        this->dynlib_handle = dlopen(dynlib_name.c_str(), RTLD_LAZY);
-#endif
+        this->dynlib_handle = RuntimeLinkLibrary(dynlib_dir, dynlib_name);
 
 
         if (!this->dynlib_handle)
