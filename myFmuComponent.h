@@ -7,9 +7,9 @@
 
 
 
-class FmuComponent: public FmuComponentBase{
+class myFmuComponent: public FmuComponentBase{
 public:
-    FmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
+    myFmuComponent(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID):
         FmuComponentBase(_instanceName, _fmuType, _fmuGUID)
     {
 
@@ -59,7 +59,7 @@ public:
 
     virtual void _exitInitializationMode() override {}
 
-    virtual ~FmuComponent(){}
+    virtual ~myFmuComponent(){}
 
     /// FMU_ACTION: override DoStep of the base class with the problem-specific implementation
     virtual fmi2Status _doStep(fmi2Real currentCommunicationPoint, fmi2Real communicationStepSize, fmi2Boolean noSetFMUStatePriorToCurrentPoint) override;

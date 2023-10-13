@@ -20,7 +20,7 @@ mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
 SET(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
 
-set(FMU_MODEL_IDENTIFIER "myFmuIdentifier" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
+set(FMU_MODEL_IDENTIFIER "myFmuComponent" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
 SET(FMU_FILENAME "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu")
 message(STATUS "FMU to be created: \"${FMU_FILENAME}\"")
 
@@ -97,7 +97,7 @@ SET(FMU_SOURCES FmuToolsCommon.h FmuToolsExport.h FmuToolsExport.cpp TypesVarian
 
 IF(USE_CUSTOM_TYPESPLATFORM)
     message(STATUS "Using custom 'fmi2TypesPlatform'.")
-    target_compile_definitions(FmuComponent PUBLIC FMITYPESPLATFORM_CUSTOM)
+    target_compile_definitions(${FMU_MODEL_IDENTIFIER} PUBLIC FMITYPESPLATFORM_CUSTOM)
     IF (NOT EXISTS "${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h")
         file(COPY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/TypesVariantsTemplate.h" "${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h")
         message(STATUS "Created template 'TypesVariantsCustom.h'. Please make your changes there.")
@@ -115,46 +115,46 @@ ENDIF()
 
 MARK_AS_ADVANCED(USE_EXTERNAL_FMU_COMPONENT_SOURCES)
 IF (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
-    message(STATUS "Using default sources for FmuComponent target.")
-    LIST(APPEND FMU_SOURCES FmuComponent.h FmuComponent.cpp)
+    message(STATUS "Using default sources for ${FMU_MODEL_IDENTIFIER} target.")
+    LIST(APPEND FMU_SOURCES myFmuComponent.h myFmuComponent.cpp)
 ELSE()
-    message(STATUS "Add custom sources to FmuComponent target through 'target_sources(FmuComponent PRIVATE <yoursourcefiles>)'")
+    message(STATUS "Add custom sources to ${FMU_MODEL_IDENTIFIER} target through 'target_sources(${FMU_MODEL_IDENTIFIER} PRIVATE <yoursourcefiles>)'")
 ENDIF()
 
-add_library(FmuComponent SHARED ${FMU_SOURCES})
+add_library(${FMU_MODEL_IDENTIFIER} SHARED ${FMU_SOURCES})
 
 
-target_include_directories(FmuComponent PRIVATE "${CMAKE_SOURCES_DIR}")
-target_compile_definitions(FmuComponent PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
-target_compile_definitions(FmuComponent PRIVATE FMU_GUID="${FMU_GUID}")
-set_target_properties(FmuComponent PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
+target_include_directories(${FMU_MODEL_IDENTIFIER} PRIVATE "${CMAKE_SOURCES_DIR}")
+target_compile_definitions(${FMU_MODEL_IDENTIFIER} PUBLIC FMU_MODEL_IDENTIFIER="${FMU_MODEL_IDENTIFIER}")
+target_compile_definitions(${FMU_MODEL_IDENTIFIER} PRIVATE FMU_GUID="${FMU_GUID}")
+set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES OUTPUT_NAME ${FMU_MODEL_IDENTIFIER})
 
 
-set_target_properties(FmuComponent PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(FmuComponent PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(FmuComponent PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(FmuComponent PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(FmuComponent PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(FmuComponent PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(FmuComponent PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(FmuComponent PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
-set_target_properties(FmuComponent PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
+set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 
 # -------------------------------------------------
 # Target: generates modelDescription.xml
 # -------------------------------------------------
 
 add_executable(fmu_modeldescription_generator FmuToolsRuntimeLinking.h fmu_modeldescription_generator.cpp)
-add_dependencies(FmuComponent fmu_modeldescription_generator)
+add_dependencies(${FMU_MODEL_IDENTIFIER} fmu_modeldescription_generator)
 
-add_custom_command(TARGET FmuComponent POST_BUILD
-    COMMENT "Generating modelDescription.xml for ${FMU_RUNTIME_OUTPUT_DIRECTORY}/${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX} into ${FMU_MAIN_DIRECTORY}"
+add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
+    COMMENT "Generating modelDescription.xml for '${FMU_RUNTIME_OUTPUT_DIRECTORY}/${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX}' into '${FMU_MAIN_DIRECTORY}'"
     COMMAND $<TARGET_FILE:fmu_modeldescription_generator> ${FMU_RUNTIME_OUTPUT_DIRECTORY} ${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX} ${FMU_MAIN_DIRECTORY}
     BYPRODUCTS "${FMU_MAIN_DIRECTORY}/modelDescription.xml"
     WORKING_DIRECTORY ${FMU_MAIN_DIRECTORY}
 )
 
-add_custom_command(TARGET FmuComponent POST_BUILD
+add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
     COMMENT "Creating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
     COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_MODEL_IDENTIFIER}.fmu" "modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
     BYPRODUCTS "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
@@ -179,7 +179,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_
     target_link_libraries(fmu_host PRIVATE stdc++fs)
     target_link_libraries(fmu_host PRIVATE ${CMAKE_DL_LIBS})
 endif()
-add_dependencies(fmu_host FmuComponent)
+add_dependencies(fmu_host ${FMU_MODEL_IDENTIFIER})
 
 
 # -------------------------------------------------
@@ -200,7 +200,7 @@ IF (BUILD_TESTING)
         SET(FMUCHECKER_RESULTS "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_results.txt")
         add_executable(test_parseFmuChecker test_parseFmuChecker.cpp)
         target_compile_definitions(test_parseFmuChecker PRIVATE FMUCHECKER_LOG="${FMUCHECKER_LOG}")
-        add_dependencies(test_parseFmuChecker FmuComponent)
+        add_dependencies(test_parseFmuChecker ${FMU_MODEL_IDENTIFIER})
 
         ## call the execution of fmuChecker
         add_custom_command(TARGET test_parseFmuChecker
