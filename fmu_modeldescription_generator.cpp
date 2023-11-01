@@ -18,6 +18,7 @@ int main(int argc, char* argv[]) {
 
         // check if a proper fmu has been provided
         if (dynlib_name.substr(dynlib_name.length() - suffix.length()) == suffix) {
+            std::cerr << "ERROR: Please unzip the fmu first and point to the binaries directory." << std::endl;
             return 3;
         }
 
@@ -35,7 +36,6 @@ int main(int argc, char* argv[]) {
 
         dynlib_fullpath = dynlib_dir + dynlib_name;
         
-        //std::cout << "FMU library: " << dynlib_fullpath << std::endl;
 
         if (argc == 4){
             output_path = argv[3];
@@ -48,7 +48,9 @@ int main(int argc, char* argv[]) {
         std::cout << "Return 1: Cannot link to library or library not found." << std::endl;
         std::cout << "Return 2: Cannot call modelDescription generation function." << std::endl;
         std::cout << "Return 3: Please unzip the fmu first and point to the binaries directory." << std::endl;
-        return 1;
+        std::cout << "Return 4: this call; wrong set of arguments." << std::endl;
+        std::cerr << "ERROR: executable called with wrong set of arguments." << std::endl;
+        return 4;
     }
 
 
@@ -58,8 +60,10 @@ int main(int argc, char* argv[]) {
     DYNLIB_HANDLE dynlib_handle = RuntimeLinkLibrary(dynlib_dir, dynlib_fullpath);
 
 
-    if (!dynlib_handle)
+    if (!dynlib_handle){
+        std::cerr << "ERROR: Cannot link to library: " << dynlib_fullpath << std::endl;
         return 1;
+    }
 
 
     createModelDescriptionPtrType createModelDescriptionPtr = (createModelDescriptionPtrType)get_function_ptr( dynlib_handle, "createModelDescription" );
@@ -79,8 +83,13 @@ int main(int argc, char* argv[]) {
         has_ModelExchange = false;
     }
 
+    if (!has_CoSimulation && !has_ModelExchange){
+        std::cerr << "ERROR: FMU is not set as CoSimulation nor as ModelExchange." << std::endl;
+        return 2;
+    }
 
-    return (has_CoSimulation || has_ModelExchange) ? 0 : 2;
+
+    return 0;
 
     
 }
