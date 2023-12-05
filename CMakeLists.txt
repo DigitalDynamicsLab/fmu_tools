@@ -91,6 +91,7 @@ set(USE_EXTERNAL_FMU_COMPONENT_SOURCES OFF CACHE BOOL "Let external users to add
 set(USE_CUSTOM_TYPESPLATFORM OFF CACHE BOOL "Use custom types platform definition.")
 
 set(FMU_SOURCES FmuToolsCommon.h FmuToolsExport.h FmuToolsExport.cpp TypesVariantsDefault.h)
+source_group("fmu_tools" FILES ${FMU_SOURCES})
 
 # message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
 # message(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")

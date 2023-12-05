@@ -341,13 +341,13 @@ public:
             else
                 throw std::runtime_error("Cannot find 'name' property in variable.\n");
 
-            if (auto variables_type = variable_node->first_node("Real"))
+            if (variable_node->first_node("Real"))
                 mvar_type = FmuVariable::Type::Real;
-            else if (auto variables_type = variable_node->first_node("String"))
+            else if (variable_node->first_node("String"))
                 mvar_type = FmuVariable::Type::String;
-            else if (auto variables_type = variable_node->first_node("Integer"))
+            else if (variable_node->first_node("Integer"))
                 mvar_type = FmuVariable::Type::Integer;
-            else if (auto variables_type = variable_node->first_node("Boolean"))
+            else if (variable_node->first_node("Boolean"))
                 mvar_type = FmuVariable::Type::Boolean;
             else
                 mvar_type = FmuVariable::Type::Real;
