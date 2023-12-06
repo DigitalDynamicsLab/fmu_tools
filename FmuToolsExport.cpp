@@ -9,8 +9,11 @@
 #include <fstream>
 #include "rapidxml/rapidxml_ext.hpp"
 
-
-const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = {UD_kg, UD_m, UD_s, UD_A, UD_K, UD_mol, UD_cd, UD_rad, UD_m_s, UD_m_s2, UD_rad_s, UD_rad_s2};
+const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = { //
+  UD_kg, UD_m, UD_s, UD_A, UD_K, UD_mol, UD_cd, UD_rad,                                           //
+  UD_m_s, UD_m_s2, UD_rad_s, UD_rad_s2,                                                           //
+  UD_N, UD_Nm, UD_N_m2                                                                            //
+};
 
 const std::set<std::string> FmuComponentBase::logCategories_available = {
     "logEvents",

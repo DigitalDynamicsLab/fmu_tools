@@ -95,6 +95,10 @@ static const UnitDefinitionType UD_m_s2   ("m/s2",   0, 1, -2, 0, 0, 0, 0, 0 );
 static const UnitDefinitionType UD_rad_s  ("rad/s",  0, 0, -1, 0, 0, 0, 0, 1 );
 static const UnitDefinitionType UD_rad_s2 ("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1 );
 
+static const UnitDefinitionType UD_N ("N",      1,  1, -2, 0, 0, 0, 0, 0);
+static const UnitDefinitionType UD_Nm("Nm",     1,  2, -2, 0, 0, 0, 0, 0);
+static const UnitDefinitionType UD_N_m2("N/m2", 1, -1, -2, 0, 0, 0, 0, 0);
+
 
 #define MAKE_GETSET_PAIR(returnType, codeGet, codeSet) \
     std::make_pair(std::function<returnType()>([this]() -> returnType  \
@@ -405,11 +409,11 @@ public:
     }
 
 
-    // DEV: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the reason is that:
+    // DEV: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the reason is as follows:
     // e.g. both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any possible splitting depending on type
     // if we accept to have both fmi2Integer and fmi2Boolean considered as the same type we can drop the 'scalartype' argument
     // but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean and it is not nice
-    // At least, in this way, we do not have any redundant code at least
+    // At least, in this way, we do not have any redundant code.
     const FmuVariable& AddFmuVariable(
             const FmuVariableExport::VarbindType& varbind,
             std::string name,
