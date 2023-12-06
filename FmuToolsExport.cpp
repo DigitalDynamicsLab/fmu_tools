@@ -281,8 +281,6 @@ void fmi2FreeInstance(fmi2Component c){
 }
 
 fmi2Status fmi2SetupExperiment(fmi2Component c, fmi2Boolean toleranceDefined, fmi2Real tolerance, fmi2Real startTime, fmi2Boolean stopTimeDefined, fmi2Real stopTime){
-    assert(toleranceDefined==fmi2False);
-    assert(stopTimeDefined==fmi2False);
     reinterpret_cast<FmuComponentBase*>(c)->SetDefaultExperiment(toleranceDefined, tolerance, startTime, stopTimeDefined, stopTime);
     return fmi2Status::fmi2OK;
 }
