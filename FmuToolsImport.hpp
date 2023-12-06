@@ -328,10 +328,9 @@ public:
         if (!variables_node)
             throw std::runtime_error("Not a valid FMU. Missing <ModelVariables> in XML. \n");
 
-        // Iterate over the variables
+        // Iterate over the variables (valueReference starts at 1)
         for (auto variable_node = variables_node->first_node("ScalarVariable"); variable_node; variable_node = variable_node->next_sibling())
         {
-
             FmuVariable::Type mvar_type;
             std::string mvar_name;
 
@@ -424,7 +423,7 @@ public:
                 throw std::runtime_error("variability is badly formatted.");
 
             FmuVariable mvar(mvar_name, mvar_type, causality_enum, variability_enum, initial_enum);
-
+            mvar.SetValueReference(valref);
 
             scalarVariables[mvar.GetName()] = mvar;
 
@@ -639,66 +638,70 @@ public:
 
     template <class T>
     fmi2Status GetVariable(fmi2ValueReference vr, T& value, FmuVariable::Type vartype) noexcept(false) {
-        switch (vartype)
-        {
-        case FmuVariable::Type::Real:
-            this->_fmi2GetReal(this->component, &vr, 1, &value);
-            break;
-        case FmuVariable::Type::Integer:
-            this->_fmi2GetInteger(this->component, &vr, 1, &value);
-            break;
-        case FmuVariable::Type::Boolean:
-            this->_fmi2GetBoolean(this->component, &vr, 1, &value);
-            break;
-        case FmuVariable::Type::String:
-            this->_fmi2GetString(this->component, &vr, 1, &value);
-            break;
-        case FmuVariable::Type::Unknown:
-            throw std::runtime_error("Fmu Variable type not initialized.");
-            break;
-        default:
-            throw std::runtime_error("Fmu Variable type not valid.");
-            break;
-        }
+      fmi2Status status = fmi2Status::fmi2Error;
+
+      switch (vartype)
+      {
+      case FmuVariable::Type::Real:
+        status = this->_fmi2GetReal(this->component, &vr, 1, (fmi2Real*)&value);
+        break;
+      case FmuVariable::Type::Integer:
+        status = this->_fmi2GetInteger(this->component, &vr, 1, (fmi2Integer*)&value);
+        break;
+      case FmuVariable::Type::Boolean:
+        status = this->_fmi2GetBoolean(this->component, &vr, 1, (fmi2Boolean*)&value);
+        break;
+      case FmuVariable::Type::String:
+        status = this->_fmi2GetString(this->component, &vr, 1, (fmi2String*)&value);
+        break;
+      case FmuVariable::Type::Unknown:
+        throw std::runtime_error("Fmu Variable type not initialized.");
+        break;
+      default:
+        throw std::runtime_error("Fmu Variable type not valid.");
+        break;
+      }
+
+      return status;
     }
 
     template <class T>
     fmi2Status SetVariable(fmi2ValueReference vr, const T& value, FmuVariable::Type vartype) noexcept(false) {
-        switch (vartype)
-        {
-        case FmuVariable::Type::Real:
-            this->_fmi2SetReal(this->component, &vr, 1, &value);
-            break;
-        case FmuVariable::Type::Integer:
-            this->_fmi2SetInteger(this->component, &vr, 1, &value);
-            break;
-        case FmuVariable::Type::Boolean:
-            this->_fmi2SetBoolean(this->component, &vr, 1, &value);
-            break;
-        case FmuVariable::Type::String:
-            this->_fmi2SetString(this->component, &vr, 1, &value);
-            break;
-        case FmuVariable::Type::Unknown:
-            throw std::runtime_error("Fmu Variable type not initialized.");
-            break;
-        default:
-            throw std::runtime_error("Fmu Variable type not valid.");
-            break;
-        }
+      fmi2Status status = fmi2Status::fmi2Error;
+
+      switch (vartype)
+      {
+      case FmuVariable::Type::Real:
+        status = this->_fmi2SetReal(this->component, &vr, 1, (fmi2Real*)&value);
+        break;
+      case FmuVariable::Type::Integer:
+        status = this->_fmi2SetInteger(this->component, &vr, 1, (fmi2Integer*)&value);
+        break;
+      case FmuVariable::Type::Boolean:
+        status = this->_fmi2SetBoolean(this->component, &vr, 1, (fmi2Boolean*)&value);
+        break;
+      case FmuVariable::Type::String:
+        status = this->_fmi2SetString(this->component, &vr, 1, (fmi2String*)&value);
+        break;
+      case FmuVariable::Type::Unknown:
+        throw std::runtime_error("Fmu Variable type not initialized.");
+        break;
+      default:
+        throw std::runtime_error("Fmu Variable type not valid.");
+        break;
+      }
+
+      return status;
     }
 
     template <class T>
-    fmi2Status GetVariable(std::string varname, T& value, FmuVariable::Type vartype) noexcept(false) {
+    fmi2Status GetVariable(const std::string& varname, T& value, FmuVariable::Type vartype) noexcept(false) {
         return GetVariable(scalarVariables.at(varname).GetValueReference(), value, vartype);
     }
 
     template <class T>
-    fmi2Status SetVariable(std::string varname, const T& value, FmuVariable::Type vartype) noexcept(false) {
+    fmi2Status SetVariable(const std::string& varname, const T& value, FmuVariable::Type vartype) noexcept(false) {
         return SetVariable(scalarVariables.at(varname).GetValueReference(), value, vartype);
     }
-
-    
-
-
 
 };
