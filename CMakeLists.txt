@@ -18,11 +18,15 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
+if(NOT FMU_MSG_PREFIX)
+  set(FMU_MSG_PREFIX "")
+endif()
+
 set(FMU_MAIN_DIRECTORY "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}")
 
 set(FMU_MODEL_IDENTIFIER "myFmuComponent" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
 set(FMU_FILENAME "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu")
-message(STATUS "FMU to be created: \"${FMU_FILENAME}\"")
+message(STATUS "${FMU_MSG_PREFIX}FMU to be created: \"${FMU_FILENAME}\"")
 
 set(FMU_UNPACK_DIRECTORY "${FMU_MAIN_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
 
@@ -57,7 +61,7 @@ if(UNKNOWN_TARGET_SYSTEM)
     set(TARGET_SYSTEM "win64" CACHE STRING "Target operating system and architecture (e.g. win64, linux32, ...)")
     mark_as_advanced(CLEAR TARGET_SYSTEM)
 else()
-    message(STATUS "Architecture: ${FMI_PLATFORM}")
+    message(STATUS "${FMU_MSG_PREFIX}Architecture: ${FMI_PLATFORM}")
     mark_as_advanced(FORCE TARGET_SYSTEM)
 endif()
 
@@ -77,9 +81,9 @@ string(RANDOM LENGTH 4  ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE4)
 string(RANDOM LENGTH 12 ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE5)
 set(FMU_GUID_NAMESPACE_RANDOM "${FMU_NAMESPACE1}-${FMU_NAMESPACE2}-${FMU_NAMESPACE3}-${FMU_NAMESPACE4}-${FMU_NAMESPACE5}")
 set(FMU_GUID_NAMESPACE ${FMU_GUID_NAMESPACE_RANDOM} CACHE STRING "FMU Namespace used to generated FMU GUID; replace with your own.")
-message(STATUS "FMU_GUID_NAMESPACE: ${FMU_GUID_NAMESPACE}")
+message(STATUS "${FMU_MSG_PREFIX}FMU_GUID_NAMESPACE: ${FMU_GUID_NAMESPACE}")
 string(UUID FMU_GUID NAMESPACE ${FMU_GUID_NAMESPACE} NAME ${FMU_MODEL_IDENTIFIER} TYPE SHA1)
-message(STATUS "FMU_GUID: ${FMU_GUID}")
+message(STATUS "${FMU_MSG_PREFIX}FMU_GUID: ${FMU_GUID}")
 
 
 
@@ -97,29 +101,29 @@ source_group("fmu_tools" FILES ${FMU_SOURCES})
 # message(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
 
 if(USE_CUSTOM_TYPESPLATFORM)
-    message(STATUS "Using custom 'fmi2TypesPlatform'.")
+    message(STATUS "${FMU_MSG_PREFIX}Using custom 'fmi2TypesPlatform'.")
     target_compile_definitions(${FMU_MODEL_IDENTIFIER} PUBLIC FMITYPESPLATFORM_CUSTOM)
     if (NOT EXISTS "${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h")
         file(COPY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/TypesVariantsTemplate.h" "${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h")
-        message(STATUS "Created template 'TypesVariantsCustom.h'. Please make your changes there.")
+        message(STATUS "${FMU_MSG_PREFIX}Created template 'TypesVariantsCustom.h'. Please make your changes there.")
     endif()
     if (NOT EXISTS "${CMAKE_SOURCE_DIR}/fmi2TypesPlatformCustom.h")
         file(COPY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/fmi2_headers/fmi2TypesPlatform.h" "${CMAKE_SOURCE_DIR}/fmi2TypesPlatformCustom.h")
-        message(STATUS "Created template 'fmi2TypesPlatformCustom.h'. Please make your changes there.")
+        message(STATUS "${FMU_MSG_PREFIX}Created template 'fmi2TypesPlatformCustom.h'. Please make your changes there.")
     endif()
     list(APPEND FMU_SOURCES ${CMAKE_SOURCE_DIR}/TypesVariantsCustom.h)
 else()
-    message(STATUS "Using default fmi2TypesPlatform.")
+    message(STATUS "${FMU_MSG_PREFIX}Using default fmi2TypesPlatform.")
     list(APPEND FMU_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/TypesVariantsDefault.h)
 endif()
 
 
 mark_as_advanced(USE_EXTERNAL_FMU_COMPONENT_SOURCES)
 if (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
-    message(STATUS "Using default sources for ${FMU_MODEL_IDENTIFIER} target.")
+    message(STATUS "${FMU_MSG_PREFIX}Using default sources for ${FMU_MODEL_IDENTIFIER} target.")
     list(APPEND FMU_SOURCES myFmuComponent.h myFmuComponent.cpp)
 else()
-    message(STATUS "Add custom sources to ${FMU_MODEL_IDENTIFIER} target through 'target_sources(${FMU_MODEL_IDENTIFIER} PRIVATE <yoursourcefiles>)'")
+    message(STATUS "${FMU_MSG_PREFIX}Add custom sources to ${FMU_MODEL_IDENTIFIER} target through 'target_sources(${FMU_MODEL_IDENTIFIER} PRIVATE <yoursourcefiles>)'")
 endif()
 
 add_library(${FMU_MODEL_IDENTIFIER} SHARED ${FMU_SOURCES})
@@ -210,7 +214,7 @@ if (BUILD_TESTING)
     # # -------------------------------------------------
     if(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
         set(TESTING_ENABLED ON)
-        message(STATUS "Testing enabled.")
+        message(STATUS "${FMU_MSG_PREFIX}Testing enabled.")
         
         ## Call fmuChecker on the FMU, parse its output
         set(test_parseFmuChecker_customname test_parseFmuChecker_${FMU_MODEL_IDENTIFIER})
@@ -250,11 +254,11 @@ if (BUILD_TESTING)
         set_tests_properties(${build_test_parseFmuChecker_customname} PROPERTIES FIXTURES_SETUP fmuChecker_requirements_${FMU_MODEL_IDENTIFIER})
         set_tests_properties(TestFmuComponent_${FMU_MODEL_IDENTIFIER} PROPERTIES FIXTURES_REQUIRED fmuChecker_requirements_${FMU_MODEL_IDENTIFIER})
     else()
-        message(STATUS "Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
+        message(STATUS "${FMU_MSG_PREFIX}Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
     endif()
 else()
     set(TESTING_ENABLED OFF)
-    message(STATUS "Testing disabled.")
+    message(STATUS "${FMU_MSG_PREFIX}Testing disabled.")
 endif(BUILD_TESTING)
 
 
