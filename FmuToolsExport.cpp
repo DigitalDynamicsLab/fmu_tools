@@ -80,6 +80,18 @@ FmuVariableExport& FmuVariableExport::operator=(const FmuVariableExport& other) 
     return *this;
 }
 
+void FmuVariableExport::SetValue(const fmi2String& val) const {
+    if (is_pointer_variant(this->varbind))
+        *varns::get<std::string*>(this->varbind) = std::string(val);
+    else
+        varns::get<FunGetSet<std::string>>(this->varbind).second(std::string(val));
+}
+
+void FmuVariableExport::GetValue(fmi2String* varptr) const {
+    *varptr = is_pointer_variant(this->varbind) ? varns::get<std::string*>(this->varbind)->c_str()
+                                                : varns::get<FunGetSet<std::string>>(this->varbind).first().c_str();
+}
+
 void FmuVariableExport::SetStartVal(fmi2String startval) {
     if (allowed_start)
         has_start = true;

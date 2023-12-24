@@ -114,11 +114,23 @@ class FmuVariableExport : public FmuVariable {
 
     void Bind(VarbindType newvarbind) { varbind = newvarbind; }
 
-    template <class T>
-    void SetValue(const T& val) const;
+    template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
+    void SetValue(const T& val) const {
+        if (is_pointer_variant(this->varbind))
+            *varns::get<T*>(this->varbind) = val;
+        else
+            varns::get<FunGetSet<T>>(this->varbind).second(val);
+    }
 
-    template <typename T>
-    void GetValue(T* varptr) const;
+    void SetValue(const fmi2String& val) const;
+
+    template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
+    void GetValue(T* varptr) const {
+        *varptr = is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind)
+                                                    : varns::get<FunGetSet<T>>(this->varbind).first();
+    }
+
+    void GetValue(fmi2String* varptr) const;
 
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
     void SetStartVal(T startval) {
@@ -152,20 +164,6 @@ class FmuVariableExport : public FmuVariable {
 };
 
 // -----------------------------------------------------------------------------
-
-template <class T>
-void FmuVariableExport::SetValue(const T& val) const {
-    if (is_pointer_variant(this->varbind))
-        *varns::get<T*>(this->varbind) = val;
-    else
-        varns::get<FunGetSet<T>>(this->varbind).second(val);
-}
-
-template <typename T>
-void FmuVariableExport::GetValue(T* varptr) const {
-    *varptr = is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind)
-                                                : varns::get<FunGetSet<T>>(this->varbind).first();
-}
 
 template <typename T>
 void FmuVariableExport::setStartFromVar(FunGetSet<T> funPair) {
