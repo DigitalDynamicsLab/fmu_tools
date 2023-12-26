@@ -18,17 +18,25 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
+# The FMU model identifier must be set by the caller. Use a cached variable
+set(FMU_MODEL_IDENTIFIER "myFmuComponent" CACHE STRING "FMU model identifier.")
+
+# Optional setting: prefix for all messages issued from this script (default: empty).
 if(NOT FMU_MSG_PREFIX)
   set(FMU_MSG_PREFIX "")
 endif()
 
-set(FMU_MAIN_DIRECTORY "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}")
+# Optional setting: output location for the FMU directory (default: CMAKE_BINARY_DIR)
+if(NOT FMU_MAIN_DIRECTORY)
+  set(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
+endif()
 
-set(FMU_MODEL_IDENTIFIER "myFmuComponent" CACHE STRING "FMU Model Identifier: should fulfill operating system and C-function naming standards.")
-set(FMU_FILENAME "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu")
+# Set directory and filename for the generated FMU
+set(FMU_DIRECTORY "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}")
+set(FMU_FILENAME "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu")
 message(STATUS "${FMU_MSG_PREFIX}FMU to be created: \"${FMU_FILENAME}\"")
 
-set(FMU_UNPACK_DIRECTORY "${FMU_MAIN_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
+set(FMU_UNPACK_DIRECTORY "${FMU_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
 
 set(TESTING_ENABLED_OS "win64" "linux64")
 
@@ -65,7 +73,7 @@ else()
     mark_as_advanced(FORCE TARGET_SYSTEM)
 endif()
 
-set(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_MAIN_DIRECTORY}/binaries/${FMI_PLATFORM}/$<0:>")
+set(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_DIRECTORY}/binaries/${FMI_PLATFORM}/$<0:>")
 
 
 
@@ -164,17 +172,17 @@ endif()
 add_dependencies(${FMU_MODEL_IDENTIFIER} fmu_modeldescription_generator)
 
 add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
-    COMMENT "Generating modelDescription.xml for '${FMU_RUNTIME_OUTPUT_DIRECTORY}/${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX}' into '${FMU_MAIN_DIRECTORY}'"
-    COMMAND $<TARGET_FILE:fmu_modeldescription_generator> ${FMU_RUNTIME_OUTPUT_DIRECTORY} ${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX} ${FMU_MAIN_DIRECTORY}
-    BYPRODUCTS "${FMU_MAIN_DIRECTORY}/modelDescription.xml"
-    WORKING_DIRECTORY ${FMU_MAIN_DIRECTORY}
+    COMMENT "Generating modelDescription.xml for '${FMU_RUNTIME_OUTPUT_DIRECTORY}/${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX}' into '${FMU_DIRECTORY}'"
+    COMMAND $<TARGET_FILE:fmu_modeldescription_generator> ${FMU_RUNTIME_OUTPUT_DIRECTORY} ${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX} ${FMU_DIRECTORY}
+    BYPRODUCTS "${FMU_DIRECTORY}/modelDescription.xml"
+    WORKING_DIRECTORY ${FMU_DIRECTORY}
 )
 
 add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
     COMMENT "\nCreating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
-    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu" "${FMU_MAIN_DIRECTORY}/modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
-    BYPRODUCTS "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
-    WORKING_DIRECTORY ${FMU_MAIN_DIRECTORY}
+    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu" "${FMU_DIRECTORY}/modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
+    BYPRODUCTS "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
+    WORKING_DIRECTORY ${FMU_DIRECTORY}
 )
 
 # -------------------------------------------------
@@ -190,7 +198,7 @@ if (BUILD_FMU_HOST)
     endif()
     target_include_directories(${fmu_host_customname} PRIVATE "${CMAKE_SOURCES_DIR}")
     target_compile_definitions(${fmu_host_customname} PUBLIC FMU_UNPACK_DIRECTORY="${FMU_UNPACK_DIRECTORY}")
-    target_compile_definitions(${fmu_host_customname} PUBLIC FMU_MAIN_DIRECTORY="${FMU_MAIN_DIRECTORY}")
+    target_compile_definitions(${fmu_host_customname} PUBLIC FMU_DIRECTORY="${FMU_DIRECTORY}")
     target_compile_definitions(${fmu_host_customname} PUBLIC FMU_FILENAME="${FMU_FILENAME}")
     target_compile_definitions(${fmu_host_customname} PUBLIC FMU_OS_SUFFIX="${FMI_PLATFORM}")
     target_compile_definitions(${fmu_host_customname} PUBLIC SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}")
@@ -265,9 +273,11 @@ endif(BUILD_TESTING)
 # -------------------------------------------------
 # Propagate variable to upper levels
 # -------------------------------------------------
+# Make variables set in this script available to the fetcher projects
 if(NOT PROJECT_IS_TOP_LEVEL)
-    # make them available to fetcher projects
     set(FMI_PLATFORM ${FMI_PLATFORM} PARENT_SCOPE)
+    set(FMU_DIRECTORY ${FMU_DIRECTORY} PARENT_SCOPE)
+    set(FMU_FILENAME ${FMU_FILENAME} PARENT_SCOPE)
     set(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_RUNTIME_OUTPUT_DIRECTORY}" PARENT_SCOPE)
     set(FMU_SOURCES ${FMU_SOURCES} PARENT_SCOPE)
     set(TESTING_ENABLED ${TESTING_ENABLED} PARENT_SCOPE)
