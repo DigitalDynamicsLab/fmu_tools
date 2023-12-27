@@ -128,6 +128,7 @@ struct FmuBody {
 class FmuUnit {
   public:
     FmuUnit();
+    virtual ~FmuUnit() {}
 
     /// Load the FMU from the directory, assuming it has been unzipped
     void LoadUnzipped(const std::string& mdirectory);
