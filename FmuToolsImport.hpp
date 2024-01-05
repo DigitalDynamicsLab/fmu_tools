@@ -193,6 +193,9 @@ class FmuUnit {
     template <class T>
     fmi2Status SetVariable(const std::string& varname, const T& value, FmuVariable::Type vartype) noexcept(false);
 
+    fmi2Status GetVariable(const std::string& varname, std::string& value) noexcept(false);
+    fmi2Status SetVariable(const std::string& varname, const std::string& value) noexcept(false);
+
   public:
     std::string directory;
     std::string binaries_dir;
@@ -756,4 +759,15 @@ fmi2Status FmuUnit::GetVariable(const std::string& varname, T& value, FmuVariabl
 template <class T>
 fmi2Status FmuUnit::SetVariable(const std::string& varname, const T& value, FmuVariable::Type vartype) noexcept(false) {
     return SetVariable(scalarVariables.at(varname).GetValueReference(), value, vartype);
+}
+
+fmi2Status FmuUnit::GetVariable(const std::string& varname, std::string& value) noexcept(false) {
+    fmi2String tmp;
+    auto status = GetVariable(varname, tmp, FmuVariable::Type::String);
+    value = std::string(tmp);
+    return status;
+}
+
+fmi2Status FmuUnit::SetVariable(const std::string& varname, const std::string& value) noexcept(false) {
+    return SetVariable(varname, value.c_str(), FmuVariable::Type::String);
 }
