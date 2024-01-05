@@ -167,11 +167,11 @@ class FmuUnit {
     fmi2Status SetDebugLogging(fmi2Boolean loggingOn, const std::vector<std::string>& logCategories);
 
     /// Set up experiment.
-    fmi2Status FmuUnit::SetupExperiment(fmi2Boolean toleranceDefined,
-                                        fmi2Real tolerance,
-                                        fmi2Real startTime,
-                                        fmi2Boolean stopTimeDefined,
-                                        fmi2Real stopTime);
+    fmi2Status SetupExperiment(fmi2Boolean toleranceDefined,
+                               fmi2Real tolerance,
+                               fmi2Real startTime,
+                               fmi2Boolean stopTimeDefined,
+                               fmi2Real stopTime);
 
     fmi2Status EnterInitializationMode();
     fmi2Status ExitInitializationMode();
