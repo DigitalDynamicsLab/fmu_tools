@@ -43,7 +43,7 @@ DYNLIB_HANDLE RuntimeLinkLibrary(const std::string& dynlib_dir, const std::strin
 
         return dynlib_handle;
 #else
-        return = dlopen(dynlib_name.c_str(), RTLD_LAZY);
+        return dlopen(dynlib_name.c_str(), RTLD_LAZY);
 #endif
 }
     
