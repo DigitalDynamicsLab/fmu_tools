@@ -196,6 +196,9 @@ class FmuUnit {
     fmi2Status GetVariable(const std::string& varname, std::string& value) noexcept(false);
     fmi2Status SetVariable(const std::string& varname, const std::string& value) noexcept(false);
 
+    fmi2Status GetVariable(const std::string& varname, bool& value) noexcept(false);
+    fmi2Status SetVariable(const std::string& varname, const bool& value) noexcept(false);
+
   public:
     std::string directory;
     std::string binaries_dir;
@@ -770,4 +773,15 @@ fmi2Status FmuUnit::GetVariable(const std::string& varname, std::string& value) 
 
 fmi2Status FmuUnit::SetVariable(const std::string& varname, const std::string& value) noexcept(false) {
     return SetVariable(varname, value.c_str(), FmuVariable::Type::String);
+}
+
+fmi2Status FmuUnit::GetVariable(const std::string& varname, bool& value) noexcept(false) {
+    fmi2Boolean tmp;
+    auto status = GetVariable(varname, tmp, FmuVariable::Type::Boolean);
+    value = (tmp != 0) ? true : false;
+    return status;
+}
+
+fmi2Status FmuUnit::SetVariable(const std::string& varname, const bool& value) noexcept(false) {
+    return SetVariable(varname, value ? 1 : 0, FmuVariable::Type::Boolean);
 }
