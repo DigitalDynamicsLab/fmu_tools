@@ -170,6 +170,7 @@ set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES LIBRARY_OUTPUT_DIRECTOR
 # -------------------------------------------------
 if (NOT TARGET fmu_modeldescription_generator)
     add_executable(fmu_modeldescription_generator FmuToolsRuntimeLinking.h fmu_modeldescription_generator.cpp)
+    target_link_libraries(fmu_modeldescription_generator PRIVATE ${CMAKE_DL_LIBS})
     set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
     set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR})
     set_target_properties(fmu_modeldescription_generator PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR})
@@ -194,7 +195,7 @@ if (EXISTS ${FMU_RESOURCES_DIRECTORY})
     #TODO: is there the need to copy the resources folder before creating the zip file?
     message(STATUS "Found resources folder: \"${FMU_RESOURCES_DIRECTORY}\"")
     add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
-        COMMENT "\nCopying \"${FMU_RESOURCES_DIRECTORY}\" to \"${FMU_DIRECTORY}/resources\""
+        COMMENT "\nCopying ${FMU_RESOURCES_DIRECTORY} to ${FMU_DIRECTORY}/resources"
         COMMAND ${CMAKE_COMMAND} -E copy_directory "${FMU_RESOURCES_DIRECTORY}" "${FMU_DIRECTORY}/resources"
         BYPRODUCTS "${FMU_DIRECTORY}/resources"
         WORKING_DIRECTORY ${FMU_DIRECTORY}
@@ -227,7 +228,7 @@ if (BUILD_FMU_HOST)
     target_compile_definitions(${fmu_host_customname} PUBLIC FMU_FILENAME="${FMU_FILENAME}")
     target_compile_definitions(${fmu_host_customname} PUBLIC FMU_OS_SUFFIX="${FMI_PLATFORM}")
     target_compile_definitions(${fmu_host_customname} PUBLIC SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}")
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "6.0" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "10.0")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "6.0")
         target_link_options(${fmu_host_customname} PRIVATE "LINKER:-as-needed")
         target_link_libraries(${fmu_host_customname} PRIVATE stdc++fs)
         target_link_libraries(${fmu_host_customname} PRIVATE ${CMAKE_DL_LIBS})
@@ -264,7 +265,7 @@ if (BUILD_TESTING)
         ## call the execution of fmuChecker
         add_custom_command(TARGET ${test_parseFmuChecker_customname}
                         PRE_BUILD
-                        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" "-e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\""
+                        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" -e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\"
                         COMMENT "\nTesting FMU with fmuChecker")
 
         if(PROJECT_IS_TOP_LEVEL)
