@@ -200,7 +200,7 @@ void FmuComponentBase::AddCallbackLoggerCategory(std::string cat) {
     logCategories.insert(cat);
 }
 
-const FmuVariable& FmuComponentBase::AddFmuVariable(const FmuVariableExport::VarbindType& varbind,
+const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExport::VarbindType& varbind,
                                                     std::string name,
                                                     FmuVariable::Type scalartype,
                                                     std::string unitname,
@@ -226,7 +226,7 @@ const FmuVariable& FmuComponentBase::AddFmuVariable(const FmuVariableExport::Var
     // check if same-name variable exists
     std::set<FmuVariableExport>::iterator it = this->findByName(name);
     if (it != scalarVariables.end())
-        throw std::runtime_error("Cannot add two Fmu variables with the same name.");
+        throw std::runtime_error("Cannot add two FMU variables with the same name.");
 
     FmuVariableExport newvar(varbind, name, scalartype, causality, variability, initial);
     newvar.SetUnitName(unitname);
@@ -552,6 +552,7 @@ fmi2Component fmi2Instantiate(fmi2String instanceName,
                               fmi2Boolean visible,
                               fmi2Boolean loggingOn) {
     FmuComponentBase* fmu_ptr = fmi2Instantiate_getPointer(instanceName, fmuType, fmuGUID);
+    fmu_ptr->SetResourceLocation(fmuResourceLocation);
     fmu_ptr->SetCallbackFunctions(functions);
     fmu_ptr->SetLogging(loggingOn == fmi2True ? true : false);
     return reinterpret_cast<void*>(fmu_ptr);

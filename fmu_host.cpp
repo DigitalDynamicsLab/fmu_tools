@@ -1,38 +1,18 @@
-// =============================================================================
-// PROJECT CHRONO - http://projectchrono.org
-//
-// Copyright (c) 2014 projectchrono.org
-// All rights reserved.
-//
-// Use of this source code is governed by a BSD-style license that can be found
-// in the LICENSE file at the top level of the distribution and at
-// http://projectchrono.org/license-chrono.txt.
-//
-// =============================================================================
-// A very simple example that can be used as template project for
-// a Chrono::Engine simulator with 3D view.
-// =============================================================================
-
-
 #include "FmuToolsImport.hpp"
 
 #include <iostream>
 
 std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
-//std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY; // for debug
+//std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY; // for debug, to retrieve the FMU just created before zipping
+
 int main(int argc, char* argv[]) {
     
     FmuUnit my_fmu;
 
     try {
-
-
         //my_fmu.LoadUnzipped(unzipped_fmu_folder);
         my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY); // make sure the user has appropriate privileges to remove/create FMU_UNPACK_DIRECTORY
         //my_fmu.Load(FMU_FILENAME); // will go in TEMP/_fmu_temp
-
-        my_fmu.BuildVariablesTree();
-        my_fmu.BuildVisualizersList(&my_fmu.tree_variables);
 
     }catch (std::exception& my_exception) {
 
@@ -42,7 +22,7 @@ int main(int argc, char* argv[]) {
     std::cout << "FMU version:  " << my_fmu._fmi2GetVersion() << "\n";
     std::cout << "FMU platform: " << my_fmu._fmi2GetTypesPlatform() << "\n";
 
-    my_fmu.Instantiate("FmuComponent");
+    my_fmu.Instantiate("FmuComponent", my_fmu.GetUnzippedFolder() + "resources");
     std::vector<std::string> categoriesVector = {"logAll"};
 
     std::vector<const char*> categoriesArray;
@@ -63,11 +43,6 @@ int main(int argc, char* argv[]) {
 
     my_fmu._fmi2EnterInitializationMode(my_fmu.component);
 
-     //// play a bit with set/get:
-     //fmi2String m_str;
-     //unsigned int sref = 1;
-     //my_fmu._fmi2GetString(my_fmu.component, &sref, 1, &m_str);
-     //std::cout << "FMU variable 1 has value: "   << m_str << "\n";
     {
         fmi2ValueReference valref = 8;
         fmi2Real m_in = 15;
@@ -93,17 +68,24 @@ int main(int argc, char* argv[]) {
         time +=dt;
     }
 
+    // Getting FMU variables through FMI functions i.e. through valueRef
     fmi2Real val_real;
     for (fmi2ValueReference valref = 1; valref<12; valref++){
         my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &val_real);
         std::cout << "REAL: valref: " << valref << " | val: " << val_real << std::endl;
     }
 
+    // Getting FMU variables through custom fmu-tools functions, directly using the variable name
+    auto status = my_fmu.GetVariable("m", val_real, FmuVariable::Type::Real);
+
+
     fmi2Boolean val_bool;
     for (fmi2ValueReference valref = 1; valref<2; valref++){
         my_fmu._fmi2GetBoolean(my_fmu.component, &valref, 1, &val_bool);
         std::cout << "BOOLEAN: valref: " << valref << " | val: " << val_bool << std::endl;
     }
+
+
 
 
 

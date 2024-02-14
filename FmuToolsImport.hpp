@@ -130,33 +130,21 @@ class FmuUnit {
     FmuUnit();
     virtual ~FmuUnit() {}
 
-    /// Load the FMU from the directory, assuming it has been unzipped
-    void LoadUnzipped(const std::string& mdirectory);
+    /// Load the FMU from the directory, assuming it has been already unzipped
+    void LoadUnzipped(const std::string& directory);
 
-    void Load(const std::string& filepath,
+    /// Load the FMU, optionally defining where the FMU will be unzipped (default is the temporary folder)
+    void Load(const std::string& fmupath,
               const std::string& unzipdir = fs::temp_directory_path().generic_string() + std::string("/_fmu_temp"));
 
-    /// Parse XML and create the list of variables.
-    void LoadXML();
-
-    /// Load the shared library in run-time and do the dynamic linking to the needed FMU functions.
-    void LoadSharedLibrary();
-
-    /// Construct a tree of variables from the flat variable list.
-    void BuildVariablesTree();
-
-    /// Dump the tree of variables (recursive)
-    void DumpTree(FmuVariableTreeNode* mynode, int tab);
-
-    void BuildBodyList(FmuVariableTreeNode* mynode) {}
-
-    void BuildVisualizersList(FmuVariableTreeNode* mynode);
+    /// Return the folder in which the FMU has been unzipped
+    std::string GetUnzippedFolder() const { return directory; }
 
     /// Return version number of header files.
-    std::string GetVersion();
+    std::string GetVersion() const;
 
     /// Return types platform.
-    std::string GetTypesPlatform();
+    std::string GetTypesPlatform() const;
 
     /// Instantiate the model.
     void Instantiate(std::string tool_name = std::string("tool1"),
@@ -198,6 +186,24 @@ class FmuUnit {
 
     fmi2Status GetVariable(const std::string& varname, bool& value) noexcept(false);
     fmi2Status SetVariable(const std::string& varname, const bool& value) noexcept(false);
+
+  protected:
+    /// Parse XML and create the list of variables.
+    void LoadXML();
+
+    /// Load the shared library in run-time and do the dynamic linking to the needed FMU functions.
+    void LoadSharedLibrary();
+
+    /// Construct a tree of variables from the flat variable list.
+    void BuildVariablesTree();
+
+    /// Dump the tree of variables (recursive)
+    void DumpTree(FmuVariableTreeNode* mynode, int tab);
+
+    void BuildBodyList(FmuVariableTreeNode* mynode) {}
+
+    void BuildVisualizersList(FmuVariableTreeNode* mynode);
+
 
   public:
     std::string directory;
@@ -273,19 +279,24 @@ FmuUnit::FmuUnit() {
 
 void FmuUnit::LoadUnzipped(const std::string& directory) {
     this->directory = directory;
+
+    LoadXML();
+    LoadSharedLibrary();
+
+    BuildVariablesTree();
+    BuildVisualizersList(&tree_variables);
 }
 
 void FmuUnit::Load(const std::string& filepath, const std::string& unzipdir) {
+
     std::cout << "Unzipping FMU: " << filepath << " in: " << unzipdir << std::endl;
     std::error_code ec;
     fs::remove_all(unzipdir, ec);
     fs::create_directories(unzipdir);
     miniz_cpp::zip_file fmufile(filepath);
     fmufile.extractall(unzipdir);
-    directory = unzipdir;
 
-    LoadXML();
-    LoadSharedLibrary();
+    LoadUnzipped(unzipdir);
 }
 
 void FmuUnit::LoadXML() {
@@ -632,12 +643,12 @@ void FmuUnit::BuildVisualizersList(FmuVariableTreeNode* mynode) {
     }
 }
 
-std::string FmuUnit::GetVersion() {
+std::string FmuUnit::GetVersion() const {
     auto version = _fmi2GetVersion();
     return std::string(version);
 }
 
-std::string FmuUnit::GetTypesPlatform() {
+std::string FmuUnit::GetTypesPlatform() const {
     auto platform = _fmi2GetTypesPlatform();
     return std::string(platform);
 }

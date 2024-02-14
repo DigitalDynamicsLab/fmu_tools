@@ -256,7 +256,7 @@ class FmuComponentBase {
     // splitting depending on type if we accept to have both fmi2Integer and fmi2Boolean considered as the same type we
     // can drop the 'scalartype' argument but the risk is that a variable might end up being flagged as Integer while
     // it's actually a Boolean and it is not nice At least, in this way, we do not have any redundant code.
-    const FmuVariable& AddFmuVariable(
+    const FmuVariableExport& AddFmuVariable(
         const FmuVariableExport::VarbindType& varbind,
         std::string name,
         FmuVariable::Type scalartype = FmuVariable::Type::Real,

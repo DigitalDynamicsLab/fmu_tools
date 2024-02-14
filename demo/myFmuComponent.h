@@ -4,6 +4,7 @@
 #include "FmuToolsExport.h"
 #include <vector>
 #include <array>
+#include <fstream> // to test the resource file loading
 
 
 
@@ -45,9 +46,9 @@ public:
 
 
         // FMU_ACTION: start value will be automatically grabbed from 'len' during AddFmuVariable;
-        // use the following statement only if the start value is not already in 'len' when called AddFmuVariable
-        //fmu_len.SetStartVal(len);
 
+        filename = "myData.txt";
+        auto& fmu_Filename = AddFmuVariable(&filename, "filename", FmuVariable::Type::String, "kg", "additional mass on cart", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
         auto& fmu_approximateOn = AddFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::Boolean, "1", "use approximated model", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
@@ -57,7 +58,24 @@ public:
 
     virtual void _enterInitializationMode() override {}
 
-    virtual void _exitInitializationMode() override {}
+    virtual void _exitInitializationMode() override {
+        std::ifstream resfile(resourceLocation+ "/" + filename);
+
+        if (!resfile) {
+            sendToLog("Unable to open file: " + filename, fmi2Status::fmi2Fatal, "logStatusFatal");
+            throw std::runtime_error("Unable to open file: " + filename);
+        }
+
+        double additional_mass = 0;
+        if (resfile >> additional_mass) {
+            M += additional_mass;
+        } else {
+            throw std::runtime_error("Expected number in: " + filename);
+        }
+
+        resfile.close();
+        sendToLog("Loaded additional cart mass " + std::to_string(additional_mass) + " from " + filename, fmi2Status::fmi2OK, "logAll");
+    }
 
     virtual ~myFmuComponent(){}
 
@@ -89,6 +107,7 @@ protected:
     double M = 1.0;
     const double g = 9.81;
     fmi2Boolean approximateOn = fmi2False;
+    std::string filename;
     std::array<double, 4> k1 = {0,0,0,0};
     std::array<double, 4> k2 = {0,0,0,0};
     std::array<double, 4> k3 = {0,0,0,0};

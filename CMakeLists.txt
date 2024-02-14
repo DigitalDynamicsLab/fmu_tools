@@ -20,6 +20,7 @@ mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
 # The FMU model identifier must be set by the caller. Use a cached variable
 set(FMU_MODEL_IDENTIFIER "myFmuComponent" CACHE STRING "FMU model identifier.")
+set(FMU_RESOURCES_DIRECTORY "${CMAKE_SOURCE_DIR}/demo/resources" CACHE PATH "FMU resources directory; will be copied.")
 
 # Optional setting: prefix for all messages issued from this script (default: empty).
 if(NOT FMU_MSG_PREFIX)
@@ -39,6 +40,19 @@ message(STATUS "${FMU_MSG_PREFIX}FMU to be created: \"${FMU_FILENAME}\"")
 set(FMU_UNPACK_DIRECTORY "${FMU_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
 
 set(TESTING_ENABLED_OS "win64" "linux64")
+
+# -------------------------------------------------
+# Developer notes
+# -------------------------------------------------
+# The ${FMU_MODEL_IDENTIFIER} target generates the main shared library of the FMU.
+# Among the various functions exposed by the library, there is one dedicated to the 'modelDescription.xml' generation.
+# This function has to called by a second target (fmu_modeldescription_generator) that instantiates the FmuComponent class of the library
+# and makes it generate the 'modelDescription.xml' file.
+# This should happen after the main target is built, but before the FMU is zipped.
+#
+# The testing relies on the fmuChecker tool: an additional target is calling it as pre-build step,
+# while during the actual execution of the test, the _output_ of the fmuChecker is parsed to check the FMU compliance.
+
 
 # -------------------------------------------------
 # Set Architecture and Operating System Flags
@@ -105,8 +119,6 @@ set(USE_CUSTOM_TYPESPLATFORM OFF CACHE BOOL "Use custom types platform definitio
 set(FMU_SOURCES FmuToolsCommon.h FmuToolsExport.h FmuToolsExport.cpp TypesVariantsDefault.h)
 source_group("fmu_tools" FILES ${FMU_SOURCES})
 
-# message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
-# message(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
 
 if(USE_CUSTOM_TYPESPLATFORM)
     message(STATUS "${FMU_MSG_PREFIX}Using custom 'fmi2TypesPlatform'.")
@@ -128,8 +140,8 @@ endif()
 
 mark_as_advanced(USE_EXTERNAL_FMU_COMPONENT_SOURCES)
 if (NOT USE_EXTERNAL_FMU_COMPONENT_SOURCES)
-    message(STATUS "${FMU_MSG_PREFIX}Using default sources for ${FMU_MODEL_IDENTIFIER} target.")
-    list(APPEND FMU_SOURCES myFmuComponent.h myFmuComponent.cpp)
+    message(STATUS "${FMU_MSG_PREFIX}Using default sources for \"${FMU_MODEL_IDENTIFIER}\" target.")
+    list(APPEND FMU_SOURCES demo/myFmuComponent.h demo/myFmuComponent.cpp)
 else()
     message(STATUS "${FMU_MSG_PREFIX}Add custom sources to ${FMU_MODEL_IDENTIFIER} target through 'target_sources(${FMU_MODEL_IDENTIFIER} PRIVATE <yoursourcefiles>)'")
 endif()
@@ -172,15 +184,28 @@ endif()
 add_dependencies(${FMU_MODEL_IDENTIFIER} fmu_modeldescription_generator)
 
 add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
-    COMMENT "Generating modelDescription.xml for '${FMU_RUNTIME_OUTPUT_DIRECTORY}/${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX}' into '${FMU_DIRECTORY}'"
+    COMMENT "\nGenerating modelDescription.xml for '${FMU_RUNTIME_OUTPUT_DIRECTORY}/${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX}' into '${FMU_DIRECTORY}'"
     COMMAND $<TARGET_FILE:fmu_modeldescription_generator> ${FMU_RUNTIME_OUTPUT_DIRECTORY} ${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX} ${FMU_DIRECTORY}
     BYPRODUCTS "${FMU_DIRECTORY}/modelDescription.xml"
     WORKING_DIRECTORY ${FMU_DIRECTORY}
 )
 
+if (EXISTS ${FMU_RESOURCES_DIRECTORY})
+    #TODO: is there the need to copy the resources folder before creating the zip file?
+    message(STATUS "Found resources folder: \"${FMU_RESOURCES_DIRECTORY}\"")
+    add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
+        COMMENT "\nCopying \"${FMU_RESOURCES_DIRECTORY}\" to \"${FMU_DIRECTORY}/resources\""
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${FMU_RESOURCES_DIRECTORY}" "${FMU_DIRECTORY}/resources"
+        BYPRODUCTS "${FMU_DIRECTORY}/resources"
+        WORKING_DIRECTORY ${FMU_DIRECTORY}
+    )
+else()
+    message(STATUS "No resources directory specified or non existing.")
+endif()
+
 add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
     COMMENT "\nCreating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
-    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu" "${FMU_DIRECTORY}/modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "--format=zip"
+    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu" "${FMU_DIRECTORY}/modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "${FMU_DIRECTORY}/resources" "--format=zip"
     BYPRODUCTS "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
     WORKING_DIRECTORY ${FMU_DIRECTORY}
 )
@@ -240,7 +265,7 @@ if (BUILD_TESTING)
         add_custom_command(TARGET ${test_parseFmuChecker_customname}
                         PRE_BUILD
                         COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" "-e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\""
-                        COMMENT "Testing FMU with fmuChecker")
+                        COMMENT "\nTesting FMU with fmuChecker")
 
         if(PROJECT_IS_TOP_LEVEL)
             ## enable the testing
