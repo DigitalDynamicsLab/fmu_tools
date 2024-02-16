@@ -1,34 +1,29 @@
 
 #include "FmuToolsExport.h"
+#include "FmuToolsRuntimeLinking.h"
 #include <cassert>
 #include <vector>
 #include <array>
 #include <map>
 #include <list>
 #include <iostream>
+#include <regex>
 #include <fstream>
 #include "rapidxml/rapidxml_ext.hpp"
 
 const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = {
-    //
     UD_kg,  UD_m,    UD_s,     UD_A,      UD_K, UD_mol, UD_cd, UD_rad,  //
     UD_m_s, UD_m_s2, UD_rad_s, UD_rad_s2,                               //
     UD_N,   UD_Nm,   UD_N_m2                                            //
 };
-
-const std::set<std::string> FmuComponentBase::logCategories_available = {
-    "logEvents",           "logSingularLinearSystems",
-    "logNonlinearSystems", "logDynamicStateSelection",
-    "logStatusWarning",    "logStatusDiscard",
-    "logStatusError",      "logStatusFatal",
-    "logStatusPending",    "logAll"};
 
 bool is_pointer_variant(const FmuVariableBindType& myVariant) {
     return varns::visit([](auto&& arg) -> bool { return std::is_pointer_v<std::decay_t<decltype(arg)>>; }, myVariant);
 }
 
 void createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid) {
-    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmutype, guid);
+    fmi2CallbackFunctions callfun = {LoggingUtilities::logger_default, calloc, free, nullptr, nullptr};
+    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmutype, FMU_GUID, ("file:///" + GetLibraryLocation() + "../../resources").c_str(), &callfun, fmi2False, fmi2False);
     fmu->ExportModelDescription(path);
     delete fmu;
 }
@@ -138,19 +133,66 @@ std::string FmuVariableExport::GetStartVal_toString() const {
 
 // =============================================================================
 
-FmuComponentBase::FmuComponentBase(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID)
-    : callbackFunctions({nullptr, nullptr, nullptr, nullptr, nullptr}),
-      instanceName(_instanceName),
-      fmuGUID(FMU_GUID),
-      modelIdentifier(FMU_MODEL_IDENTIFIER),
-      fmuMachineState(FmuMachineStateType::instantiated) {
-    unitDefinitions["1"] = UnitDefinitionType("1");  // guarantee the existence of the default unit
-    unitDefinitions[""] = UnitDefinitionType("");    // guarantee the existence of the unassigned unit
+FmuComponentBase::FmuComponentBase(fmi2String instanceName,
+                                   fmi2Type fmuType,
+                                   fmi2String fmuGUID,
+                                   fmi2String fmuResourceLocation,
+                                   const fmi2CallbackFunctions* functions,
+                                   fmi2Boolean visible,
+                                   fmi2Boolean loggingOn,
+                                   const std::unordered_map<std::string, bool>& logCategories_init,
+                                   const std::unordered_set<std::string>& logCategories_debug_init)
+    : m_instanceName(instanceName),
+      m_callbackFunctions(*functions),
+      m_fmuGUID(FMU_GUID),
+      m_visible(visible == fmi2True ? true : false),
+      m_debug_logging_enabled(loggingOn == fmi2True ? true : false),
+      m_modelIdentifier(FMU_MODEL_IDENTIFIER),
+      m_fmuMachineState(FmuMachineStateType::instantiated),
+      m_logCategories_enabled(logCategories_init),
+      m_logCategories_debug(logCategories_debug_init) {
+    m_unitDefinitions["1"] = UnitDefinitionType("1");  // guarantee the existence of the default unit
+    m_unitDefinitions[""] = UnitDefinitionType("");    // guarantee the existence of the unassigned unit
 
-    AddFmuVariable(&time, "time", FmuVariable::Type::Real, "s", "time");
+    AddFmuVariable(&m_time, "time", FmuVariable::Type::Real, "s", "time");
 
-    if (std::string(_fmuGUID).compare(fmuGUID))
+
+    //// Parse URL according to https://datatracker.ietf.org/doc/html/rfc3986
+    std::string m_resources_location_str = std::string(fmuResourceLocation);
+
+    std::regex url_patternA("^(\\w+):\\/\\/[^\\/]*\\/([^#\\?]+)");
+    std::regex url_patternB("^(\\w+):\\/([^\\/][^#\\?]+)");
+
+    std::smatch url_matches;
+    std::string url_scheme;
+    if ((std::regex_search(m_resources_location_str, url_matches, url_patternA) ||
+        std::regex_search(m_resources_location_str, url_matches, url_patternB)) &&
+        url_matches.size()>=3) {
+        if (url_matches[1].compare("file") != 0){
+            sendToLog("Bad URL scheme: " + url_matches[1].str() + ". Trying to continue", fmi2Status::fmi2Warning, "logStatusWarning");
+        }
+        m_resources_location = url_matches[2];
+    } else {
+        // TODO: rollback?
+        sendToLog("Cannot parse resource location: " + m_resources_location_str, fmi2Status::fmi2Warning, "logStatusWarning");
+
+        m_resources_location = GetLibraryLocation() + "/../../resources";
+        sendToLog("Rolled back to default location: " + m_resources_location, fmi2Status::fmi2Warning, "logStatusWarning");
+    }
+
+
+    //// Compare GUID
+    if (std::string(fmuGUID).compare(m_fmuGUID)) {
         sendToLog("GUID used for instantiation not matching with source.", fmi2Status::fmi2Warning, "logStatusWarning");
+    }
+
+    for (auto deb_sel = logCategories_debug_init.begin(); deb_sel != logCategories_debug_init.end(); ++deb_sel) {
+        if (logCategories_init.find(*deb_sel) == logCategories_init.end()) {
+            sendToLog("Developer error: Log category \"" + *deb_sel +
+                          "\" specified to be of debug is not listed as a log category.",
+                      fmi2Status::fmi2Warning, "logStatusWarning");
+        }
+    }
 }
 
 void FmuComponentBase::initializeType(fmi2Type fmuType) {
@@ -158,12 +200,12 @@ void FmuComponentBase::initializeType(fmi2Type fmuType) {
         case fmi2Type::fmi2CoSimulation:
             if (!is_cosimulation_available())
                 throw std::runtime_error("Requested CoSimulation FMU mode but it is not available.");
-            this->fmuType = fmi2Type::fmi2CoSimulation;
+            this->m_fmuType = fmi2Type::fmi2CoSimulation;
             break;
         case fmi2Type::fmi2ModelExchange:
             if (!is_modelexchange_available())
                 throw std::runtime_error("Requested ModelExchange FMU mode but it is not available.");
-            this->fmuType = fmi2Type::fmi2ModelExchange;
+            this->m_fmuType = fmi2Type::fmi2ModelExchange;
             break;
         default:
             throw std::runtime_error("Requested unrecognized FMU type.");
@@ -171,52 +213,64 @@ void FmuComponentBase::initializeType(fmi2Type fmuType) {
     }
 }
 
-void FmuComponentBase::SetDefaultExperiment(fmi2Boolean _toleranceDefined,
-                                            fmi2Real _tolerance,
-                                            fmi2Real _startTime,
-                                            fmi2Boolean _stopTimeDefined,
-                                            fmi2Real _stopTime) {
-    startTime = _startTime;
-    stopTime = _stopTime;
-    tolerance = _tolerance;
-    toleranceDefined = _toleranceDefined;
-    stopTimeDefined = _stopTimeDefined;
+void FmuComponentBase::SetDefaultExperiment(fmi2Boolean toleranceDefined,
+                                            fmi2Real tolerance,
+                                            fmi2Real startTime,
+                                            fmi2Boolean stopTimeDefined,
+                                            fmi2Real stopTime) {
+    m_startTime = startTime;
+    m_stopTime = stopTime;
+    m_tolerance = tolerance;
+    m_toleranceDefined = toleranceDefined;
+    m_stopTimeDefined = stopTimeDefined;
 }
 
 void FmuComponentBase::EnterInitializationMode() {
-    fmuMachineState = FmuMachineStateType::initializationMode;
+    m_fmuMachineState = FmuMachineStateType::initializationMode;
     _enterInitializationMode();
 }
 
 void FmuComponentBase::ExitInitializationMode() {
     _exitInitializationMode();
-    fmuMachineState = FmuMachineStateType::stepCompleted;  // TODO: introduce additional state when after
-                                                           // initialization and before step?
+    m_fmuMachineState = FmuMachineStateType::stepCompleted;  // TODO: introduce additional state when after
+                                                             // initialization and before step?
 }
 
-void FmuComponentBase::AddCallbackLoggerCategory(std::string cat) {
-    if (logCategories_available.find(cat) == logCategories_available.end())
-        throw std::runtime_error(std::string("Log category \"") + cat + std::string("\" is not valid."));
-    logCategories.insert(cat);
+void FmuComponentBase::SetDebugLogging(std::string cat, bool value) {
+    try {
+        m_logCategories_enabled[cat] = value;
+    } catch (const std::exception& ex) {
+        sendToLog("The LogCategory \"" + cat +
+                      "\" is not recognized by the FMU. Please check its availability in modelDescription.xml",
+                  fmi2Error, "logStatusError");
+    }
 }
 
+//// Developer Note: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the
+/// reason is
+/// as / follows: e.g. both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any
+/// possible / splitting depending on type if we accept to have both fmi2Integer and fmi2Boolean considered as
+/// the same type we / can drop the 'scalartype' argument but the risk is that a variable might end up being
+/// flagged as Integer while / it's actually a Boolean and it is not nice. At least, in this way, we do not have
+/// any redundant code.
 const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExport::VarbindType& varbind,
-                                                    std::string name,
-                                                    FmuVariable::Type scalartype,
-                                                    std::string unitname,
-                                                    std::string description,
-                                                    FmuVariable::CausalityType causality,
-                                                    FmuVariable::VariabilityType variability,
-                                                    FmuVariable::InitialType initial) {
+                                                          std::string name,
+                                                          FmuVariable::Type scalartype,
+                                                          std::string unitname,
+                                                          std::string description,
+                                                          FmuVariable::CausalityType causality,
+                                                          FmuVariable::VariabilityType variability,
+                                                          FmuVariable::InitialType initial) {
     // check if unit definition exists
-    auto match_unit = unitDefinitions.find(unitname);
-    if (match_unit == unitDefinitions.end()) {
+    auto match_unit = m_unitDefinitions.find(unitname);
+    if (match_unit == m_unitDefinitions.end()) {
         auto predicate_samename = [unitname](const UnitDefinitionType& var) { return var.name == unitname; };
         auto match_commonunit =
             std::find_if(common_unitdefinitions.begin(), common_unitdefinitions.end(), predicate_samename);
         if (match_commonunit == common_unitdefinitions.end()) {
             throw std::runtime_error(
-                "Variable unit is not registered within this FmuComponentBase. Call 'addUnitDefinition' first.");
+                "Variable unit is not registered within this FmuComponentBase. Call 'addUnitDefinition' "
+                "first.");
         } else {
             addUnitDefinition(*match_commonunit);
         }
@@ -225,21 +279,22 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
     // create new variable
     // check if same-name variable exists
     std::set<FmuVariableExport>::iterator it = this->findByName(name);
-    if (it != scalarVariables.end())
+    if (it != m_scalarVariables.end())
         throw std::runtime_error("Cannot add two FMU variables with the same name.");
 
     FmuVariableExport newvar(varbind, name, scalartype, causality, variability, initial);
     newvar.SetUnitName(unitname);
-    newvar.SetValueReference(++valueReferenceCounter[scalartype]);
+    newvar.SetValueReference(++m_valueReferenceCounter[scalartype]);
     newvar.SetDescription(description);
 
     // check that the attributes of the variable would allow a no-set variable
     const FmuMachineStateType tempFmuState = FmuMachineStateType::anySettableState;
 
     newvar.ExposeCurrentValueAsStart();
-    // varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(var_ptr_expanded);}, var_ptr);
+    // varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(var_ptr_expanded);},
+    // var_ptr);
 
-    std::pair<std::set<FmuVariableExport>::iterator, bool> ret = scalarVariables.insert(newvar);
+    std::pair<std::set<FmuVariableExport>::iterator, bool> ret = m_scalarVariables.insert(newvar);
     if (!ret.second)
         throw std::runtime_error("Developer error: cannot insert new variable into FMU.");
 
@@ -248,12 +303,12 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
 
 bool FmuComponentBase::RebindVariable(FmuVariableExport::VarbindType varbind, std::string name) {
     std::set<FmuVariableExport>::iterator it = this->findByName(name);
-    if (it != scalarVariables.end()) {
+    if (it != m_scalarVariables.end()) {
         FmuVariableExport newvar(*it);
         newvar.Bind(varbind);
-        scalarVariables.erase(*it);
+        m_scalarVariables.erase(*it);
 
-        std::pair<std::set<FmuVariableExport>::iterator, bool> ret = scalarVariables.insert(newvar);
+        std::pair<std::set<FmuVariableExport>::iterator, bool> ret = m_scalarVariables.insert(newvar);
 
         return ret.second;
     }
@@ -278,8 +333,8 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
     rootNode->append_attribute(doc_ptr->allocate_attribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance"));
     rootNode->append_attribute(doc_ptr->allocate_attribute("fmiVersion", fmi2GetVersion()));
     rootNode->append_attribute(
-        doc_ptr->allocate_attribute("modelName", modelIdentifier.c_str()));  // modelName can be anything else
-    rootNode->append_attribute(doc_ptr->allocate_attribute("guid", fmuGUID.c_str()));
+        doc_ptr->allocate_attribute("modelName", m_modelIdentifier.c_str()));  // modelName can be anything else
+    rootNode->append_attribute(doc_ptr->allocate_attribute("guid", m_fmuGUID.c_str()));
     rootNode->append_attribute(doc_ptr->allocate_attribute("generationTool", "rapidxml"));
     rootNode->append_attribute(doc_ptr->allocate_attribute("variableNamingConvention", "structured"));
     rootNode->append_attribute(doc_ptr->allocate_attribute("numberOfEventIndicators", "0"));
@@ -288,7 +343,7 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
     // Add CoSimulation node
     if (is_cosimulation_available()) {
         rapidxml::xml_node<>* coSimNode = doc_ptr->allocate_node(rapidxml::node_element, "CoSimulation");
-        coSimNode->append_attribute(doc_ptr->allocate_attribute("modelIdentifier", modelIdentifier.c_str()));
+        coSimNode->append_attribute(doc_ptr->allocate_attribute("modelIdentifier", m_modelIdentifier.c_str()));
         coSimNode->append_attribute(doc_ptr->allocate_attribute("canHandleVariableCommunicationStepSize", "true"));
         coSimNode->append_attribute(doc_ptr->allocate_attribute("canInterpolateInputs", "true"));
         coSimNode->append_attribute(doc_ptr->allocate_attribute("maxOutputDerivativeOrder", "1"));
@@ -309,7 +364,7 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
     std::list<std::string> stringbuf;
     rapidxml::xml_node<>* unitDefsNode = doc_ptr->allocate_node(rapidxml::node_element, "UnitDefinitions");
 
-    for (auto& ud_pair : unitDefinitions) {
+    for (auto& ud_pair : m_unitDefinitions) {
         auto& ud = ud_pair.second;
         rapidxml::xml_node<>* unitNode = doc_ptr->allocate_node(rapidxml::node_element, "Unit");
         unitNode->append_attribute(doc_ptr->allocate_attribute("name", ud.name.c_str()));
@@ -355,35 +410,38 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
 
     // Add LogCategories node
     rapidxml::xml_node<>* logCategoriesNode = doc_ptr->allocate_node(rapidxml::node_element, "LogCategories");
-    for (auto& lc : logCategories) {
+    for (auto& lc : m_logCategories_enabled) {
         rapidxml::xml_node<>* logCategoryNode = doc_ptr->allocate_node(rapidxml::node_element, "Category");
-        logCategoryNode->append_attribute(doc_ptr->allocate_attribute("name", lc.c_str()));
+        logCategoryNode->append_attribute(doc_ptr->allocate_attribute("name", lc.first.c_str()));
+        logCategoryNode->append_attribute(doc_ptr->allocate_attribute(
+            "description", m_logCategories_debug.find(lc.first) == m_logCategories_debug.end() ? "NotDebugCategory"
+                                                                                               : "DebugCategory"));
         logCategoriesNode->append_node(logCategoryNode);
     }
     rootNode->append_node(logCategoriesNode);
 
     // Add DefaultExperiment node
-    std::string startTime_str = std::to_string(startTime);
-    std::string stopTime_str = std::to_string(stopTime);
-    std::string stepSize_str = std::to_string(stepSize);
-    std::string tolerance_str = std::to_string(tolerance);
+    std::string startTime_str = std::to_string(m_startTime);
+    std::string stopTime_str = std::to_string(m_stopTime);
+    std::string stepSize_str = std::to_string(m_stepSize);
+    std::string tolerance_str = std::to_string(m_tolerance);
 
     rapidxml::xml_node<>* defaultExpNode = doc_ptr->allocate_node(rapidxml::node_element, "DefaultExperiment");
     defaultExpNode->append_attribute(doc_ptr->allocate_attribute("startTime", startTime_str.c_str()));
     defaultExpNode->append_attribute(doc_ptr->allocate_attribute("stopTime", stopTime_str.c_str()));
-    if (stepSize > 0)
+    if (m_stepSize > 0)
         defaultExpNode->append_attribute(doc_ptr->allocate_attribute("stepSize", stepSize_str.c_str()));
-    if (tolerance > 0)
+    if (m_tolerance > 0)
         defaultExpNode->append_attribute(doc_ptr->allocate_attribute("tolerance", tolerance_str.c_str()));
     rootNode->append_node(defaultExpNode);
 
     // Add ModelVariables node
     rapidxml::xml_node<>* modelVarsNode = doc_ptr->allocate_node(rapidxml::node_element, "ModelVariables");
 
-    // WARNING: rapidxml does not copy the strings that we pass to print, but it just keeps the addresses until it's
-    // time to print them so we cannot use a temporary string to convert the number to string and then recycle it we
-    // cannot use std::vector because, in case of reallocation, it might move the array somewhere else thus invalidating
-    // the addresses
+    // WARNING: rapidxml does not copy the strings that we pass to print, but it just keeps the addresses until
+    // it's time to print them so we cannot use a temporary string to convert the number to string and then
+    // recycle it we cannot use std::vector because, in case of reallocation, it might move the array somewhere
+    // else thus invalidating the addresses
     std::list<std::string> valueref_str;
 
     // TODO: move elsewhere
@@ -413,7 +471,8 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         {FmuVariable::CausalityType::local, "local"},
         {FmuVariable::CausalityType::independent, "independent"}};
 
-    for (std::set<FmuVariableExport>::const_iterator it = scalarVariables.begin(); it != scalarVariables.end(); ++it) {
+    for (std::set<FmuVariableExport>::const_iterator it = m_scalarVariables.begin(); it != m_scalarVariables.end();
+         ++it) {
         // Create a ScalarVariable node
         rapidxml::xml_node<>* scalarVarNode = doc_ptr->allocate_node(rapidxml::node_element, "ScalarVariable");
         scalarVarNode->append_attribute(doc_ptr->allocate_attribute("name", it->GetName().c_str()));
@@ -467,24 +526,24 @@ std::set<FmuVariableExport>::iterator FmuComponentBase::findByValrefType(fmi2Val
     auto predicate_samevalreftype = [vr, vartype](const FmuVariable& var) {
         return var.GetValueReference() == vr && var.GetType() == vartype;
     };
-    return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samevalreftype);
+    return std::find_if(m_scalarVariables.begin(), m_scalarVariables.end(), predicate_samevalreftype);
 }
 
 void FmuComponentBase::executePreStepCallbacks() {
-    for (auto& callb : preStepCallbacks) {
+    for (auto& callb : m_preStepCallbacks) {
         callb();
     }
 }
 
 void FmuComponentBase::executePostStepCallbacks() {
-    for (auto& callb : postStepCallbacks) {
+    for (auto& callb : m_postStepCallbacks) {
         callb();
     }
 }
 
 std::set<FmuVariableExport>::iterator FmuComponentBase::findByName(const std::string& name) {
     auto predicate_samename = [name](const FmuVariable& var) { return !var.GetName().compare(name); };
-    return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_samename);
+    return std::find_if(m_scalarVariables.begin(), m_scalarVariables.end(), predicate_samename);
 }
 
 fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
@@ -501,22 +560,22 @@ fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
 
     switch (doStep_status) {
         case fmi2OK:
-            fmuMachineState = FmuMachineStateType::stepCompleted;
+            m_fmuMachineState = FmuMachineStateType::stepCompleted;
             break;
         case fmi2Warning:
-            fmuMachineState = FmuMachineStateType::stepCompleted;
+            m_fmuMachineState = FmuMachineStateType::stepCompleted;
             break;
         case fmi2Discard:
-            fmuMachineState = FmuMachineStateType::stepFailed;
+            m_fmuMachineState = FmuMachineStateType::stepFailed;
             break;
         case fmi2Error:
-            fmuMachineState = FmuMachineStateType::error;
+            m_fmuMachineState = FmuMachineStateType::error;
             break;
         case fmi2Fatal:
-            fmuMachineState = FmuMachineStateType::fatal;
+            m_fmuMachineState = FmuMachineStateType::fatal;
             break;
         case fmi2Pending:
-            fmuMachineState = FmuMachineStateType::stepInProgress;
+            m_fmuMachineState = FmuMachineStateType::stepInProgress;
             break;
         default:
             throw std::runtime_error("Developer error: unexpected status from _doStep");
@@ -527,16 +586,17 @@ fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
 }
 
 void FmuComponentBase::addUnitDefinition(const UnitDefinitionType& unit_definition) {
-    unitDefinitions[unit_definition.name] = unit_definition;
+    m_unitDefinitions[unit_definition.name] = unit_definition;
 }
 
 void FmuComponentBase::sendToLog(std::string msg, fmi2Status status, std::string msg_cat) {
-    if (logCategories_available.find(msg_cat) == logCategories_available.end())
-        throw std::runtime_error(std::string("Log category \"") + msg_cat + std::string("\" is not valid."));
+    assert(m_logCategories_enabled.find(msg_cat) != m_logCategories_enabled.end() &&
+           ("Developer warning: the category \"" + msg_cat + "\" is not recognized by the FMU").c_str());
 
-    if (logCategories.find(msg_cat) != logCategories.end()) {
-        callbackFunctions.logger(callbackFunctions.componentEnvironment, instanceName.c_str(), status, msg_cat.c_str(),
-                                 msg.c_str());
+    if (m_logCategories_enabled.find(msg_cat) == m_logCategories_enabled.end() || m_logCategories_enabled[msg_cat] ||
+        (m_debug_logging_enabled && m_logCategories_debug.find(msg_cat) != m_logCategories_debug.end())) {
+        m_callbackFunctions.logger(m_callbackFunctions.componentEnvironment, m_instanceName.c_str(), status,
+                                   msg_cat.c_str(), msg.c_str());
     }
 }
 
@@ -551,10 +611,8 @@ fmi2Component fmi2Instantiate(fmi2String instanceName,
                               const fmi2CallbackFunctions* functions,
                               fmi2Boolean visible,
                               fmi2Boolean loggingOn) {
-    FmuComponentBase* fmu_ptr = fmi2Instantiate_getPointer(instanceName, fmuType, fmuGUID);
-    fmu_ptr->SetResourceLocation(fmuResourceLocation);
-    fmu_ptr->SetCallbackFunctions(functions);
-    fmu_ptr->SetLogging(loggingOn == fmi2True ? true : false);
+    FmuComponentBase* fmu_ptr =
+        fmi2Instantiate_getPointer(instanceName, fmuType, fmuGUID, fmuResourceLocation, functions, visible, loggingOn);
     return reinterpret_cast<void*>(fmu_ptr);
 }
 
@@ -571,9 +629,8 @@ fmi2Status fmi2SetDebugLogging(fmi2Component c,
                                size_t nCategories,
                                const fmi2String categories[]) {
     FmuComponentBase* fmu_ptr = reinterpret_cast<FmuComponentBase*>(c);
-    fmu_ptr->SetLogging(loggingOn == fmi2True ? true : false);
     for (auto cs = 0; cs < nCategories; ++cs) {
-        fmu_ptr->AddCallbackLoggerCategory(categories[cs]);
+        fmu_ptr->SetDebugLogging(categories[cs], loggingOn == fmi2True ? true : false);
     }
 
     return fmi2Status::fmi2OK;
@@ -677,14 +734,15 @@ fmi2Status fmi2GetDirectionalDerivative(fmi2Component c,
 // fmi2Status fmi2EnterEventMode(fmi2Component c){ return fmi2Status::fmi2OK; }
 // fmi2Status fmi2NewDiscreteStates(fmi2Component c, fmi2EventInfo* fmi2eventInfo){ return fmi2Status::fmi2OK; }
 // fmi2Status fmi2EnterContinuousTimeMode(fmi2Component c){ return fmi2Status::fmi2OK; }
-// fmi2Status fmi2CompletedIntegratorStep(fmi2Component c, fmi2Boolean noSetFMUStatePriorToCurrentPoint, fmi2Boolean*
-// enterEventMode, fmi2Boolean* terminateSimulation){ return fmi2Status::fmi2OK; } fmi2Status fmi2SetTime(fmi2Component
-// c, fmi2Real time){ return fmi2Status::fmi2OK; } fmi2Status fmi2SetContinuousStates(fmi2Component c, const fmi2Real
-// x[], size_t nx){ return fmi2Status::fmi2OK; } fmi2Status fmi2GetDerivatives(fmi2Component c, fmi2Real derivatives[],
-// size_t nx){ return fmi2Status::fmi2OK; } fmi2Status fmi2GetEventIndicators(fmi2Component c, fmi2Real
-// eventIndicators[], size_t ni){ return fmi2Status::fmi2OK; } fmi2Status fmi2GetContinuousStates(fmi2Component c,
-// fmi2Real x[], size_t nx){ return fmi2Status::fmi2OK; } fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component c,
-// fmi2Real x_nominal[], size_t nx){ return fmi2Status::fmi2OK; }
+// fmi2Status fmi2CompletedIntegratorStep(fmi2Component c, fmi2Boolean noSetFMUStatePriorToCurrentPoint,
+// fmi2Boolean* enterEventMode, fmi2Boolean* terminateSimulation){ return fmi2Status::fmi2OK; } fmi2Status
+// fmi2SetTime(fmi2Component c, fmi2Real time){ return fmi2Status::fmi2OK; } fmi2Status
+// fmi2SetContinuousStates(fmi2Component c, const fmi2Real x[], size_t nx){ return fmi2Status::fmi2OK; }
+// fmi2Status fmi2GetDerivatives(fmi2Component c, fmi2Real derivatives[], size_t nx){ return fmi2Status::fmi2OK;
+// } fmi2Status fmi2GetEventIndicators(fmi2Component c, fmi2Real eventIndicators[], size_t ni){ return
+// fmi2Status::fmi2OK; } fmi2Status fmi2GetContinuousStates(fmi2Component c, fmi2Real x[], size_t nx){ return
+// fmi2Status::fmi2OK; } fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component c, fmi2Real x_nominal[],
+// size_t nx){ return fmi2Status::fmi2OK; }
 
 // Co-Simulation
 fmi2Status fmi2SetRealInputDerivatives(fmi2Component c,

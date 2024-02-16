@@ -8,7 +8,7 @@ int main() {
     std::cout << "-> status: ";
     std::ifstream file(FMUCHECKER_LOG);
     if (!file.is_open()) {
-        std::cerr << "ERROR" << std::endl;
+        std::cerr << "ERROR: cannot open file: " << FMUCHECKER_LOG << std::endl;
         return 1;
     }
     std::cout << " SUCCESS" << std::endl;

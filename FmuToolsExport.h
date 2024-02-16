@@ -189,37 +189,41 @@ void FmuVariableExport::setStartFromVar(T* var_ptr) {
 
 class FmuComponentBase {
   public:
-    FmuComponentBase(fmi2String _instanceName, fmi2Type _fmuType, fmi2String _fmuGUID);
+    FmuComponentBase(fmi2String instanceName,
+                     fmi2Type fmuType,
+                     fmi2String fmuGUID,
+                     fmi2String fmuResourceLocation,
+                     const fmi2CallbackFunctions* functions,
+                     fmi2Boolean visible,
+                     fmi2Boolean loggingOn,
+                     const std::unordered_map<std::string, bool>& logCategories_init,
+                     const std::unordered_set<std::string>& logCategories_debug_init);
 
     virtual ~FmuComponentBase() {}
 
-    void SetResourceLocation(fmi2String resloc) { resourceLocation = std::string(resloc); }
+    void SetDefaultExperiment(fmi2Boolean toleranceDefined,
+                              fmi2Real tolerance,
+                              fmi2Real startTime,
+                              fmi2Boolean stopTimeDefined,
+                              fmi2Real stopTime);
 
-    void SetDefaultExperiment(fmi2Boolean _toleranceDefined,
-                              fmi2Real _tolerance,
-                              fmi2Real _startTime,
-                              fmi2Boolean _stopTimeDefined,
-                              fmi2Real _stopTime);
-
-    const std::set<FmuVariableExport>& GetScalarVariables() const { return scalarVariables; }
+    const std::set<FmuVariableExport>& GetScalarVariables() const { return m_scalarVariables; }
 
     void EnterInitializationMode();
 
     void ExitInitializationMode();
 
-    void SetCallbackFunctions(const fmi2CallbackFunctions* functions) { callbackFunctions = *functions; }
-
-    void SetLogging(bool val) { loggingOn = val; };
-
-    void AddCallbackLoggerCategory(std::string cat);
+    /// Enable/disable the logging for a specific log category.
+    virtual void SetDebugLogging(std::string cat, bool val);
 
     fmi2Status DoStep(fmi2Real currentCommunicationPoint,
                       fmi2Real communicationStepSize,
                       fmi2Boolean noSetFMUStatePriorToCurrentPoint);
 
+    /// Create the modelDescription.xml file in the given location \a path.
     void ExportModelDescription(std::string path);
 
-    double GetTime() const { return time; }
+    double GetTime() const { return m_time; }
 
     void executePreStepCallbacks();
 
@@ -231,7 +235,7 @@ class FmuComponentBase {
         //  and check if they match any of the nvr requested variables
         for (size_t s = 0; s < nvr; ++s) {
             auto it = this->findByValrefType(vr[s], vartype);
-            if (it != this->scalarVariables.end()) {
+            if (it != this->m_scalarVariables.end()) {
                 it->GetValue(&value[s]);
             } else
                 return fmi2Status::fmi2Error;  // requested a variable that does not exist
@@ -243,7 +247,7 @@ class FmuComponentBase {
     fmi2Status fmi2SetVariable(const fmi2ValueReference vr[], size_t nvr, const T value[], FmuVariable::Type vartype) {
         for (size_t s = 0; s < nvr; ++s) {
             std::set<FmuVariableExport>::iterator it = this->findByValrefType(vr[s], vartype);
-            if (it != this->scalarVariables.end() && it->IsSetAllowed(this->fmuType, this->fmuMachineState)) {
+            if (it != this->m_scalarVariables.end() && it->IsSetAllowed(this->m_fmuType, this->m_fmuMachineState)) {
                 it->SetValue(value[s]);
             } else
                 return fmi2Status::fmi2Error;  // requested a variable that does not exist or that cannot be set
@@ -251,11 +255,8 @@ class FmuComponentBase {
         return fmi2Status::fmi2OK;
     }
 
-    // DEV: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the reason is as
-    // follows: e.g. both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any possible
-    // splitting depending on type if we accept to have both fmi2Integer and fmi2Boolean considered as the same type we
-    // can drop the 'scalartype' argument but the risk is that a variable might end up being flagged as Integer while
-    // it's actually a Boolean and it is not nice At least, in this way, we do not have any redundant code.
+    /// Adds a variable to the list of variables of the FMU.
+    /// The start value is automatically grabbed from the variable itself.
     const FmuVariableExport& AddFmuVariable(
         const FmuVariableExport::VarbindType& varbind,
         std::string name,
@@ -286,49 +287,68 @@ class FmuComponentBase {
 
     void addUnitDefinition(const UnitDefinitionType& unit_definition);
 
-    void clearUnitDefinitions() { unitDefinitions.clear(); }
+    void clearUnitDefinitions() { m_unitDefinitions.clear(); }
 
+    /// Send message to the logger function.
+    /// The message will be sent if at least one of the following applies:
+    /// - \a msg_cat has been enabled by `SetDebugLogging(msg_cat, true)`
+    /// - the FMU has been instantiated with `loggingOn` set as `fmi2True` and \a msg_cat has been labelled as a
+    /// debugging category FMUs generated by this library provides a Description in which it is reported if the category
+    /// is of debug.
     void sendToLog(std::string msg, fmi2Status status, std::string msg_cat);
 
     std::set<FmuVariableExport>::iterator findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype);
     std::set<FmuVariableExport>::iterator findByName(const std::string& name);
 
-    std::string instanceName;
-    std::string fmuGUID;
-    std::string resourceLocation;
+    std::string m_instanceName;
+    std::string m_fmuGUID;
+    std::string m_resources_location;
 
-    static const std::set<std::string> logCategories_available;
-    std::set<std::string> logCategories;
+    bool m_visible;
+
+    /// list of available logging categories + flag to enabled their logging
+    const std::unordered_set<std::string> m_logCategories_debug;  ///< list of log categories considered to be of debug
+    bool m_debug_logging_enabled = true;
+
+
 
     // DefaultExperiment
-    fmi2Real startTime = 0;
-    fmi2Real stopTime = 1;
-    fmi2Real tolerance = -1;
-    fmi2Boolean toleranceDefined = 0;
-    fmi2Boolean stopTimeDefined = 0;
+    fmi2Real m_startTime = 0;
+    fmi2Real m_stopTime = 1;
+    fmi2Real m_tolerance = -1;
+    fmi2Boolean m_toleranceDefined = 0;
+    fmi2Boolean m_stopTimeDefined = 0;
 
-    fmi2Real stepSize = 1e-3;
-    fmi2Real time = 0;
+    fmi2Real m_stepSize = 1e-3;
+    fmi2Real m_time = 0;
 
-    const std::string modelIdentifier;
+    const std::string m_modelIdentifier;
 
-    fmi2Type fmuType;
+    fmi2Type m_fmuType;
 
-    std::map<FmuVariable::Type, unsigned int> valueReferenceCounter;
+    std::map<FmuVariable::Type, unsigned int> m_valueReferenceCounter;
 
-    std::set<FmuVariableExport> scalarVariables;
-    std::unordered_map<std::string, UnitDefinitionType> unitDefinitions;
+    std::set<FmuVariableExport> m_scalarVariables;
+    std::unordered_map<std::string, UnitDefinitionType> m_unitDefinitions;
 
-    std::list<std::function<void(void)>> preStepCallbacks;
-    std::list<std::function<void(void)>> postStepCallbacks;
+    std::list<std::function<void(void)>> m_preStepCallbacks;
+    std::list<std::function<void(void)>> m_postStepCallbacks;
 
-    fmi2CallbackFunctions callbackFunctions;
-    bool loggingOn = true;
-    FmuMachineStateType fmuMachineState;
+    fmi2CallbackFunctions m_callbackFunctions;
+    FmuMachineStateType m_fmuMachineState;
+
+  private:
+    std::unordered_map<std::string, bool> m_logCategories_enabled;
 };
 
 // -----------------------------------------------------------------------------
 
-FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName, fmi2Type fmuType, fmi2String fmuGUID);
+FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,
+                                             fmi2Type fmuType,
+                                             fmi2String fmuGUID,
+                                             fmi2String fmuResourceLocation,
+                                             const fmi2CallbackFunctions* functions,
+                                             fmi2Boolean visible,
+                                             fmi2Boolean loggingOn);
 
 #endif

@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 
         // check if a proper fmu has been provided
         if (dynlib_name.substr(dynlib_name.length() - suffix.length()) == suffix) {
-            std::cerr << "ERROR: Please unzip the fmu first and point to the binaries directory." << std::endl;
+            std::cerr << "ERROR: Please unzip the FMU first and point to the binaries directory." << std::endl;
             return 3;
         }
 

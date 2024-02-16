@@ -22,50 +22,7 @@
         throw std::runtime_error(std::string(std::string("Could not find ") + std::string(#funcName) + \
                                              std::string(" in the FMU library. Wrong or outdated FMU?")));
 
-std::string fmi2Status_toString(fmi2Status status) {
-    switch (status) {
-        case fmi2Status::fmi2Discard:
-            return "Discard";
-            break;
-        case fmi2Status::fmi2Error:
-            return "Error";
-            break;
-        case fmi2Status::fmi2Fatal:
-            return "Fatal";
-            break;
-        case fmi2Status::fmi2OK:
-            return "OK";
-            break;
-        case fmi2Status::fmi2Pending:
-            return "Pending";
-            break;
-        case fmi2Status::fmi2Warning:
-            return "Warning";
-            break;
-        default:
-            throw std::runtime_error("Wrong fmi2Status");
-            break;
-    }
-}
 
-void logger_default(fmi2ComponentEnvironment c,
-                    fmi2String instanceName,
-                    fmi2Status status,
-                    fmi2String category,
-                    fmi2String message,
-                    ...) {
-    char msg[2024];
-    va_list argp;
-    va_start(argp, message);
-    vsprintf(msg, message, argp);
-    if (!instanceName)
-        instanceName = "?";
-    if (!category)
-        category = "?";
-    printf("[%s|%s] %s: %s", instanceName, fmi2Status_toString(status).c_str(), category, msg);
-}
-
-static fmi2CallbackFunctions callbackFunctions_default = {logger_default, calloc, free, nullptr, nullptr};
 
 // =============================================================================
 
@@ -147,9 +104,7 @@ class FmuUnit {
     std::string GetTypesPlatform() const;
 
     /// Instantiate the model.
-    void Instantiate(std::string tool_name = std::string("tool1"),
-                     std::string resource_dir = std::string("file:///C:/temp"),
-                     bool logging = false);
+    void Instantiate(std::string tool_name = std::string(""), std::string resource_dir = "", bool logging = false);
 
     /// Set debug logging level.
     fmi2Status SetDebugLogging(fmi2Boolean loggingOn, const std::vector<std::string>& logCategories);
@@ -203,7 +158,6 @@ class FmuUnit {
     void BuildBodyList(FmuVariableTreeNode* mynode) {}
 
     void BuildVisualizersList(FmuVariableTreeNode* mynode);
-
 
   public:
     std::string directory;
@@ -288,7 +242,6 @@ void FmuUnit::LoadUnzipped(const std::string& directory) {
 }
 
 void FmuUnit::Load(const std::string& filepath, const std::string& unzipdir) {
-
     std::cout << "Unzipping FMU: " << filepath << " in: " << unzipdir << std::endl;
     std::error_code ec;
     fs::remove_all(unzipdir, ec);
@@ -300,14 +253,14 @@ void FmuUnit::Load(const std::string& filepath, const std::string& unzipdir) {
 }
 
 void FmuUnit::LoadXML() {
-    std::string xml_filename = directory + "/modelDescription.xml";
+    std::string xml_filename = directory + "modelDescription.xml";
 
     rapidxml::xml_document<>* doc_ptr = new rapidxml::xml_document<>();
 
     // Read the xml file into a vector
     std::ifstream theFile(xml_filename);
 
-    if (!theFile.is_open())
+    if (!theFile.good())
         throw std::runtime_error("Cannot find file: " + xml_filename + "\n");
 
     std::vector<char> buffer((std::istreambuf_iterator<char>(theFile)), std::istreambuf_iterator<char>());
@@ -654,7 +607,7 @@ std::string FmuUnit::GetTypesPlatform() const {
 }
 
 void FmuUnit::Instantiate(std::string tool_name, std::string resource_dir, bool logging) {
-    callbacks.logger = logger_default;
+    callbacks.logger = LoggingUtilities::logger_default;
     callbacks.allocateMemory = calloc;
     callbacks.freeMemory = free;
     callbacks.stepFinished = NULL;

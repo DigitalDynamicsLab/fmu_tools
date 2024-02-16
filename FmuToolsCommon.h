@@ -4,16 +4,61 @@
 #include "fmi2_headers/fmi2Functions.h"
 #include <stdexcept>
 #include <string>
+#include <cstdarg>
 #include <typeindex>
 #include <unordered_map>
 #include <cassert>
 
 
 
+struct LoggingUtilities {
+    
+static std::string fmi2Status_toString(fmi2Status status) {
+    switch (status) {
+        case fmi2Status::fmi2Discard:
+            return "Discard";
+            break;
+        case fmi2Status::fmi2Error:
+            return "Error";
+            break;
+        case fmi2Status::fmi2Fatal:
+            return "Fatal";
+            break;
+        case fmi2Status::fmi2OK:
+            return "OK";
+            break;
+        case fmi2Status::fmi2Pending:
+            return "Pending";
+            break;
+        case fmi2Status::fmi2Warning:
+            return "Warning";
+            break;
+        default:
+            throw std::runtime_error("Wrong fmi2Status");
+            break;
+    }
+}
+
+static void logger_default(fmi2ComponentEnvironment c,
+                    fmi2String instanceName,
+                    fmi2Status status,
+                    fmi2String category,
+                    fmi2String message,
+                    ...) {
+    char msg[2024];
+    va_list argp;
+    va_start(argp, message);
+    vsprintf(msg, message, argp);
+    if (!instanceName)
+        instanceName = "?";
+    if (!category)
+        category = "?";
+    printf("[%s|%s] %s: %s", instanceName, fmi2Status_toString(status).c_str(), category, msg);
+}
+
+};
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
 
 enum class FmuMachineStateType{
     anySettableState, // custom element, used to do checks
@@ -29,7 +74,6 @@ enum class FmuMachineStateType{
     eventMode, // only ModelExchange
     continuousTimeMode // only ModelExchange
 };
-
 
 
 
