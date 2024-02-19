@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     std::cout << "FMU Platform: " << my_fmu._fmi2GetTypesPlatform() << "\n";
 
     //my_fmu.Instantiate("FmuComponent", my_fmu.GetUnzippedFolder() + "resources");
-    my_fmu.InstantiateWithDefaultResources("FmuComponent"); // automatic loading of default resources
+    my_fmu.Instantiate("FmuComponent"); // automatic loading of default resources
 
     std::vector<std::string> categoriesVector = {"logAll"};
 
