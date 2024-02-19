@@ -20,7 +20,7 @@ mark_as_advanced(FORCE CMAKE_INSTALL_PREFIX)
 
 # The FMU model identifier must be set by the caller. Use a cached variable
 set(FMU_MODEL_IDENTIFIER "myFmuComponent" CACHE STRING "FMU model identifier.")
-set(FMU_RESOURCES_DIRECTORY "${CMAKE_SOURCE_DIR}/demo/resources" CACHE PATH "FMU resources directory; will be copied.")
+set(FMU_RESOURCES_DIRECTORY "${CMAKE_SOURCE_DIR}/demo/my_resources" CACHE PATH "FMU resources directory; will be copied.")
 
 # Optional setting: prefix for all messages issued from this script (default: empty).
 if(NOT FMU_MSG_PREFIX)
