@@ -104,7 +104,10 @@ class FmuUnit {
     std::string GetTypesPlatform() const;
 
     /// Instantiate the model.
-    void Instantiate(std::string tool_name = std::string(""), std::string resource_dir = "", bool logging = false);
+    void Instantiate(std::string tool_name, std::string resource_dir = "", bool logging = false);
+
+    /// Instantiate the model, setting as resources folder the one from the unzipped FMU.
+    void InstantiateWithDefaultResources(std::string tool_name, bool logging = false);
 
     /// Set debug logging level.
     fmi2Status SetDebugLogging(fmi2Boolean loggingOn, const std::vector<std::string>& logCategories);
@@ -624,6 +627,10 @@ void FmuUnit::Instantiate(std::string tool_name, std::string resource_dir, bool 
 
     if (!component)
         throw std::runtime_error("Failed to instantiate the FMU.");
+}
+
+void FmuUnit::InstantiateWithDefaultResources(std::string tool_name, bool logging) {
+    Instantiate(tool_name, directory + "/../../resources", logging);
 }
 
 fmi2Status FmuUnit::SetDebugLogging(fmi2Boolean loggingOn, const std::vector<std::string>& logCategories) {
