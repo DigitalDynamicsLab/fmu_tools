@@ -193,20 +193,23 @@ add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
 
 if (EXISTS ${FMU_RESOURCES_DIRECTORY})
     #TODO: is there the need to copy the resources folder before creating the zip file?
+    set(FMU_RESOURCES_DIR_OUT "${FMU_DIRECTORY}/resources")
+
     message(STATUS "Found resources folder: \"${FMU_RESOURCES_DIRECTORY}\"")
     add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
-        COMMENT "\nCopying ${FMU_RESOURCES_DIRECTORY} to ${FMU_DIRECTORY}/resources"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${FMU_RESOURCES_DIRECTORY}" "${FMU_DIRECTORY}/resources"
+        COMMENT "\nCopying ${FMU_RESOURCES_DIRECTORY} to ${FMU_RESOURCES_DIR_OUT}"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${FMU_RESOURCES_DIRECTORY}" "${FMU_RESOURCES_DIR_OUT}"
         BYPRODUCTS "${FMU_DIRECTORY}/resources"
         WORKING_DIRECTORY ${FMU_DIRECTORY}
     )
 else()
     message(STATUS "No resources directory specified or non existing.")
+    set(FMU_RESOURCES_DIR_OUT "")
 endif()
 
 add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
     COMMENT "\nCreating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
-    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu" "${FMU_DIRECTORY}/modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "${FMU_DIRECTORY}/resources" "--format=zip"
+    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu" "${FMU_DIRECTORY}/modelDescription.xml" "${FMU_RUNTIME_OUTPUT_DIRECTORY}" "${FMU_RESOURCES_DIR_OUT}" "--format=zip"
     BYPRODUCTS "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
     WORKING_DIRECTORY ${FMU_DIRECTORY}
 )
