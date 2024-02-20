@@ -630,7 +630,7 @@ void FmuUnit::Instantiate(std::string tool_name, std::string resource_dir, bool 
 }
 
 void FmuUnit::Instantiate(std::string tool_name, bool logging) {
-    Instantiate(tool_name, directory + "/../../resources", logging);
+    Instantiate(tool_name, "file:///" + directory + "/resources", logging);
 }
 
 fmi2Status FmuUnit::SetDebugLogging(fmi2Boolean loggingOn, const std::vector<std::string>& logCategories) {
