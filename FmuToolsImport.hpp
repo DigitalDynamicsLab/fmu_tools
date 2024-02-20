@@ -256,7 +256,7 @@ void FmuUnit::Load(const std::string& filepath, const std::string& unzipdir) {
 }
 
 void FmuUnit::LoadXML() {
-    std::string xml_filename = directory + "modelDescription.xml";
+    std::string xml_filename = directory + "/modelDescription.xml";
 
     rapidxml::xml_document<>* doc_ptr = new rapidxml::xml_document<>();
 
@@ -444,7 +444,7 @@ void FmuUnit::LoadXML() {
 }
 
 void FmuUnit::LoadSharedLibrary() {
-    std::string dynlib_dir = directory + binaries_dir;
+    std::string dynlib_dir = directory + "/" +  binaries_dir;
     std::string dynlib_name = dynlib_dir + "/" + info_cosimulation_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
 
     dynlib_handle = RuntimeLinkLibrary(dynlib_dir, dynlib_name);
