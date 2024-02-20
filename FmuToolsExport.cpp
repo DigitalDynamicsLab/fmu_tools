@@ -23,7 +23,9 @@ bool is_pointer_variant(const FmuVariableBindType& myVariant) {
 
 void createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid) {
     fmi2CallbackFunctions callfun = {LoggingUtilities::logger_default, calloc, free, nullptr, nullptr};
-    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmutype, FMU_GUID, ("file:///" + GetLibraryLocation() + "../../resources").c_str(), &callfun, fmi2False, fmi2False);
+    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmutype, FMU_GUID,
+                                                       ("file:///" + GetLibraryLocation() + "../../resources").c_str(),
+                                                       &callfun, fmi2False, fmi2False);
     fmu->ExportModelDescription(path);
     delete fmu;
 }
@@ -156,7 +158,6 @@ FmuComponentBase::FmuComponentBase(fmi2String instanceName,
 
     AddFmuVariable(&m_time, "time", FmuVariable::Type::Real, "s", "time");
 
-
     //// Parse URL according to https://datatracker.ietf.org/doc/html/rfc3986
     std::string m_resources_location_str = std::string(fmuResourceLocation);
 
@@ -166,30 +167,33 @@ FmuComponentBase::FmuComponentBase(fmi2String instanceName,
     std::smatch url_matches;
     std::string url_scheme;
     if ((std::regex_search(m_resources_location_str, url_matches, url_patternA) ||
-        std::regex_search(m_resources_location_str, url_matches, url_patternB)) &&
-        url_matches.size()>=3) {
-        if (url_matches[1].compare("file") != 0){
-            sendToLog("Bad URL scheme: " + url_matches[1].str() + ". Trying to continue", fmi2Status::fmi2Warning, "logStatusWarning");
+         std::regex_search(m_resources_location_str, url_matches, url_patternB)) &&
+        url_matches.size() >= 3) {
+        if (url_matches[1].compare("file") != 0) {
+            sendToLog("Bad URL scheme: " + url_matches[1].str() + ". Trying to continue.\n", fmi2Status::fmi2Warning,
+                      "logStatusWarning");
         }
         m_resources_location = url_matches[2];
     } else {
         // TODO: rollback?
-        sendToLog("Cannot parse resource location: " + m_resources_location_str, fmi2Status::fmi2Warning, "logStatusWarning");
+        sendToLog("Cannot parse resource location: " + m_resources_location_str + "\n", fmi2Status::fmi2Warning,
+                  "logStatusWarning");
 
         m_resources_location = GetLibraryLocation() + "/../../resources";
-        sendToLog("Rolled back to default location: " + m_resources_location, fmi2Status::fmi2Warning, "logStatusWarning");
+        sendToLog("Rolled back to default location: " + m_resources_location + "\n", fmi2Status::fmi2Warning,
+                  "logStatusWarning");
     }
-
 
     //// Compare GUID
     if (std::string(fmuGUID).compare(m_fmuGUID)) {
-        sendToLog("GUID used for instantiation not matching with source.", fmi2Status::fmi2Warning, "logStatusWarning");
+        sendToLog("GUID used for instantiation not matching with source.\n", fmi2Status::fmi2Warning,
+                  "logStatusWarning");
     }
 
     for (auto deb_sel = logCategories_debug_init.begin(); deb_sel != logCategories_debug_init.end(); ++deb_sel) {
         if (logCategories_init.find(*deb_sel) == logCategories_init.end()) {
             sendToLog("Developer error: Log category \"" + *deb_sel +
-                          "\" specified to be of debug is not listed as a log category.",
+                          "\" specified to be of debug is not listed as a log category.\n",
                       fmi2Status::fmi2Warning, "logStatusWarning");
         }
     }
@@ -241,7 +245,7 @@ void FmuComponentBase::SetDebugLogging(std::string cat, bool value) {
         m_logCategories_enabled[cat] = value;
     } catch (const std::exception& ex) {
         sendToLog("The LogCategory \"" + cat +
-                      "\" is not recognized by the FMU. Please check its availability in modelDescription.xml",
+                      "\" is not recognized by the FMU. Please check its availability in modelDescription.xml.\n",
                   fmi2Error, "logStatusError");
     }
 }
