@@ -1,14 +1,9 @@
+#include <regex>
+#include <fstream>
 
 #include "FmuToolsExport.h"
 #include "FmuToolsRuntimeLinking.h"
-#include <cassert>
-#include <vector>
-#include <array>
-#include <map>
-#include <list>
-#include <iostream>
-#include <regex>
-#include <fstream>
+
 #include "rapidxml/rapidxml_ext.hpp"
 
 const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = {
@@ -21,9 +16,19 @@ bool is_pointer_variant(const FmuVariableBindType& myVariant) {
     return varns::visit([](auto&& arg) -> bool { return std::is_pointer_v<std::decay_t<decltype(arg)>>; }, myVariant);
 }
 
-void createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid) {
+void createModelDescription(const std::string& path, FmuType fmu_type) {
+    fmi2Type fmi2_type = fmi2Type::fmi2CoSimulation;
+    switch (fmu_type) {
+        case FmuType::COSIMULATION:
+            fmi2_type = fmi2Type::fmi2CoSimulation;
+            break;
+        case FmuType::MODEL_EXCHANGE:
+            fmi2_type = fmi2Type::fmi2ModelExchange;
+            break;
+    }
+
     fmi2CallbackFunctions callfun = {LoggingUtilities::logger_default, calloc, free, nullptr, nullptr};
-    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmutype, FMU_GUID,
+    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmi2_type, FMU_GUID,
                                                        ("file:///" + GetLibraryLocation() + "../../resources").c_str(),
                                                        &callfun, fmi2False, fmi2False);
     fmu->ExportModelDescription(path);

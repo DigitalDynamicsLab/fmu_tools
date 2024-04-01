@@ -1,8 +1,6 @@
+#ifndef FMUTOOLS_EXPORT_H
+#define FMUTOOLS_EXPORT_H
 
-#ifndef FMUTOOLSEXPORT_H
-#define FMUTOOLSEXPORT_H
-#include "FmuToolsCommon.h"
-#include "fmi2_headers/fmi2Functions.h"
 #include <algorithm>
 #include <cassert>
 #include <vector>
@@ -16,6 +14,10 @@
 #include <functional>
 #include <list>
 
+#include "FmuToolsCommon.h"
+#include "FmuToolsDefinitions.h"
+#include "fmi2_headers/fmi2Functions.h"
+
 #ifndef FMITYPESPLATFORM_CUSTOM
     #include "TypesVariantsDefault.h"
 #else
@@ -28,7 +30,7 @@
 extern "C" {
 #endif
 
-void FMI2_Export createModelDescription(const std::string& path, fmi2Type fmutype, fmi2String guid);
+void FMI2_Export createModelDescription(const std::string& path, FmuType fmu_type);
 
 #ifdef __cplusplus
 }

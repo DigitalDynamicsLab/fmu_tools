@@ -1,11 +1,10 @@
-#include "fmi2_headers/fmi2Functions.h"
-#include "FmuToolsRuntimeLinking.h"
 #include <string>
 #include <iostream>
 
+#include "FmuToolsRuntimeLinking.h"
+#include "FmuToolsDefinitions.h"
 
 int main(int argc, char* argv[]) {
-
     std::string dynlib_fullpath;
     std::string dynlib_dir;
     std::string output_path;
@@ -35,16 +34,16 @@ int main(int argc, char* argv[]) {
         }
 
         dynlib_fullpath = dynlib_dir + dynlib_name;
-        
 
-        if (argc == 4){
+        if (argc == 4) {
             output_path = argv[3];
-        }
-        else
+        } else
             output_path = dynlib_fullpath + "../../";
 
     } else {
-        std::cout << "Usage: " << argv[0] << " <FMU binaries folder location> <FMU library name> <modelDescription output dir (optional)>" << std::endl;
+        std::cout << "Usage: " << argv[0]
+                  << " <FMU binaries folder location> <FMU library name> <modelDescription output dir (optional)>"
+                  << std::endl;
         std::cout << "Return 1: Cannot link to library or library not found." << std::endl;
         std::cout << "Return 2: Cannot call modelDescription generation function." << std::endl;
         std::cout << "Return 3: Please unzip the fmu first and point to the binaries directory." << std::endl;
@@ -53,43 +52,35 @@ int main(int argc, char* argv[]) {
         return 4;
     }
 
-
-    typedef void (*createModelDescriptionPtrType)(const std::string& path, fmi2Type fmutype, fmi2String guid);
-
-
     DYNLIB_HANDLE dynlib_handle = RuntimeLinkLibrary(dynlib_dir, dynlib_fullpath);
-
-
-    if (!dynlib_handle){
+    if (!dynlib_handle) {
         std::cerr << "ERROR: Cannot link to library: " << dynlib_fullpath << std::endl;
         return 1;
     }
 
-
-    createModelDescriptionPtrType createModelDescriptionPtr = (createModelDescriptionPtrType)get_function_ptr( dynlib_handle, "createModelDescription" );
+    typedef void (*createModelDescriptionPtrType)(const std::string& path, FmuType fmu_type);
+    createModelDescriptionPtrType createModelDescriptionPtr =
+        (createModelDescriptionPtrType)get_function_ptr(dynlib_handle, "createModelDescription");
 
     bool has_CoSimulation = true;
     bool has_ModelExchange = true;
 
-    try{
-        createModelDescriptionPtr(output_path, fmi2Type::fmi2CoSimulation, "");
+    try {
+        createModelDescriptionPtr(output_path, FmuType::COSIMULATION);
     } catch (std::exception& e) {
         has_CoSimulation = false;
     }
 
-    try{
-        createModelDescriptionPtr(output_path, fmi2Type::fmi2ModelExchange, "");
+    try {
+        createModelDescriptionPtr(output_path, FmuType::MODEL_EXCHANGE);
     } catch (std::exception& e) {
         has_ModelExchange = false;
     }
 
-    if (!has_CoSimulation && !has_ModelExchange){
+    if (!has_CoSimulation && !has_ModelExchange) {
         std::cerr << "ERROR: FMU is not set as CoSimulation nor as ModelExchange." << std::endl;
         return 2;
     }
 
-
     return 0;
-
-    
 }
