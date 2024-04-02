@@ -9,11 +9,14 @@
 #include <iostream>
 #include <system_error>
 
-#include "FMI2/FmuToolsCommon.h"
-#include "FMI2/FmuToolsRuntimeLinking.h"
+#include "FmuToolsCommon.h"
+#include "FmuToolsRuntimeLinking.h"
 
-#include "miniz-cpp/zip_file.hpp"
+// ATTENTION: order of included headers is IMPORTANT!
+//            rapidxml.hpp must be included first here.
+
 #include "rapidxml/rapidxml.hpp"
+#include "miniz-cpp/zip_file.hpp"
 #include "filesystem.hpp"
 
 #define LOAD_FMI_FUNCTION(funcName)                                                                    \
@@ -21,8 +24,6 @@
     if (!this->_##funcName)                                                                            \
         throw std::runtime_error(std::string(std::string("Could not find ") + std::string(#funcName) + \
                                              std::string(" in the FMU library. Wrong or outdated FMU?")));
-
-
 
 // =============================================================================
 
@@ -444,7 +445,7 @@ void FmuUnit::LoadXML() {
 }
 
 void FmuUnit::LoadSharedLibrary() {
-    std::string dynlib_dir = directory + "/" +  binaries_dir;
+    std::string dynlib_dir = directory + "/" + binaries_dir;
     std::string dynlib_name = dynlib_dir + "/" + info_cosimulation_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
 
     dynlib_handle = RuntimeLinkLibrary(dynlib_dir, dynlib_name);
