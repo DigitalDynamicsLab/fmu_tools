@@ -10,7 +10,7 @@
 #include <math.h>
 
 // #define FMI2_FUNCTION_PREFIX MyModel_
-#include "myFmuComponent.h"
+#include "myFmuCosimulation.h"
 
 
 // FMU_ACTION:: implement the following functions
