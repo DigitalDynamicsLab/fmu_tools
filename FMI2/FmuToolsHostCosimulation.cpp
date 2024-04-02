@@ -1,6 +1,7 @@
-#include "FmuToolsImport.hpp"
-
 #include <iostream>
+#include <cstddef>
+
+#include "FmuToolsImport.hpp"
 
 std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
 //std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY; // for debug, to retrieve the FMU just created before zipping

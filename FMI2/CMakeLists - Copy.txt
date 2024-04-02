@@ -155,11 +155,10 @@ if (NOT TARGET fmi_modeldescription)
         ${CMAKE_CURRENT_SOURCE_DIR}/../FmuToolsModelDescription.cpp)
     source_group("" FILES ${MODELDESCRIPTION_SOURCES})
     
-    set(fmi_modeldescription "fmi_modeldescription")
     add_executable(fmi_modeldescription ${MODELDESCRIPTION_SOURCES})
 
-    message(STATUS "${FMU_MSG_PREFIX}Set up FMU generation of model description")
-    message(STATUS "${FMU_MSG_PREFIX}   adding target '${fmi_modeldescription}'")
+#    message(STATUS "${FMU_MSG_PREFIX}Set up FMU generation of model description")
+#    message(STATUS "${FMU_MSG_PREFIX}   adding target '${fmi_modeldescription}'")
 
     target_link_libraries(fmi_modeldescription PRIVATE ${CMAKE_DL_LIBS})
     set_target_properties(fmi_modeldescription PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -186,7 +185,7 @@ if (EXISTS ${FMU_RESOURCES_DIRECTORY})
     #TODO: is there the need to copy the resources folder before creating the zip file?
     set(FMU_RESOURCES_DIR_OUT "${FMU_DIRECTORY}/resources")
 
-    message(STATUS "${FMU_MSG_PREFIX}Found resources folder: ${FMU_RESOURCES_DIRECTORY}")
+    message(STATUS "${FMU_MSG_PREFIX}Found resources folder: ${FMU_RESOURCES_DIRECTORY})
     add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
         COMMENT "\nCopying ${FMU_RESOURCES_DIRECTORY} to ${FMU_RESOURCES_DIR_OUT}"
         COMMAND ${CMAKE_COMMAND} -E copy_directory "${FMU_RESOURCES_DIRECTORY}" "${FMU_RESOURCES_DIR_OUT}"
@@ -220,8 +219,8 @@ if (BUILD_FMU_HOST)
 
     set(fmi_host_cosim fmi_hostcosimulation_${FMU_MODEL_IDENTIFIER})
 
-    message(STATUS "${FMU_MSG_PREFIX}Host instantiation enabled")
-    message(STATUS "${FMU_MSG_PREFIX}   adding target '${fmi_host_cosim}'")
+#    message(STATUS "${FMU_MSG_PREFIX}Host instantiation enabled.")
+#    message(STATUS "${FMU_MSG_PREFIX}   adding target '${fmi_host_cosim}'")
 
     add_executable(${fmi_host_cosim})
     target_include_directories(${fmi_host_cosim} PRIVATE "${CMAKE_SOURCES_DIR}")
@@ -236,8 +235,7 @@ if (BUILD_FMU_HOST)
         target_link_libraries(${fmi_host_cosim} PRIVATE ${CMAKE_DL_LIBS})
     endif()
     add_dependencies(${fmi_host_cosim} ${FMU_MODEL_IDENTIFIER})
-else()
-    message(STATUS "${FMU_MSG_PREFIX}Host instantiation disabled")    
+
 endif()
 
 
@@ -245,7 +243,7 @@ endif()
 # Target that runs the compiled and extracted fmu
 # -------------------------------------------------
 
-set(BUILD_TESTING ON CACHE BOOL "Enable testing")
+set(BUILD_TESTING ON CACHE BOOL "Enable testing.")
 
 if (BUILD_TESTING)
     if(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
@@ -255,8 +253,8 @@ if (BUILD_TESTING)
         set(fmi_testchecker fmi_testchecker_${FMU_MODEL_IDENTIFIER})
         set(build_fmi_testchecker build_test_parseFmuChecker_${FMU_MODEL_IDENTIFIER})
 
-        message(STATUS "${FMU_MSG_PREFIX}Testing enabled.")
-        message(STATUS "${FMU_MSG_PREFIX}   adding target '${fmi_testchecker}'")
+#        message(STATUS "${FMU_MSG_PREFIX}Testing enabled.")
+#        message(STATUS "${FMU_MSG_PREFIX}   adding target '${fmi_testchecker}'")
 
         set(FMUCHECKER_LOG "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_log.txt")
         set(FMUCHECKER_RESULTS "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_results.txt")
@@ -299,7 +297,7 @@ if (BUILD_TESTING)
     endif()
 else()
     set(TESTING_ENABLED OFF)
-    message(STATUS "${FMU_MSG_PREFIX}Testing disabled")
+    message(STATUS "${FMU_MSG_PREFIX}Testing disabled.")
 endif(BUILD_TESTING)
 
 
