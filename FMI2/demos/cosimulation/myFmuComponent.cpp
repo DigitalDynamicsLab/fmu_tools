@@ -1,8 +1,5 @@
-
-// #define FMI2_FUNCTION_PREFIX MyModel_
 #define NOMINMAX
 
-#include "myFmuComponent.h"
 #include <cassert>
 #include <vector>
 #include <array>
@@ -11,6 +8,10 @@
 
 #define _USE_MATH_DEFINES
 #include <math.h>
+
+// #define FMI2_FUNCTION_PREFIX MyModel_
+#include "myFmuComponent.h"
+
 
 // FMU_ACTION:: implement the following functions
 FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,

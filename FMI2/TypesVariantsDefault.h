@@ -1,13 +1,13 @@
-
 #ifndef TYPESVARIANTS_H
 #define TYPESVARIANTS_H
-#include "variant/variant_guard.hpp"
-#include "fmi2_headers/fmi2TypesPlatform.h"
+
 #include <string>
+
+#include "variant/variant_guard.hpp"
+#include "FMI2/fmi2_headers/fmi2TypesPlatform.h"
 
 
 #define FMITYPESPLATFORM_DEFAULT
-
 
 // variants does not allow repeated types;
 // unfortunately, in the default implementation, both fmi2Boolean and fmi2Integer point to a int type

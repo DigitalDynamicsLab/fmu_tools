@@ -1,7 +1,6 @@
-#ifndef FMUTOOLSCOMMON_H
-#define FMUTOOLSCOMMON_H
-#include "fmi2_headers/fmi2FunctionTypes.h"
-#include "fmi2_headers/fmi2Functions.h"
+#ifndef FMUTOOLS_COMMON_H
+#define FMUTOOLS_COMMON_H
+
 #include <stdexcept>
 #include <string>
 #include <cstdarg>
@@ -9,7 +8,8 @@
 #include <unordered_map>
 #include <cassert>
 
-
+#include "FMI2/fmi2_headers/fmi2FunctionTypes.h"
+#include "FMI2/fmi2_headers/fmi2Functions.h"
 
 struct LoggingUtilities {
     

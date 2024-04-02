@@ -1,8 +1,5 @@
 #pragma once
-#include "FmuToolsCommon.h"
-#include "FmuToolsRuntimeLinking.h"
 
-#include "rapidxml/rapidxml.hpp"
 #include <string>
 #include <vector>
 #include <map>
@@ -12,8 +9,11 @@
 #include <iostream>
 #include <system_error>
 
-#include "miniz-cpp/zip_file.hpp"
+#include "FMI2/FmuToolsCommon.h"
+#include "FMI2/FmuToolsRuntimeLinking.h"
 
+#include "miniz-cpp/zip_file.hpp"
+#include "rapidxml/rapidxml.hpp"
 #include "filesystem.hpp"
 
 #define LOAD_FMI_FUNCTION(funcName)                                                                    \

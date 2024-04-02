@@ -1,9 +1,10 @@
-
 #ifndef TYPESVARIANTS_H
 #define TYPESVARIANTS_H
-#include "variant/variant_guard.hpp"
-#include "fmi2TypesPlatformCustom.h"
+
 #include <string>
+
+#include "variant/variant_guard.hpp"
+#include "FMI2/fmi2TypesPlatformCustom.h"
 
 
 #define FMITYPESPLATFORM_DEFAULT

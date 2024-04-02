@@ -1,5 +1,5 @@
-#ifndef FMUTOOLSRUNTIMELINKING_H
-#define FMUTOOLSRUNTIMELINKING_H
+#ifndef FMUTOOLS_RUNTIMELINKING_H
+#define FMUTOOLS_RUNTIMELINKING_H
 
 #include <string>
 #include <stdexcept>

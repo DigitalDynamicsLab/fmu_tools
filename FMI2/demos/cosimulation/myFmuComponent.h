@@ -1,11 +1,13 @@
-
 #pragma once
-// #define FMI2_FUNCTION_PREFIX MyModel_
-#include "FmuToolsExport.h"
+
 #include <vector>
 #include <array>
 
 #include <fstream>  // to test the resource file loading
+
+// #define FMI2_FUNCTION_PREFIX MyModel_
+#include "FMI2/FmuToolsExport.h"
+
 
 class myFmuComponent : public FmuComponentBase {
   public:

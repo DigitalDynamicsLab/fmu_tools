@@ -14,14 +14,14 @@
 #include <functional>
 #include <list>
 
-#include "FmuToolsCommon.h"
 #include "FmuToolsDefinitions.h"
-#include "fmi2_headers/fmi2Functions.h"
+#include "FMI2/FmuToolsCommon.h"
+#include "FMI2/fmi2_headers/fmi2Functions.h"
 
 #ifndef FMITYPESPLATFORM_CUSTOM
-    #include "TypesVariantsDefault.h"
+    #include "FMI2/TypesVariantsDefault.h"
 #else
-    #include "TypesVariantsCustom.h"
+    #include "FMI2/TypesVariantsCustom.h"
 #endif
 
 // =============================================================================
