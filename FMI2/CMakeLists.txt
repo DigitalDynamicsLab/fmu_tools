@@ -223,7 +223,11 @@ if (BUILD_FMU_HOST)
     message(STATUS "${FMU_MSG_PREFIX}Host instantiation enabled")
     message(STATUS "${FMU_MSG_PREFIX}   adding target '${fmi_host_cosim}'")
 
-    add_executable(${fmi_host_cosim})
+    set(HOST_SOURCES
+        ${CMAKE_CURRENT_SOURCE_DIR}/FmuToolsHostCosimulation.cpp)
+    source_group("" FILES ${HOST_SOURCES})
+
+    add_executable(${fmi_host_cosim} ${HOST_SOURCES})
     target_include_directories(${fmi_host_cosim} PRIVATE "${CMAKE_SOURCES_DIR}")
     target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_UNPACK_DIRECTORY="${FMU_UNPACK_DIRECTORY}")
     target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_DIRECTORY="${FMU_DIRECTORY}")

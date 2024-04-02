@@ -4,7 +4,6 @@ set(COMPONENT_SOURCES myFmuComponent.h myFmuComponent.cpp)
 set(COMPONENT_RESOURCES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/my_resources)
 
 set(FMU_TOOLS_DIR ${CMAKE_SOURCE_DIR}/FMI2)
-set(FMU_HOST_SOURCES ${CMAKE_SOURCE_DIR}/FMI2/FmuToolsHostCosimulation.cpp)
 
 #--------------------------------------------------------------
 
@@ -24,8 +23,7 @@ message(STATUS "   FetchContent(fmu_tools) from ${FMU_TOOLS_DIR}")
 
 set(FMU_MODEL_IDENTIFIER "${COMPONENT_NAME}" CACHE INTERNAL "")
 set(FMU_RESOURCES_DIRECTORY ${COMPONENT_RESOURCES_DIR} CACHE INTERNAL "")
-set(BUILD_FMU_HOST ON CACHE INTERNAL "")
-set(USE_EXTERNAL_FMU_COMPONENT_SOURCES ON CACHE INTERNAL "")
+##set(BUILD_FMU_HOST ON CACHE INTERNAL "")
 set(USE_CUSTOM_TYPESPLATFORM OFF CACHE INTERNAL "")
 
 set(FMU_MAIN_DIRECTORY ${COMPONENT_MAIN_DIR})
@@ -55,11 +53,4 @@ set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES FOLDER demos COMPILE_FL
 target_link_libraries(${FMU_MODEL_IDENTIFIER} ${LIBS})  
 
 source_group("" FILES ${COMPONENT_SOURCES})
-
-#---------------------------------------------------------------
-# add to the fmu_host target
-
-if(BUILD_FMU_HOST)
-  target_sources(fmi_hostcosimulation_${FMU_MODEL_IDENTIFIER} PRIVATE ${FMU_HOST_SOURCES})
-endif()
 
