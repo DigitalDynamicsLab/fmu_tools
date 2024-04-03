@@ -1,3 +1,10 @@
+# Set the minimum required C++ standard to C++14, allow C++17 if available
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED OFF)
+set(CMAKE_CXX_STANDARD 17)
+
 # -------------------------------------------------
 
 # Optional setting: prefix for all messages issued from this script (default: empty).
@@ -9,10 +16,6 @@ endif()
 if(NOT FMU_MAIN_DIRECTORY)
   set(FMU_MAIN_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
-
-message(STATUS "${FMU_MSG_PREFIX}Curent source directory: ${CMAKE_CURRENT_SOURCE_DIR}")
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 # Set directory and filename for the generated FMU
 set(FMU_DIRECTORY "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}")
@@ -125,6 +128,7 @@ source_group("fmu_tools" FILES ${FMU_SOURCES})
 
 message(STATUS "${FMU_MSG_PREFIX}Set up FMU creation")
 message(STATUS "${FMU_MSG_PREFIX}   adding target '${FMU_MODEL_IDENTIFIER}'")
+message(STATUS "${FMU_MSG_PREFIX}   setting runtime output dir to '${FMU_RUNTIME_OUTPUT_DIRECTORY}'")
 message(STATUS "${FMU_MSG_PREFIX}   append FMU sources to '${FMU_MODEL_IDENTIFIER}' target through 'target_sources(${FMU_MODEL_IDENTIFIER} PRIVATE <your_source_files>)'")
 
 
@@ -306,17 +310,14 @@ else()
     message(STATUS "${FMU_MSG_PREFIX}Testing disabled")
 endif(BUILD_TESTING)
 
-
 # -------------------------------------------------
 # Propagate variable to upper levels
+# Make variables set in this script available to the fetcher projects
 # -------------------------------------------------
 
-# Make variables set in this script available to the fetcher projects
-if(NOT PROJECT_IS_TOP_LEVEL)
-    set(FMI_PLATFORM ${FMI_PLATFORM} PARENT_SCOPE)
-    set(FMU_DIRECTORY ${FMU_DIRECTORY} PARENT_SCOPE)
-    set(FMU_FILENAME ${FMU_FILENAME} PARENT_SCOPE)
-    set(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_RUNTIME_OUTPUT_DIRECTORY}" PARENT_SCOPE)
-    set(FMU_SOURCES ${FMU_SOURCES} PARENT_SCOPE)
-    set(TESTING_ENABLED ${TESTING_ENABLED} PARENT_SCOPE)
-endif()
+set(FMI_PLATFORM ${FMI_PLATFORM} PARENT_SCOPE)
+set(FMU_DIRECTORY ${FMU_DIRECTORY} PARENT_SCOPE)
+set(FMU_FILENAME ${FMU_FILENAME} PARENT_SCOPE)
+set(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_RUNTIME_OUTPUT_DIRECTORY}" PARENT_SCOPE)
+set(FMU_SOURCES ${FMU_SOURCES} PARENT_SCOPE)
+set(TESTING_ENABLED ${TESTING_ENABLED} PARENT_SCOPE)

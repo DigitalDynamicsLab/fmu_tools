@@ -3,8 +3,6 @@ set(COMPONENT_MAIN_DIR "${CMAKE_BINARY_DIR}")
 set(COMPONENT_SOURCES myFmuCosimulation_fmi2.h myFmuCosimulation_fmi2.cpp)
 set(COMPONENT_RESOURCES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/my_resources)
 
-set(FMU_TOOLS_DIR ${CMAKE_SOURCE_DIR}/FMI2)
-
 #--------------------------------------------------------------
 
 # Set include paths, compiler & linker flags, and libraries
@@ -30,7 +28,7 @@ set(FMU_MSG_PREFIX "   - ")
 
 FetchContent_Declare(
     ${FMU_MODEL_IDENTIFIER}
-    SOURCE_DIR ${FMU_TOOLS_DIR}
+    SOURCE_DIR ${FMU_TOOLS_DIR}/FMI2
 )
 
 FetchContent_MakeAvailable(${FMU_MODEL_IDENTIFIER})
