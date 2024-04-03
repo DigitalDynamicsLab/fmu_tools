@@ -1,8 +1,10 @@
+// =============================================================================
+// Example FMU for co-simulation (FMI 2.0 standard)
+// =============================================================================
+
 #define NOMINMAX
 
 #include <cassert>
-#include <vector>
-#include <array>
 #include <map>
 #include <algorithm>
 
@@ -10,8 +12,7 @@
 #include <math.h>
 
 // #define FMI2_FUNCTION_PREFIX MyModel_
-#include "myFmuCosimulation.h"
-
+#include "myFmuCosimulation_fmi2.h"
 
 // FMU_ACTION:: implement the following functions
 FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,

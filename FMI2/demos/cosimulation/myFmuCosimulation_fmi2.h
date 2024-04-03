@@ -1,13 +1,15 @@
+// =============================================================================
+// Example FMU for co-simulation (FMI 2.0 standard)
+// =============================================================================
+
 #pragma once
 
 #include <vector>
 #include <array>
-
-#include <fstream>  // to test the resource file loading
+#include <fstream>
 
 // #define FMI2_FUNCTION_PREFIX MyModel_
 #include "FMI2/FmuToolsExport.h"
-
 
 class myFmuComponent : public FmuComponentBase {
   public:

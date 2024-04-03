@@ -1,6 +1,6 @@
-set(COMPONENT_NAME "myFmuCosimulation")
+set(COMPONENT_NAME "myFmuCosimulation_fmi2")
 set(COMPONENT_MAIN_DIR "${CMAKE_BINARY_DIR}")
-set(COMPONENT_SOURCES myFmuCosimulation.h myFmuCosimulation.cpp)
+set(COMPONENT_SOURCES myFmuCosimulation_fmi2.h myFmuCosimulation_fmi2.cpp)
 set(COMPONENT_RESOURCES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/my_resources)
 
 set(FMU_TOOLS_DIR ${CMAKE_SOURCE_DIR}/FMI2)
