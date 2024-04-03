@@ -54,7 +54,7 @@ DYNLIB_HANDLE RuntimeLinkLibrary(const std::string& dynlib_dir, const std::strin
 
 /// Gets the location of the shared library.
 std::string GetLibraryLocation(){
-    std::filesystem::path library_path;
+    fs::path library_path;
 #if WIN32
     HMODULE hModule = nullptr;
     if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&GetLibraryLocation, &hModule))
@@ -82,7 +82,7 @@ std::string GetLibraryLocation(){
     }
 #endif
 
-    std::filesystem::path library_folder = library_path.parent_path();
+    fs::path library_folder = library_path.parent_path();
     return library_folder.string();
 }
     
