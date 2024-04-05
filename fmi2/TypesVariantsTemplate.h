@@ -4,7 +4,7 @@
 #include <string>
 
 #include "variant/variant_guard.hpp"
-#include "FMI2/fmi2TypesPlatformCustom.h"
+#include "fmi2/fmi2TypesPlatformCustom.h"
 
 
 #define FMITYPESPLATFORM_DEFAULT

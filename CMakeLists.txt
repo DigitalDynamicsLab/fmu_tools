@@ -18,7 +18,7 @@ include_directories(${FMU_TOOLS_DIR})
 # Add the various demo subdirectories
 
 message(STATUS "\nDemos for FMI 2.0")
-add_subdirectory(FMI2/demos/cosimulation)
+add_subdirectory(fmi2/demos/cosimulation)
 
 ##message(STATUS "\nDemos for FMI 3.0")
-##add_subdirectory(FMI3/demos/cosimulation)
+##add_subdirectory(fmi3/demos/cosimulation)

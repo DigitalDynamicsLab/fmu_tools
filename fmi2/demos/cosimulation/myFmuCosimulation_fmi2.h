@@ -9,7 +9,7 @@
 #include <fstream>
 
 // #define FMI2_FUNCTION_PREFIX MyModel_
-#include "FMI2/FmuToolsExport.h"
+#include "fmi2/FmuToolsExport.h"
 
 class myFmuComponent : public FmuComponentBase {
   public:

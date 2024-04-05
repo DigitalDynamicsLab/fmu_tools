@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <cassert>
 
-#include "FMI2/fmi2_headers/fmi2FunctionTypes.h"
-#include "FMI2/fmi2_headers/fmi2Functions.h"
+#include "fmi2/fmi2_headers/fmi2FunctionTypes.h"
+#include "fmi2/fmi2_headers/fmi2Functions.h"
 
 struct LoggingUtilities {
     

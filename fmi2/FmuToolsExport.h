@@ -15,13 +15,13 @@
 #include <list>
 
 #include "FmuToolsDefinitions.h"
-#include "FMI2/FmuToolsCommon.h"
-#include "FMI2/fmi2_headers/fmi2Functions.h"
+#include "fmi2/FmuToolsCommon.h"
+#include "fmi2/fmi2_headers/fmi2Functions.h"
 
 #ifndef FMITYPESPLATFORM_CUSTOM
-    #include "FMI2/TypesVariantsDefault.h"
+    #include "fmi2/TypesVariantsDefault.h"
 #else
-    #include "FMI2/TypesVariantsCustom.h"
+    #include "fmi2/TypesVariantsCustom.h"
 #endif
 
 // =============================================================================

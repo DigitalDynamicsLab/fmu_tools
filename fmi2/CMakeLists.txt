@@ -1,3 +1,25 @@
+# -------------------------------------------------
+# Usage notes
+# -------------------------------------------------
+# A fetcher project should set required and optional variables with details on the FMU to be created:
+#   FMU_MODEL_IDENTIFIER (required)
+#   FMU_MAIN_DIRECTORY (optional, use CMAKE_BINARY_DIR if not set)
+#   FMU_DEPENDENCIES (optional)
+#   FMU_RESOURCES_DIRECTORY (optional)
+#   FMU_GUID_NAMESPACE (optional, default randomly-generated)
+#   BUILD_FMU_HOST (optional, default ON)
+#   USE_CUSTOM_TYPESPLATFORM (optional, default OFF)
+#   FMU_MSG_PREFIX (optional, default "")
+#
+# On return, this script makes the following variables available to the fetcher project:
+#   FMI_PLATFORM
+#   FMU_DIRECTORY
+#   FMU_FILENAME
+#   FMU_RUNTIME_OUTPUT_DIRECTORY
+#   FMU_SOURCES
+#   TESTING_ENABLED
+# -------------------------------------------------
+
 # Set the minimum required C++ standard to C++14, allow C++17 if available
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -179,6 +201,25 @@ endif()
 
 add_dependencies(${FMU_MODEL_IDENTIFIER} fmi_modeldescription)
 
+# --------------------------------------
+# Add custom commands for:
+# - Copying external dependencies (if any)
+# - Generating the FMU model description
+# - Adding the FMU resources directory (if any)
+# - Creating the FMU archive
+# ---------------------------------------
+
+if (DEFINED FMU_DEPENDENCIES AND NOT FMU_DEPENDENCIES STREQUAL "")
+    message(STATUS "${FMU_MSG_PREFIX}Found dependencies: ${FMU_DEPENDENCIES}")
+    add_custom_command(
+        TARGET ${FMU_MODEL_IDENTIFIER} PRE_BUILD
+        COMMENT "Copy FMU dependencies."
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FMU_DEPENDENCIES} ${FMU_RUNTIME_OUTPUT_DIRECTORY}
+    )
+else()
+    message(STATUS "${FMU_MSG_PREFIX}No dependencies specified.")    
+endif()
+
 add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
     COMMENT "\nGenerating modelDescription.xml for '${FMU_RUNTIME_OUTPUT_DIRECTORY}/${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX}' into '${FMU_DIRECTORY}'"
     COMMAND $<TARGET_FILE:fmi_modeldescription> ${FMU_RUNTIME_OUTPUT_DIRECTORY} ${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX} ${FMU_DIRECTORY}
@@ -186,7 +227,7 @@ add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
     WORKING_DIRECTORY ${FMU_DIRECTORY}
 )
 
-if (EXISTS ${FMU_RESOURCES_DIRECTORY})
+if (DEFINED FMU_RESOURCES_DIRECTORY AND NOT FMU_RESOURCES_DIRECTORY STREQUAL "")
     #TODO: is there the need to copy the resources folder before creating the zip file?
     set(FMU_RESOURCES_DIR_OUT "${FMU_DIRECTORY}/resources")
 

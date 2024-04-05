@@ -1,7 +1,7 @@
 #include <regex>
 #include <fstream>
 
-#include "FMI2/FmuToolsExport.h"
+#include "fmi2/FmuToolsExport.h"
 #include "FmuToolsRuntimeLinking.h"
 
 #include "rapidxml/rapidxml_ext.hpp"
