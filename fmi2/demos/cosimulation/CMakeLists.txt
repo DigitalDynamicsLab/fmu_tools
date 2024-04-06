@@ -6,6 +6,12 @@ set(COMPONENT_DLL_DEPENDENCIES "")
 
 #--------------------------------------------------------------
 
+set(BUILD_FMU_HOST ON CACHE BOOL "Build fmi_host executable to run FMUs.")
+set(BUILD_TESTING ON CACHE BOOL "Enable testing")
+set(USE_CUSTOM_TYPESPLATFORM OFF CACHE BOOL "Use custom types platform definition.")
+
+#--------------------------------------------------------------
+
 # Set include paths, compiler & linker flags, and libraries
 set(COMPILER_FLAGS "")
 set(LINKER_FLAGS "")
@@ -15,13 +21,12 @@ list(APPEND LIBS "")
 
 include(FetchContent)
 
-#==============================================================
+#--------------------------------------------------------------
 
 message(STATUS "...add ${COMPONENT_NAME}")
 message(STATUS "   FetchContent(fmu_tools) from ${FMU_TOOLS_DIR}")
 
 set(FMU_MODEL_IDENTIFIER "${COMPONENT_NAME}" CACHE INTERNAL "")
-set(USE_CUSTOM_TYPESPLATFORM OFF CACHE INTERNAL "")
 set(FMU_RESOURCES_DIRECTORY ${COMPONENT_RESOURCES_DIR})
 set(FMU_DEPENDENCIES ${COMPONENT_DLL_DEPENDENCIES})
 set(FMU_MAIN_DIRECTORY ${COMPONENT_MAIN_DIR})

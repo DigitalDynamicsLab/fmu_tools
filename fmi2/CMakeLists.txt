@@ -108,7 +108,8 @@ string(RANDOM LENGTH 4  ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE3)
 string(RANDOM LENGTH 4  ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE4)
 string(RANDOM LENGTH 12 ALPHABET ${UUID_ALPHABET} FMU_NAMESPACE5)
 set(FMU_GUID_NAMESPACE_RANDOM "${FMU_NAMESPACE1}-${FMU_NAMESPACE2}-${FMU_NAMESPACE3}-${FMU_NAMESPACE4}-${FMU_NAMESPACE5}")
-set(FMU_GUID_NAMESPACE ${FMU_GUID_NAMESPACE_RANDOM} CACHE STRING "FMU Namespace used to generated FMU GUID; replace with your own.")
+
+set(FMU_GUID_NAMESPACE ${FMU_GUID_NAMESPACE_RANDOM} CACHE STRING "FMU Namespace used to generated FMU GUID.")
 message(STATUS "${FMU_MSG_PREFIX}FMU_GUID_NAMESPACE: ${FMU_GUID_NAMESPACE}")
 string(UUID FMU_GUID NAMESPACE ${FMU_GUID_NAMESPACE} NAME ${FMU_MODEL_IDENTIFIER} TYPE SHA1)
 message(STATUS "${FMU_MSG_PREFIX}FMU_GUID: ${FMU_GUID}")
@@ -116,8 +117,6 @@ message(STATUS "${FMU_MSG_PREFIX}FMU_GUID: ${FMU_GUID}")
 # -------------------------------------------------
 # Target: compiles FMU source code
 # -------------------------------------------------
-
-set(USE_CUSTOM_TYPESPLATFORM OFF CACHE BOOL "Use custom types platform definition.")
 
 set(FMU_SOURCES 
     ${CMAKE_CURRENT_SOURCE_DIR}/FmuToolsCommon.h
@@ -228,18 +227,23 @@ add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
 )
 
 if (DEFINED FMU_RESOURCES_DIRECTORY AND NOT FMU_RESOURCES_DIRECTORY STREQUAL "")
-    #TODO: is there the need to copy the resources folder before creating the zip file?
-    set(FMU_RESOURCES_DIR_OUT "${FMU_DIRECTORY}/resources")
+    if(EXISTS ${FMU_RESOURCES_DIRECTORY})
+        message(STATUS "${FMU_MSG_PREFIX}Found resources folder: ${FMU_RESOURCES_DIRECTORY}")
 
-    message(STATUS "${FMU_MSG_PREFIX}Found resources folder: ${FMU_RESOURCES_DIRECTORY}")
-    add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
-        COMMENT "\nCopying ${FMU_RESOURCES_DIRECTORY} to ${FMU_RESOURCES_DIR_OUT}"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${FMU_RESOURCES_DIRECTORY}" "${FMU_RESOURCES_DIR_OUT}"
-        BYPRODUCTS "${FMU_DIRECTORY}/resources"
-        WORKING_DIRECTORY ${FMU_DIRECTORY}
-    )
+        set(FMU_RESOURCES_DIR_OUT "${FMU_DIRECTORY}/resources")
+
+        add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
+          COMMENT "\nCopying ${FMU_RESOURCES_DIRECTORY} to ${FMU_RESOURCES_DIR_OUT}"
+          COMMAND ${CMAKE_COMMAND} -E copy_directory "${FMU_RESOURCES_DIRECTORY}" "${FMU_RESOURCES_DIR_OUT}"
+          BYPRODUCTS "${FMU_DIRECTORY}/resources"
+          WORKING_DIRECTORY ${FMU_DIRECTORY}
+        )
+    else()
+        message(STATUS "${FMU_MSG_PREFIX}Resources directory ${FMU_RESOURCES_DIRECTORY} not found.")
+        set(FMU_RESOURCES_DIR_OUT "")
+    endif()
 else()
-    message(STATUS "${FMU_MSG_PREFIX}No resources directory specified or non existing.")
+    message(STATUS "${FMU_MSG_PREFIX}No resources directory specified.")
     set(FMU_RESOURCES_DIR_OUT "")
 endif()
 
@@ -254,15 +258,7 @@ add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
 # Target that runs the compiled fmu
 # -------------------------------------------------
 
-set(BUILD_FMU_HOST ON CACHE BOOL "Build fmu_host to run FMUs.")
-
 if (BUILD_FMU_HOST)
-    # *************************************************************************************************
-    # If caller sets BUILD_FMU_HOST to ON, caller must add custom sources to 
-    # the fmu_host_${FMU_MODEL_IDENTIFIER} target with a call as follows:
-    #    'target_sources(fmu_host_${FMU_MODEL_IDENTIFIER} PRIVATE <yoursourcefiles>)'
-    # *************************************************************************************************
-
     set(fmi_host_cosim fmi_hostcosimulation_${FMU_MODEL_IDENTIFIER})
 
     message(STATUS "${FMU_MSG_PREFIX}Host instantiation enabled")
@@ -289,12 +285,9 @@ else()
     message(STATUS "${FMU_MSG_PREFIX}Host instantiation disabled")    
 endif()
 
-
 # -------------------------------------------------
 # Target that runs the compiled and extracted fmu
 # -------------------------------------------------
-
-set(BUILD_TESTING ON CACHE BOOL "Enable testing")
 
 if (BUILD_TESTING)
     if(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
