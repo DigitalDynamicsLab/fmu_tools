@@ -9,7 +9,7 @@
 #include <iostream>
 #include <cstddef>
 
-#include "fmi2/FmuToolsImport.hpp"
+#include "fmi2/FmuToolsImport.h"
 
 std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
 ////std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY;

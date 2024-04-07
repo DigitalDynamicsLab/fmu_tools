@@ -16,6 +16,13 @@ set(COMPILER_FLAGS "")
 set(LINKER_FLAGS "")
 list(APPEND LIBS "")
 
+# Set the minimum required C++ standard to C++14, allow C++17 if available
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED OFF)
+set(CMAKE_CXX_STANDARD 17)
+
 #==============================================================
 
 include(FetchContent)
