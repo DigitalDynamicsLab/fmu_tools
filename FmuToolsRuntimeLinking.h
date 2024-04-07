@@ -17,6 +17,7 @@
 #    include <string>
 #else
 #    include <dlfcn.h>
+#    include <limits.h>
 #    define DYNLIB_HANDLE void*
 #    define get_function_ptr dlsym
 #endif
@@ -71,10 +72,14 @@ std::string GetLibraryLocation(){
         std::cerr << "Error getting the FMU shared library handle. Error code: " << GetLastError() << std::endl;
     }
 #else
+    void* sym_ptr = dlsym(RTLD_DEFAULT, "fmi2DoStep");
+    if (sym_ptr == NULL) {
+        std::cout << "Warning: FmuToolsRuntimeLinking: sym_ptr to fmi2DoStep is Null" << std::endl;
+    }
     Dl_info dl_info;
-    if (dladdr((void*)main, &dl_info)) {
+    if (dladdr(sym_ptr, &dl_info)) {
         char library_pathc[PATH_MAX];
-        realpath(dl_info.dli_fname, library_pathc);
+        library_path = realpath(dl_info.dli_fname, library_pathc);
         //std::cout << "The path of the FMU shared library is: " << library_pathc << std::endl;
         library_path = std::string(library_pathc);
     } else {
