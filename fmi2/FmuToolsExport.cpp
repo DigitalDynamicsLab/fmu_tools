@@ -29,7 +29,7 @@ void createModelDescription(const std::string& path, FmuType fmu_type) {
 
     fmi2CallbackFunctions callfun = {LoggingUtilities::logger_default, calloc, free, nullptr, nullptr};
     FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmi2_type, FMU_GUID,
-                                                       ("file:///" + GetLibraryLocation() + "../../resources").c_str(),
+                                                       ("file:///" + GetLibraryLocation() + "/../../resources").c_str(),
                                                        &callfun, fmi2False, fmi2False);
     fmu->ExportModelDescription(path);
     delete fmu;

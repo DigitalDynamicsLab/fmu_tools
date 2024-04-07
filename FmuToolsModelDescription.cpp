@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
         if (argc == 4) {
             output_path = argv[3];
         } else
-            output_path = dynlib_fullpath + "../../";
+            output_path = dynlib_fullpath + "/../../";
 
     } else {
         std::cout << "Usage: " << argv[0]
