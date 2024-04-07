@@ -7,7 +7,7 @@ set(COMPONENT_DLL_DEPENDENCIES "")
 #--------------------------------------------------------------
 
 set(BUILD_FMU_HOST ON CACHE BOOL "Build fmi_host executable to run FMUs.")
-set(BUILD_TESTING ON CACHE BOOL "Enable testing")
+set(BUILD_TESTING OFF CACHE BOOL "Enable testing")
 set(USE_CUSTOM_TYPESPLATFORM OFF CACHE BOOL "Use custom types platform definition.")
 
 #--------------------------------------------------------------

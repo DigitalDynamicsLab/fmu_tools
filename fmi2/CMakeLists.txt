@@ -44,8 +44,6 @@ set(FMU_DIRECTORY "${FMU_MAIN_DIRECTORY}/${FMU_MODEL_IDENTIFIER}")
 set(FMU_FILENAME "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu")
 message(STATUS "${FMU_MSG_PREFIX}FMU to be created: ${FMU_FILENAME}")
 
-set(FMU_UNPACK_DIRECTORY "${FMU_DIRECTORY}/.${FMU_MODEL_IDENTIFIER}/")
-
 set(TESTING_ENABLED_OS "win64" "linux64")
 
 # -------------------------------------------------
@@ -114,9 +112,9 @@ message(STATUS "${FMU_MSG_PREFIX}FMU_GUID_NAMESPACE: ${FMU_GUID_NAMESPACE}")
 string(UUID FMU_GUID NAMESPACE ${FMU_GUID_NAMESPACE} NAME ${FMU_MODEL_IDENTIFIER} TYPE SHA1)
 message(STATUS "${FMU_MSG_PREFIX}FMU_GUID: ${FMU_GUID}")
 
-# -------------------------------------------------
-# Target: compiles FMU source code
-# -------------------------------------------------
+# -------------------------------------
+# Target to compile the FMU source code
+# -------------------------------------
 
 set(FMU_SOURCES 
     ${CMAKE_CURRENT_SOURCE_DIR}/FmuToolsCommon.h
@@ -170,9 +168,9 @@ set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES LIBRARY_OUTPUT_DIRECTOR
 set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_RELEASE ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 set_target_properties(${FMU_MODEL_IDENTIFIER} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_DEBUG ${FMU_RUNTIME_OUTPUT_DIRECTORY})
 
-# -------------------------------------------------
-# Target: generates modelDescription.xml
-# -------------------------------------------------
+# ----------------------------------------------------
+# Target to generate the FMU modelDescription XML file
+# ----------------------------------------------------
 
 if (NOT TARGET fmi_modeldescription)
     set(MODELDESCRIPTION_SOURCES
@@ -200,13 +198,13 @@ endif()
 
 add_dependencies(${FMU_MODEL_IDENTIFIER} fmi_modeldescription)
 
-# --------------------------------------
-# Add custom commands for:
-# - Copying external dependencies (if any)
-# - Generating the FMU model description
-# - Adding the FMU resources directory (if any)
-# - Creating the FMU archive
-# ---------------------------------------
+# ---------------------------------------------
+# Add custom commands to:
+# - Copy external dependencies (if any)
+# - Generate the FMU model description
+# - Add the FMU resources directory (if any)
+# - Create the FMU archive
+# ---------------------------------------------
 
 if (DEFINED FMU_DEPENDENCIES AND NOT FMU_DEPENDENCIES STREQUAL "")
     message(STATUS "${FMU_MSG_PREFIX}Found dependencies: ${FMU_DEPENDENCIES}")
@@ -254,9 +252,9 @@ add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
     WORKING_DIRECTORY ${FMU_DIRECTORY}
 )
 
-# -------------------------------------------------
-# Target that runs the compiled fmu
-# -------------------------------------------------
+# ----------------------------------------------
+# Target to run the FMU in a simple host program
+# ----------------------------------------------
 
 if (BUILD_FMU_HOST)
     set(fmi_host_cosim fmi_hostcosimulation_${FMU_MODEL_IDENTIFIER})
@@ -270,7 +268,7 @@ if (BUILD_FMU_HOST)
 
     add_executable(${fmi_host_cosim} ${HOST_SOURCES})
     target_include_directories(${fmi_host_cosim} PRIVATE "${CMAKE_SOURCES_DIR}")
-    target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_UNPACK_DIRECTORY="${FMU_UNPACK_DIRECTORY}")
+    target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_UNPACK_DIRECTORY="${FMU_DIRECTORY}/tmp_unpack")
     target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_DIRECTORY="${FMU_DIRECTORY}")
     target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_FILENAME="${FMU_FILENAME}")
     target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_OS_SUFFIX="${FMI_PLATFORM}")
@@ -282,17 +280,15 @@ if (BUILD_FMU_HOST)
     endif()
     add_dependencies(${fmi_host_cosim} ${FMU_MODEL_IDENTIFIER})
 else()
-    message(STATUS "${FMU_MSG_PREFIX}Host instantiation disabled")    
+    message(STATUS "${FMU_MSG_PREFIX}Host instantiation disabled")
 endif()
 
-# -------------------------------------------------
-# Target that runs the compiled and extracted fmu
-# -------------------------------------------------
+# --------------------------------------------------------
+# Target to run fmuCheck on the FMU and test result output 
+# --------------------------------------------------------
 
 if (BUILD_TESTING)
     if(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
-        set(TESTING_ENABLED ON)
-        
         ## Call fmuChecker on the FMU, parse its output
         set(fmi_testchecker fmi_testchecker_${FMU_MODEL_IDENTIFIER})
         set(build_fmi_testchecker build_test_parseFmuChecker_${FMU_MODEL_IDENTIFIER})
@@ -340,7 +336,6 @@ if (BUILD_TESTING)
         message(STATUS "${FMU_MSG_PREFIX}Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
     endif()
 else()
-    set(TESTING_ENABLED OFF)
     message(STATUS "${FMU_MSG_PREFIX}Testing disabled")
 endif(BUILD_TESTING)
 
@@ -354,4 +349,3 @@ set(FMU_DIRECTORY ${FMU_DIRECTORY} PARENT_SCOPE)
 set(FMU_FILENAME ${FMU_FILENAME} PARENT_SCOPE)
 set(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_RUNTIME_OUTPUT_DIRECTORY}" PARENT_SCOPE)
 set(FMU_SOURCES ${FMU_SOURCES} PARENT_SCOPE)
-set(TESTING_ENABLED ${TESTING_ENABLED} PARENT_SCOPE)
