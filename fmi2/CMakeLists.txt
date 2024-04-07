@@ -7,6 +7,7 @@
 #   FMU_DEPENDENCIES (optional)
 #   FMU_RESOURCES_DIRECTORY (optional)
 #   FMU_GUID_NAMESPACE (optional, default randomly-generated)
+#   FMU_TESTING (optional, default OFF)
 #   BUILD_FMU_HOST (optional, default ON)
 #   USE_CUSTOM_TYPESPLATFORM (optional, default OFF)
 #   FMU_MSG_PREFIX (optional, default "")
@@ -287,7 +288,7 @@ endif()
 # Target to run fmuCheck on the FMU and test result output 
 # --------------------------------------------------------
 
-if (BUILD_TESTING)
+if (FMU_TESTING)
     if(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
         ## Call fmuChecker on the FMU, parse its output
         set(fmi_testchecker fmi_testchecker_${FMU_MODEL_IDENTIFIER})
@@ -337,7 +338,7 @@ if (BUILD_TESTING)
     endif()
 else()
     message(STATUS "${FMU_MSG_PREFIX}Testing disabled")
-endif(BUILD_TESTING)
+endif(FMU_TESTING)
 
 # -------------------------------------------------
 # Propagate variable to upper levels
