@@ -8,7 +8,6 @@
 #   FMU_RESOURCES_DIRECTORY (optional)
 #   FMU_GUID_NAMESPACE (optional, default randomly-generated)
 #   FMU_TESTING (optional, default OFF)
-#   BUILD_FMU_HOST (optional, default ON)
 #   USE_CUSTOM_TYPESPLATFORM (optional, default OFF)
 #   FMU_MSG_PREFIX (optional, default "")
 #
@@ -252,37 +251,6 @@ add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
     BYPRODUCTS "${FMU_DIRECTORY}/${FMU_MODEL_IDENTIFIER}.fmu"
     WORKING_DIRECTORY ${FMU_DIRECTORY}
 )
-
-# ----------------------------------------------
-# Target to run the FMU in a simple host program
-# ----------------------------------------------
-
-if (BUILD_FMU_HOST)
-    set(fmi_host_cosim fmi_hostcosimulation_${FMU_MODEL_IDENTIFIER})
-
-    message(STATUS "${FMU_MSG_PREFIX}Host instantiation enabled")
-    message(STATUS "${FMU_MSG_PREFIX}   adding target '${fmi_host_cosim}'")
-
-    set(HOST_SOURCES
-        ${CMAKE_CURRENT_SOURCE_DIR}/FmuToolsHostCosimulation.cpp)
-    source_group("" FILES ${HOST_SOURCES})
-
-    add_executable(${fmi_host_cosim} ${HOST_SOURCES})
-    target_include_directories(${fmi_host_cosim} PRIVATE "${CMAKE_SOURCES_DIR}")
-    target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_UNPACK_DIRECTORY="${FMU_DIRECTORY}/tmp_unpack")
-    target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_DIRECTORY="${FMU_DIRECTORY}")
-    target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_FILENAME="${FMU_FILENAME}")
-    target_compile_definitions(${fmi_host_cosim} PUBLIC FMU_OS_SUFFIX="${FMI_PLATFORM}")
-    target_compile_definitions(${fmi_host_cosim} PUBLIC SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}")
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "6.0")
-        target_link_options(${fmi_host_cosim} PRIVATE "LINKER:-as-needed")
-        target_link_libraries(${fmi_host_cosim} PRIVATE stdc++fs)
-        target_link_libraries(${fmi_host_cosim} PRIVATE ${CMAKE_DL_LIBS})
-    endif()
-    add_dependencies(${fmi_host_cosim} ${FMU_MODEL_IDENTIFIER})
-else()
-    message(STATUS "${FMU_MSG_PREFIX}Host instantiation disabled")
-endif()
 
 # --------------------------------------------------------
 # Target to run fmuCheck on the FMU and test result output 

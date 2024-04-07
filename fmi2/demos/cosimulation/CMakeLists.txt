@@ -6,7 +6,6 @@ set(COMPONENT_DLL_DEPENDENCIES "")
 
 #--------------------------------------------------------------
 
-set(BUILD_FMU_HOST ON CACHE BOOL "Build fmi_host executable to run FMUs.")
 set(FMU_TESTING OFF CACHE BOOL "Enable testing")
 set(USE_CUSTOM_TYPESPLATFORM OFF CACHE BOOL "Use custom types platform definition.")
 
@@ -57,3 +56,27 @@ target_link_libraries(${FMU_MODEL_IDENTIFIER} ${LIBS})
 
 source_group("" FILES ${COMPONENT_SOURCES})
 
+#==============================================================
+
+message(STATUS "...add instantiation demo for ${COMPONENT_NAME}")
+
+set(DEMO myDemoCosimulation_fmi2)
+set(DEMO_SOURCES myDemoCosimulation_fmi2.cpp)
+source_group("" FILES ${DEMO_SOURCES})
+
+add_executable(${DEMO} ${DEMO_SOURCES})
+
+target_include_directories(${DEMO} PRIVATE "${CMAKE_SOURCES_DIR}")
+target_compile_definitions(${DEMO} PUBLIC FMU_UNPACK_DIRECTORY="${FMU_DIRECTORY}/tmp_unpack")
+target_compile_definitions(${DEMO} PUBLIC FMU_DIRECTORY="${FMU_DIRECTORY}")
+target_compile_definitions(${DEMO} PUBLIC FMU_FILENAME="${FMU_FILENAME}")
+target_compile_definitions(${DEMO} PUBLIC FMU_OS_SUFFIX="${FMI_PLATFORM}")
+target_compile_definitions(${DEMO} PUBLIC SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}")
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "6.0")
+    target_link_options(${DEMO} PRIVATE "LINKER:-as-needed")
+    target_link_libraries(${DEMO} PRIVATE stdc++fs)
+    target_link_libraries(${DEMO} PRIVATE ${CMAKE_DL_LIBS})
+endif()
+
+add_dependencies(${DEMO} ${COMPONENT_NAME})
