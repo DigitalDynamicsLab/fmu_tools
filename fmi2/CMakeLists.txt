@@ -209,7 +209,7 @@ if (DEFINED FMU_DEPENDENCIES AND NOT FMU_DEPENDENCIES STREQUAL "")
     message(STATUS "${FMU_MSG_PREFIX}Found dependencies: ${FMU_DEPENDENCIES}")
     add_custom_command(
         TARGET ${FMU_MODEL_IDENTIFIER} PRE_BUILD
-        COMMENT "Copy FMU dependencies."
+        COMMENT "\nCopy FMU dependencies '${FMU_DEPENDENCIES}' into '${FMU_RUNTIME_OUTPUT_DIRECTORY}'"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FMU_DEPENDENCIES} ${FMU_RUNTIME_OUTPUT_DIRECTORY}
     )
 else()

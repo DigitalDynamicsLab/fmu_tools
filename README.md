@@ -114,86 +114,76 @@ The creation of an FMU requires few steps that are automatically carried on by C
 
 In order to better grasp what is happening under the hood it is important to understand both the target/command dependencies and the order in which they are triggered.
 
-The dependencies can be depicted as:
-
-```mermaid
-flowchart TB
-    subgraph DEPENDENCIES_target["Dependencies (provided by parent project)"]
-    direction TB
-    COPY_LIB[["`Copy dependencies (*.dll) into FMU_RUNTIME_OUTPUT_DIRECTORY`"]]
-    COPY_RESOURCES[["`Copy FMU_RESOURCES_DIRECTORY into 'FMU_DIRECTORY/resources'`"]]
-    end
-    subgraph FMU_MODEL_IDENTIFIER_target[Build FMU source]
-    direction TB
-    FMU_MODEL_IDENTIFIER-->FMU_MI_OUTPUT[/"Build 'FMU_MODEL_IDENTIFIER.dll' into FMU_RUNTIME_OUTPUT_DIRECTORY=FMU_DIRECTORY/bin/_os_/"/]
-    end
-    subgraph modelDescriptionGen[Create modelDescription.xml]
-    direction TB
-    fmi_modeldescription_build["fmi_modeldescription"]-->fmi_modeldescription_output[/"fmi_modeldescription.exe"/]
-    fmi_modeldescription[["`fmi_modeldescription.exe FMU_MODEL_IDENTIFIER`"]]-->MODEL_DESCRIPTION[/"Create 'modelDescription.xml' in FMU_DIRECTORY"/]
-    fmi_modeldescription_output -.-> fmi_modeldescription
-    end
-    subgraph zip_procedure["Zipping"]
-    direction TB
-    ZIP[["CMake ZIP"]]-->FMU_MODEL_IDENTIFIER_ZIP[/"Create 'FMU_MODEL_IDENTIFIER.fmu' in FMU_DIRECTORY"/]
-    end
-    FMU_MI_OUTPUT --> ZIP
-    MODEL_DESCRIPTION --> ZIP
-    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| fmi_modeldescription
-    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| ZIP
-    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| COPY_LIB
-    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| COPY_RESOURCES
-    FMU_MODEL_IDENTIFIER -.->|ADD_DEPENDENCIES| fmi_modeldescription_build
-```
-
-The layout above ends up triggering the various commands/build in the following order:
-
-```mermaid
-flowchart TB
-    subgraph FMU_MODEL_IDENTIFIER_target[Build FMU source]
-    direction TB
-    FMU_MODEL_IDENTIFIER-->FMU_MI_OUTPUT[/"Build 'FMU_MODEL_IDENTIFIER.dll' in 'FMU_RUNTIME_OUTPUT_DIRECTORY'"/]
-    end
-    subgraph modelDescGenBuild[ ]
-    direction TB
-    fmi_modeldescription_build["fmi_modeldescription"]-->fmi_modeldescription_output[/"Build 'fmi_modeldescription.exe'"/]
-    end
-    subgraph modelDescription[ ]
-    direction TB
-    fmi_modeldescription[["`Call 'fmi_modeldescription.exe FMU_MODEL_IDENTIFIER'`"]]-->MODEL_DESCRIPTION[/"Create 'modelDescription.xml'"/]
-    end
-    subgraph dependenciesCopy[ ]
-    direction TB
-    dependencies_copy[["Copy 'FMU_DEPENDENCIES' into 'FMU_RUNTIME_OUTPUT_DIRECTORY'"]]
-    end
-    subgraph resourcesFolder[ ]
-    direction TB
-    resources_folder[["Copy 'FMU_RESOURCES' into 'FMU_DIRECTORY/resources'"]]
-    end
-    subgraph zip_procedure[ ]
-    direction TB
-    ZIP[["CMake ZIP"]]-->FMU_MODEL_IDENTIFIER_ZIP[/"Zip 'FMU_DIRECTORY' into 'FMU_MODEL_IDENTIFIER.fmu'"/]
-    end
-    MODEL_DESCRIPTION -->dependenciesCopy
-    dependenciesCopy --> resourcesFolder
-    resourcesFolder --> ZIP
-    fmi_modeldescription_output --> FMU_MODEL_IDENTIFIER
-    FMU_MI_OUTPUT --> fmi_modeldescription
-```
-
-Please consider the legend:
-
+With the various blocks below following the convention:
 ```mermaid
 flowchart TB
     TARGET_EXAMPLE["This is a CMake target"]
     CUSTOM_COMMAND_EXAMPLE[["This is a CMake custom command"]]
-    OUTPUT_EXAMPLE[/"This is a CMake or build output"/]
+    OUTPUT_EXAMPLE[/"This is a build or command output"/]
 ```
 
+the dependencies can be depicted as:
+```mermaid
+flowchart TB
+    subgraph DEPENDENCIES_target["Dependencies and resources"]
+    direction TB
+    COPY_LIB[["`Copy dependencies (FMU_DEPENDENCIES) into FMU_RUNTIME_OUTPUT_DIRECTORY`"]]
+    COPY_RESOURCES[["`Copy FMU_RESOURCES_DIRECTORY into 'FMU_DIRECTORY/resources'`"]]
+    end
+    subgraph FMU_MODEL_IDENTIFIER_target[Build FMU source]
+    direction TB
+    FMU_MODEL_IDENTIFIER-->FMU_MI_OUTPUT[/"`Build 'FMU_MODEL_IDENTIFIER' binaries in FMU_RUNTIME_OUTPUT_DIRECTORY=FMU_DIRECTORY/bin/_os_/`"/]
+    end
+    subgraph modelDescriptionGen[Create modelDescription.xml]
+    direction TB
+    fmi_modeldescription_build["fmi_modeldescription"]-->fmi_modeldescription_output[/"fmi_modeldescription.exe"/]
+    fmi_modeldescription[["Execute 'fmi_modeldescription.exe FMU_MODEL_IDENTIFIER'"]]-->MODEL_DESCRIPTION[/"Create 'modelDescription.xml' in FMU_DIRECTORY"/]
+    fmi_modeldescription_output -.-> fmi_modeldescription
+    end
+    subgraph zip_procedure["Create FMU file"]
+    direction TB
+    ZIP[["Execute 'tar --format=zip FMU_DIRECTORY'"]]-->FMU_MODEL_IDENTIFIER_ZIP[/"Create 'FMU_MODEL_IDENTIFIER.fmu' in FMU_DIRECTORY"/]
+    end
+    FMU_MI_OUTPUT --> ZIP
+    MODEL_DESCRIPTION --> ZIP
+    COPY_LIB --> ZIP
+    COPY_RESOURCES --> ZIP
+    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| fmi_modeldescription
+    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| ZIP
+    FMU_MODEL_IDENTIFIER -.->|PRE_BUILD| COPY_LIB
+    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| COPY_RESOURCES
+```
 
-
-
-
-
-
-
+The above layout triggers the various commands/builds in the following order:
+```mermaid
+flowchart TB
+    subgraph FMU_MODEL_IDENTIFIER_target[ ]
+    direction TB
+    FMU_MODEL_IDENTIFIER["<b>TARGET:</b> FMU_MODEL_IDENTIFIER"]-->FMU_MI_OUTPUT[/"Build 'FMU_MODEL_IDENTIFIER' binaries in 'FMU_RUNTIME_OUTPUT_DIRECTORY'"/]
+    end
+    subgraph modelDescGenBuild[ ]
+    direction TB
+    fmi_modeldescription_build["<b>TARGET:</b> fmi_modeldescription"]-->fmi_modeldescription_output[/"Build 'fmi_modeldescription.exe'"/]
+    end
+    subgraph modelDescription[ ]
+    direction TB
+    fmi_modeldescription[["<b>COMMAND:</b> Execute 'fmi_modeldescription.exe FMU_MODEL_IDENTIFIER'"]]-->MODEL_DESCRIPTION[/"Create 'modelDescription.xml'"/]
+    end
+    subgraph dependenciesCopy[ ]
+    direction TB
+    dependencies_copy[["<b>COMMAND:</b> Copy 'FMU_DEPENDENCIES' into 'FMU_RUNTIME_OUTPUT_DIRECTORY'"]]
+    end
+    subgraph resourcesFolder[ ]
+    direction TB
+    resources_folder[["<b>COMMAND:</b> Copy 'FMU_RESOURCES' into 'FMU_DIRECTORY/resources'"]]
+    end
+    subgraph zip_procedure[ ]
+    direction TB
+    ZIP[["<b>COMMAND:</b> Execute 'tar --format=zip FMU_DIRECTORY'"]]-->FMU_MODEL_IDENTIFIER_ZIP[/"Create 'FMU_MODEL_IDENTIFIER.fmu' ZIP archive"/]
+    end
+    fmi_modeldescription_output --> dependenciesCopy
+    dependenciesCopy --> FMU_MODEL_IDENTIFIER
+    FMU_MI_OUTPUT --> fmi_modeldescription
+    MODEL_DESCRIPTION -->resourcesFolder
+    resourcesFolder --> ZIP
+```
