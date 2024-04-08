@@ -446,8 +446,7 @@ void FmuUnit::LoadXML() {
 
 void FmuUnit::LoadSharedLibrary() {
     std::string dynlib_dir = directory + "/" + binaries_dir;
-    std::string dynlib_name = dynlib_dir + "/" + std::string(SHARED_LIBRARY_PREFIX) +
-                              info_cosimulation_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
+    std::string dynlib_name = dynlib_dir + "/" + info_cosimulation_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
 
     dynlib_handle = RuntimeLinkLibrary(dynlib_dir, dynlib_name);
 
