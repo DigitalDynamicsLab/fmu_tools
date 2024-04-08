@@ -118,63 +118,67 @@ The dependencies can be depicted as:
 
 ```mermaid
 flowchart TB
-    subgraph DEPENDENCIES_target[External Project using fmu_tools]
+    subgraph DEPENDENCIES_target["Dependencies (provided by parent project)"]
     direction TB
-    DEPENDENT_LIB["COPY_DEPENDENCIES"]-->CREATE_DIR[["Create FMU_RUNTIME_OUTPUT_DIRECTORY"]]
-    DEPENDENT_LIB-->COPY_LIB[["`Copy _Dependency.dll_  into FMU_RUNTIME_OUTPUT_DIRECTORY`"]]
+    COPY_LIB[["`Copy dependencies (*.dll) into FMU_RUNTIME_OUTPUT_DIRECTORY`"]]
+    COPY_RESOURCES[["`Copy FMU_RESOURCES_DIRECTORY into 'FMU_DIRECTORY/resources'`"]]
     end
     subgraph FMU_MODEL_IDENTIFIER_target[Build FMU source]
     direction TB
-    FMU_MODEL_IDENTIFIER-->FMU_MI_OUTPUT[/"FMU_MODEL_IDENTIFIER.dll"/]
+    FMU_MODEL_IDENTIFIER-->FMU_MI_OUTPUT[/"Build 'FMU_MODEL_IDENTIFIER.dll' into FMU_RUNTIME_OUTPUT_DIRECTORY=FMU_DIRECTORY/bin/_os_/"/]
     end
-    subgraph modelDescriptionGen[ ]
+    subgraph modelDescriptionGen[Create modelDescription.xml]
     direction TB
-    fmu_modeldescription_generator_build["fmu_modeldescription_generator"]-->fmu_modeldescription_generator_output[/"fmu_modeldescription_generator.exe"/]
-    fmu_modeldescription_generator[["`fmu_modeldescription_generator(FMU_MODEL_IDENTIFIER)`"]]-->MODEL_DESCRIPTION[/"modelDescription.xml"/]
-    fmu_modeldescription_generator_output -.-> fmu_modeldescription_generator
+    fmi_modeldescription_build["fmi_modeldescription"]-->fmi_modeldescription_output[/"fmi_modeldescription.exe"/]
+    fmi_modeldescription[["`fmi_modeldescription.exe FMU_MODEL_IDENTIFIER`"]]-->MODEL_DESCRIPTION[/"Create 'modelDescription.xml' in FMU_DIRECTORY"/]
+    fmi_modeldescription_output -.-> fmi_modeldescription
     end
-    subgraph zip_procedure[ ]
+    subgraph zip_procedure["Zipping"]
     direction TB
-    ZIP[["CMake ZIP"]]-->FMU_MODEL_IDENTIFIER_ZIP[/"FMU_MODEL_IDENTIFIER.fmu"/]
+    ZIP[["CMake ZIP"]]-->FMU_MODEL_IDENTIFIER_ZIP[/"Create 'FMU_MODEL_IDENTIFIER.fmu' in FMU_DIRECTORY"/]
     end
-    MODEL_DESCRIPTION --> ZIP
     FMU_MI_OUTPUT --> ZIP
-    COPY_LIB --> ZIP
-    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| fmu_modeldescription_generator
+    MODEL_DESCRIPTION --> ZIP
+    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| fmi_modeldescription
     FMU_MODEL_IDENTIFIER -.->|POST_BUILD| ZIP
-    FMU_MODEL_IDENTIFIER -.->|ADD_DEPENDENCIES| DEPENDENT_LIB
-    FMU_MODEL_IDENTIFIER -.->|ADD_DEPENDENCIES| fmu_modeldescription_generator_build
+    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| COPY_LIB
+    FMU_MODEL_IDENTIFIER -.->|POST_BUILD| COPY_RESOURCES
+    FMU_MODEL_IDENTIFIER -.->|ADD_DEPENDENCIES| fmi_modeldescription_build
 ```
 
 The layout above ends up triggering the various commands/build in the following order:
 
 ```mermaid
 flowchart TB
-    subgraph DEPENDENCIES_target[External Project using fmu_tools]
-    direction TB
-    DEPENDENT_LIB["COPY_DEPENDENCIES"]-->CREATE_DIR[["Create FMU_RUNTIME_OUTPUT_DIRECTORY"]]
-    CREATE_DIR-->COPY_LIB[["`Copy _Dependency.dll_  into FMU_RUNTIME_OUTPUT_DIRECTORY`"]]
-    end
     subgraph FMU_MODEL_IDENTIFIER_target[Build FMU source]
     direction TB
-    FMU_MODEL_IDENTIFIER-->FMU_MI_OUTPUT[/"FMU_MODEL_IDENTIFIER.dll"/]
+    FMU_MODEL_IDENTIFIER-->FMU_MI_OUTPUT[/"Build 'FMU_MODEL_IDENTIFIER.dll' in 'FMU_RUNTIME_OUTPUT_DIRECTORY'"/]
     end
-    subgraph modelDescGenBuild[Build fmu_modeldescription_generator]
+    subgraph modelDescGenBuild[ ]
     direction TB
-    fmu_modeldescription_generator_build["fmu_modeldescription_generator"]-->fmu_modeldescription_generator_output[/"fmu_modeldescription_generator.exe"/]
+    fmi_modeldescription_build["fmi_modeldescription"]-->fmi_modeldescription_output[/"Build 'fmi_modeldescription.exe'"/]
     end
-    subgraph modelDescription[Call fmu_modeldescription_generator]
+    subgraph modelDescription[ ]
     direction TB
-    fmu_modeldescription_generator[["`fmu_modeldescription_generator(FMU_MODEL_IDENTIFIER)`"]]-->MODEL_DESCRIPTION[/"modelDescription.xml"/]
+    fmi_modeldescription[["`Call 'fmi_modeldescription.exe FMU_MODEL_IDENTIFIER'`"]]-->MODEL_DESCRIPTION[/"Create 'modelDescription.xml'"/]
+    end
+    subgraph dependenciesCopy[ ]
+    direction TB
+    dependencies_copy[["Copy 'FMU_DEPENDENCIES' into 'FMU_RUNTIME_OUTPUT_DIRECTORY'"]]
+    end
+    subgraph resourcesFolder[ ]
+    direction TB
+    resources_folder[["Copy 'FMU_RESOURCES' into 'FMU_DIRECTORY/resources'"]]
     end
     subgraph zip_procedure[ ]
     direction TB
-    ZIP[["CMake ZIP"]]-->FMU_MODEL_IDENTIFIER_ZIP[/"FMU_MODEL_IDENTIFIER.fmu"/]
+    ZIP[["CMake ZIP"]]-->FMU_MODEL_IDENTIFIER_ZIP[/"Zip 'FMU_DIRECTORY' into 'FMU_MODEL_IDENTIFIER.fmu'"/]
     end
-    MODEL_DESCRIPTION --> ZIP
-    COPY_LIB --> FMU_MODEL_IDENTIFIER
-    fmu_modeldescription_generator_output --> FMU_MODEL_IDENTIFIER
-    FMU_MI_OUTPUT --> fmu_modeldescription_generator
+    MODEL_DESCRIPTION -->dependenciesCopy
+    dependenciesCopy --> resourcesFolder
+    resourcesFolder --> ZIP
+    fmi_modeldescription_output --> FMU_MODEL_IDENTIFIER
+    FMU_MI_OUTPUT --> fmi_modeldescription
 ```
 
 Please consider the legend:

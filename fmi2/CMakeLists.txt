@@ -17,7 +17,6 @@
 #   FMU_FILENAME
 #   FMU_RUNTIME_OUTPUT_DIRECTORY
 #   FMU_SOURCES
-#   TESTING_ENABLED
 # -------------------------------------------------
 
 # Set the minimum required C++ standard to C++14, allow C++17 if available
@@ -233,7 +232,7 @@ if (DEFINED FMU_RESOURCES_DIRECTORY AND NOT FMU_RESOURCES_DIRECTORY STREQUAL "")
         add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
           COMMENT "\nCopying ${FMU_RESOURCES_DIRECTORY} to ${FMU_RESOURCES_DIR_OUT}"
           COMMAND ${CMAKE_COMMAND} -E copy_directory "${FMU_RESOURCES_DIRECTORY}" "${FMU_RESOURCES_DIR_OUT}"
-          BYPRODUCTS "${FMU_DIRECTORY}/resources"
+          BYPRODUCTS "${FMU_RESOURCES_DIR_OUT}"
           WORKING_DIRECTORY ${FMU_DIRECTORY}
         )
     else()
