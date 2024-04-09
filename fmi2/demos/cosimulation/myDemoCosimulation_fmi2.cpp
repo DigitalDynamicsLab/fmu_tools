@@ -33,13 +33,15 @@ int main(int argc, char* argv[]) {
     my_fmu.Instantiate("FmuComponent");  // automatic loading of default resources
 
     std::vector<std::string> categoriesVector = {"logAll"};
+    my_fmu.SetDebugLogging(fmi2True, categoriesVector);
 
-    std::vector<const char*> categoriesArray;
-    for (const auto& category : categoriesVector) {
-        categoriesArray.push_back(category.c_str());
-    }
+    // alternatively, with native interface:
+    // std::vector<const char*> categoriesArray;
+    // for (const auto& category : categoriesVector) {
+    //    categoriesArray.push_back(category.c_str());
+    //}
 
-    my_fmu._fmi2SetDebugLogging(my_fmu.component, fmi2True, categoriesVector.size(), categoriesArray.data());
+    // my_fmu._fmi2SetDebugLogging(my_fmu.component, fmi2True, categoriesVector.size(), categoriesArray.data());
 
     double start_time = 0;
     double stop_time = 2;
