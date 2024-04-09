@@ -178,13 +178,13 @@ FmuComponentBase::FmuComponentBase(fmi2String instanceName,
             sendToLog("Bad URL scheme: " + url_matches[1].str() + ". Trying to continue.\n", fmi2Status::fmi2Warning,
                       "logStatusWarning");
         }
-        m_resources_location = url_matches[2];
+        m_resources_location = std::string(url_matches[2]) + "/";
     } else {
         // TODO: rollback?
         sendToLog("Cannot parse resource location: " + m_resources_location_str + "\n", fmi2Status::fmi2Warning,
                   "logStatusWarning");
 
-        m_resources_location = GetLibraryLocation() + "/../../resources";
+        m_resources_location = GetLibraryLocation() + "/../../resources/";
         sendToLog("Rolled back to default location: " + m_resources_location + "\n", fmi2Status::fmi2Warning,
                   "logStatusWarning");
     }

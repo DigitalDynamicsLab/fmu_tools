@@ -92,37 +92,5 @@ int main(int argc, char* argv[]) {
         std::cout << "BOOLEAN: valref: " << valref << " | val: " << val_bool << std::endl;
     }
 
-    // Just some dumps for checking:
-
-    /*
-    //my_fmu.DumpTree(&my_fmu.tree_variables,0);  // dump all tree
-    my_fmu.DumpTree(&my_fmu.tree_variables.children["body1"],0);  // dump only one subtree
-    */
-
-    /*
-    for (auto& i : my_fmu.visualizers) {
-        std::cout   << "Visualizer: \n"
-                    << "   r1  = " << i.pos_references[0] << "\n"
-                    << "   r2  = " << i.pos_references[1] << "\n"
-                    << "   r3  = " << i.pos_references[2] << "\n";
-    }
-    */
-
-    /*
-    for (auto i : my_fmu.scalarVariables) {
-        std::cout   << "Variable: \n"
-                    << "   name  = " << i.second.name << "\n"
-                    << "   ref.  = " << i.second.valueReference << "\n";
-                   // << "   desc. = " << i.second.description << "\n"
-                   // << "   init. = " << i.second.initial << "\n"
-                   // << "   caus. = " << i.second.causality << "\n"
-                   // << "   varb. = " << i.second.variability << "\n";
-    }
-    */
-
-    //======================================================================
-
-    std::cout << "\n\n\n";
-
     return 0;
 }
