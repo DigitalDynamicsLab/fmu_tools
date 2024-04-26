@@ -248,7 +248,7 @@ void FmuComponentBase::ExitInitializationMode() {
 void FmuComponentBase::SetDebugLogging(std::string cat, bool value) {
     try {
         m_logCategories_enabled[cat] = value;
-    } catch (const std::exception& ex) {
+    } catch (const std::exception&) {
         sendToLog("The LogCategory \"" + cat +
                       "\" is not recognized by the FMU. Please check its availability in modelDescription.xml.\n",
                   fmi2Error, "logStatusError");
@@ -323,6 +323,35 @@ bool FmuComponentBase::RebindVariable(FmuVariableExport::VarbindType varbind, st
     }
 
     return false;
+}
+
+void FmuComponentBase::AddFmuVariableDependencies(const std::string& variable_name,
+                                                  const std::vector<std::string>& dependency_names) {
+    for (const auto& dependency_name : dependency_names) {
+        addDependency(variable_name, dependency_name);
+    }
+}
+
+void FmuComponentBase::addDependency(const std::string& variable_name, const std::string& dependency_name) {
+    // Check that a variable with specified name exists
+    {
+        std::set<FmuVariableExport>::iterator it = this->findByName(variable_name);
+        if (it == m_scalarVariables.end())
+            throw std::runtime_error("No (primary) variable with given name exists.");
+    }
+
+    // Check that the specified dependency corresponds to an existing variable
+    std::set<FmuVariableExport>::iterator it = this->findByName(dependency_name);
+    if (it == m_scalarVariables.end())
+        throw std::runtime_error("No (dependency) variable with given name exists.");
+
+    // If a dependency list already exists for the specified variable, append to it; otherwise, initialize it
+    auto list = m_variableDependencies.find(variable_name);
+    if (list != m_variableDependencies.end()) {
+        list->second.push_back(dependency_name);
+    } else {
+        m_variableDependencies.insert({variable_name, {dependency_name}});
+    }
 }
 
 void FmuComponentBase::ExportModelDescription(std::string path) {
@@ -480,6 +509,10 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         {FmuVariable::CausalityType::local, "local"},
         {FmuVariable::CausalityType::independent, "independent"}};
 
+    std::unordered_map<std::string, int> variableIndices;  // indices of all variables
+    std::vector<int> outputIndices;                        // indices of output variables
+    int crt_index = 1;                                     // start index value
+
     for (std::set<FmuVariableExport>::const_iterator it = m_scalarVariables.begin(); it != m_scalarVariables.end();
          ++it) {
         // Create a ScalarVariable node
@@ -511,13 +544,73 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
             unitNode->append_attribute(doc_ptr->allocate_attribute("start", stringbuf.back().c_str()));
         }
         scalarVarNode->append_node(unitNode);
+
+        // Cache index of this variable (map by variable name); include in list of output variables if needed
+        variableIndices[it->GetName()] = crt_index;
+        if (it->GetCausality() == FmuVariable::CausalityType::output)
+            outputIndices.push_back(crt_index);
+        crt_index++;
     }
 
     rootNode->append_node(modelVarsNode);
 
+    // Check that dependencies are defined for all variables that require them
+    for (const auto& var : m_scalarVariables) {
+        auto causality = var.GetCausality();
+        auto initial = var.GetInitial();
+
+        if (m_variableDependencies.find(var.GetName()) == m_variableDependencies.end()) {
+            if (causality == FmuVariable::CausalityType::output &&
+                (initial == FmuVariable::InitialType::approx || initial == FmuVariable::InitialType::calculated)) {
+                std::string msg =
+                    "Dependencies required for an 'output' variable with initial='approx' or 'calculated' (" +
+                    var.GetName() + ").";
+                std::cout << "ERROR: " << msg << std::endl;
+                throw std::runtime_error(msg);
+            }
+
+            if (causality == FmuVariable::CausalityType::calculatedParameter) {
+                std::string msg = "Dependencies required for a 'calculatedParameter' variable (" + var.GetName() + ").";
+                std::cout << "ERROR: " << msg << std::endl;
+                throw std::runtime_error(msg);
+            }
+        }
+    }
+
     // Add ModelStructure node
     rapidxml::xml_node<>* modelStructNode = doc_ptr->allocate_node(rapidxml::node_element, "ModelStructure");
-    // TODO: Add Outputs, Derivatives, and InitialUnknowns nodes and attributes here...
+
+    //      ...Outputs
+    rapidxml::xml_node<>* outputsNode = doc_ptr->allocate_node(rapidxml::node_element, "Outputs");
+    for (int index : outputIndices) {
+        rapidxml::xml_node<>* unknownNode = doc_ptr->allocate_node(rapidxml::node_element, "Unknown");
+        stringbuf.push_back(std::to_string(index));
+        unknownNode->append_attribute(doc_ptr->allocate_attribute("index", stringbuf.back().c_str()));
+        outputsNode->append_node(unknownNode);
+    }
+    modelStructNode->append_node(outputsNode);
+    
+    //     ...Derivatives
+    //// TODO
+
+    //     ...InitialUnknowns
+    rapidxml::xml_node<>* initialUnknownsNode = doc_ptr->allocate_node(rapidxml::node_element, "InitialUnknowns");
+    for (const auto& v : m_variableDependencies) {
+        rapidxml::xml_node<>* unknownNode = doc_ptr->allocate_node(rapidxml::node_element, "Unknown");
+        auto v_index = variableIndices[v.first];
+        stringbuf.push_back(std::to_string(v_index));
+        unknownNode->append_attribute(doc_ptr->allocate_attribute("index", stringbuf.back().c_str()));
+        std::string dependencies = "";
+        for (const auto& d : v.second) {
+            auto d_index = variableIndices[d];
+            dependencies += std::to_string(d_index) + " ";
+        }
+        stringbuf.push_back(dependencies);
+        unknownNode->append_attribute(doc_ptr->allocate_attribute("dependencies", stringbuf.back().c_str()));
+        initialUnknownsNode->append_node(unknownNode);
+    }
+    modelStructNode->append_node(initialUnknownsNode);
+
     rootNode->append_node(modelStructNode);
 
     // Save the XML document to a file

@@ -269,6 +269,10 @@ class FmuComponentBase {
         FmuVariable::VariabilityType variability = FmuVariable::VariabilityType::continuous,
         FmuVariable::InitialType initial = FmuVariable::InitialType::none);
 
+    /// Add variable dependencies.
+    /// Calls to this function must be made *after* all FMU variables were defined.
+    void AddFmuVariableDependencies(const std::string& variable_name, const std::vector<std::string>& dependency_names);
+
     bool RebindVariable(FmuVariableExport::VarbindType varbind, std::string name);
 
   protected:
@@ -284,6 +288,9 @@ class FmuComponentBase {
 
     virtual void _enterInitializationMode() {}
     virtual void _exitInitializationMode() {}
+
+    /// Include a dependency of "variable_name" on "dependency_name".
+    virtual void addDependency(const std::string& variable_name, const std::string& dependency_name);
 
     void initializeType(fmi2Type fmuType);
 
@@ -332,6 +339,7 @@ class FmuComponentBase {
     std::map<FmuVariable::Type, unsigned int> m_valueReferenceCounter;
 
     std::set<FmuVariableExport> m_scalarVariables;
+    std::unordered_map<std::string, std::vector<std::string>> m_variableDependencies;
     std::unordered_map<std::string, UnitDefinitionType> m_unitDefinitions;
 
     std::list<std::function<void(void)>> m_preStepCallbacks;
