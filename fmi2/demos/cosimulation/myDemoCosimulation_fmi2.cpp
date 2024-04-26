@@ -7,6 +7,7 @@
 // =============================================================================
 
 #include <iostream>
+#include <fstream>
 #include <cstddef>
 
 #include "fmi2/FmuToolsImport.h"
@@ -55,26 +56,35 @@ int main(int argc, char* argv[]) {
     my_fmu._fmi2EnterInitializationMode(my_fmu.component);
 
     {
-        fmi2ValueReference valref = 8;
-        fmi2Real m_in = 15;
+        fmi2ValueReference valref = 3;
+        fmi2Real m_in = 1.5;
         my_fmu._fmi2SetReal(my_fmu.component, &valref, 1, &m_in);
 
         fmi2Real m_out;
         my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &m_out);
-        std::cout << "m_out_: " << m_out << std::endl;
+        std::cout << "m_out: " << m_out << std::endl;
     }
 
     my_fmu._fmi2ExitInitializationMode(my_fmu.component);
 
     // Test a simulation loop
     double time = 0;
-    double dt = 0.001;
+    double dt = 0.01;
+    constexpr int n_steps = 1000;
 
-    for (int i = 0; i < 1000; ++i) {
+    std::ofstream ofile("results.out");
+
+    for (int i = 0; i < n_steps; ++i) {
+        double x, theta;
+        my_fmu.GetVariable("x", x, FmuVariable::Type::Real);
+        my_fmu.GetVariable("theta", theta, FmuVariable::Type::Real);
+        ofile << time << " " << x << " " << theta << std::endl;
+
         my_fmu._fmi2DoStep(my_fmu.component, time, dt, fmi2True);
 
         time += dt;
     }
+    ofile.close();
 
     // Getting FMU variables through FMI functions, i.e. through valueRef
     fmi2Real val_real;

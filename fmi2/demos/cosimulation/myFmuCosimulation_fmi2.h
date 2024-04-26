@@ -35,24 +35,30 @@ class myFmuComponent : public FmuComponentBase {
                                fmi2Real communicationStepSize,
                                fmi2Boolean noSetFMUStatePriorToCurrentPoint) override;
 
-    // Problem-specific functions
-    double get_x_tt(double th_t, double th);
-    double get_th_tt(double th_t, double th);
-    double get_x_tt_linear(double th_t, double th);
-    double get_th_tt_linear(double th_t, double th);
-    void get_q_t(const std::array<double, 4>& _q, std::array<double, 4>& q_t);
-
   private:
     virtual bool is_cosimulation_available() const override { return true; }
     virtual bool is_modelexchange_available() const override { return false; }
 
-    // Problem-specific data members
-    std::array<double, 4> q;
-    std::array<double, 4> q_t;
+    // Problem-specific functions
+    typedef std::array<double, 4> vec4;
+
+    double calcX_dd(double theta, double theta_d);
+    double calcTheta_dd(double theta, double theta_d);
+    vec4 calcRHS(double t, const vec4& q);
+
+    void calcAccelerations();
+
+    // Problem parameters
     double len = 0.5;
     double m = 1.0;
     double M = 1.0;
     const double g = 9.81;
+
     fmi2Boolean approximateOn = fmi2False;
     std::string filename;
+
+    // Problem states
+    vec4 q;
+    double x_dd;
+    double theta_dd;
 };

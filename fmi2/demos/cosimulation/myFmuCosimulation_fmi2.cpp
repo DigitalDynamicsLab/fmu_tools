@@ -20,7 +20,7 @@
 
 // -----------------------------------------------------------------------------
 
-// Implement function declarted in FmuToolsExport.h to create an instance of this FMU. 
+// Implement function declared in FmuToolsExport.h to create an instance of this FMU. 
 FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,
                                              fmi2Type fmuType,
                                              fmi2String fmuGUID,
@@ -33,7 +33,9 @@ FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,
 
 // -----------------------------------------------------------------------------
 
-// Construct the FMU component
+// During construction of the FMU component:
+// - list the log categories that this FMU should handle, together with a flag that specifies if they have to be enabled dy default
+// - specify which log categories are to be considered as debug
 myFmuComponent::myFmuComponent(fmi2String instanceName,
                                fmi2Type fmuType,
                                fmi2String fmuGUID,
@@ -62,11 +64,6 @@ myFmuComponent::myFmuComponent(fmi2String instanceName,
           {"logStatusWarning", "logStatusDiscard", "logStatusError", "logStatusFatal", "logStatusPending"}) {
     initializeType(fmuType);
 
-    // During construction,
-    // - list the log categories that this FMU should handle, together with a flag that specifies if it
-    // they have to be enabled dy default;
-    // - list, among the log categories, which are those to be considered as debug
-
     // Define new units if needed
     UnitDefinitionType UD_J("J");
     UD_J.kg = 1;
@@ -74,19 +71,40 @@ myFmuComponent::myFmuComponent(fmi2String instanceName,
     UD_J.s = -2;
     addUnitDefinition(UD_J);
 
+    // Set initial conditions for underlying ODE
+    q = {0, 3.14159265358979323846 / 4, 0, 0};
+
     // Declare relevant variables
-    AddFmuVariable(&q_t[0], "x_tt", FmuVariable::Type::Real, "m/s2", "cart acceleration");
-    AddFmuVariable(&q[0], "x_t", FmuVariable::Type::Real, "m/s", "cart velocity");
-    AddFmuVariable(&q[1], "x", FmuVariable::Type::Real, "m", "cart position");
-    AddFmuVariable(&q_t[2], "theta_tt", FmuVariable::Type::Real, "rad/s2", "pendulum ang acceleration");
-    AddFmuVariable(&q[2], "theta_t", FmuVariable::Type::Real, "rad/s", "pendulum ang velocity");
-    AddFmuVariable(&q[3], "theta", FmuVariable::Type::Real, "rad", "pendulum angle");
     auto& fmu_len = AddFmuVariable(&len, "len", FmuVariable::Type::Real, "m", "pendulum length",
                                    FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
     auto& fmu_m = AddFmuVariable(&m, "m", FmuVariable::Type::Real, "kg", "pendulum mass",
                                  FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
     auto& fmu_M = AddFmuVariable(&M, "M", FmuVariable::Type::Real, "kg", "cart mass",
                                  FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+  
+    auto& fmu_approximateOn =
+        AddFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::Boolean, "1", "use approximated model",
+                       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+
+    AddFmuVariable(&q[0], "x", FmuVariable::Type::Real, "m", "cart position",                     //
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,  //
+                   FmuVariable::InitialType::exact);                                              //
+    AddFmuVariable(&q[1], "theta", FmuVariable::Type::Real, "rad", "pendulum angle",              //
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,  //
+                   FmuVariable::InitialType::exact);                                              //
+    AddFmuVariable(&q[2], "x_t", FmuVariable::Type::Real, "m/s", "cart velocity",                 //
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,  //
+                   FmuVariable::InitialType::exact);                                              //
+    AddFmuVariable(&q[3], "theta_t", FmuVariable::Type::Real, "rad/s", "pendulum ang velocity",   //
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,  //
+                   FmuVariable::InitialType::exact);                                              //
+
+    AddFmuVariable(&x_dd, "x_tt", FmuVariable::Type::Real, "m/s2", "cart linear acceleration",
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
+                   FmuVariable::InitialType::calculated);
+    AddFmuVariable(&theta_dd, "theta_tt", FmuVariable::Type::Real, "rad/s2", "pendulum angular acceleration",
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
+                   FmuVariable::InitialType::calculated);
 
     /// One can also pass std::functions to get/set the value of the variable if queried
     // AddFmuVariable(std::make_pair(
@@ -98,7 +116,7 @@ myFmuComponent::myFmuComponent(fmi2String instanceName,
     // same result is achieved through helper function 'MAKE_GETSET_PAIR'
     AddFmuVariable(
         MAKE_GETSET_PAIR(fmi2Real,
-                         { return (0.5 * (this->m * this->len * this->len / 3) * (this->q_t[2] * this->q_t[2])); }, {}),
+                         { return (0.5 * (this->m * this->len * this->len / 3) * (this->theta_dd * this->theta_dd)); }, {}),
         "kineticEnergy", FmuVariable::Type::Real, "J", "kinetic energy");
 
     // Set name of file expected to be present in the FMU resources directory
@@ -107,57 +125,73 @@ myFmuComponent::myFmuComponent(fmi2String instanceName,
         AddFmuVariable(&filename, "filename", FmuVariable::Type::String, "kg", "additional mass on cart",
                        FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
-    auto& fmu_approximateOn =
-        AddFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::Boolean, "1", "use approximated model",
-                       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    // Variable dependencies must be specified for:
+    // - variables with causality 'output' for which 'initial' is 'approx' or 'calculated'
+    // - variables with causality 'calculatedParameter'
+    AddFmuVariableDependencies("x_tt", {"len", "m", "M"});
+    AddFmuVariableDependencies("theta_tt", {"len", "m", "M"});
+    
+    // Specify functions to calculate FMU outputs (at end of step)
+    m_postStepCallbacks.push_back([this]() { this->calcAccelerations(); });
 
-    // Additional commands
-    q = {0, 0, 0, 3.14159265358979323846 / 4};
-
+    // Log location of resources directory
     sendToLog("Resources directory location: " + std::string(fmuResourceLocation) + ".\n", fmi2Status::fmi2OK, "logAll");
 }
 
 // -----------------------------------------------------------------------------
 
-std::array<double, 4> operator*(double lhs, const std::array<double, 4>& rhs) {
+// A function added as a post-step callback can be used to prepare (post-process)
+// other output or local FMI variables (here, the cart and pendulum accelerations)
+void myFmuComponent::calcAccelerations() {
+    x_dd = calcX_dd(q[1], q[3]);
+    theta_dd = calcTheta_dd(q[1], q[3]);
+}
+
+// -----------------------------------------------------------------------------
+
+std::array<double, 4> operator*(double a, const std::array<double, 4>& v) {
     std::array<double, 4> temp;
-    temp[0] = rhs[0] * lhs;
-    temp[1] = rhs[1] * lhs;
-    temp[2] = rhs[2] * lhs;
-    temp[3] = rhs[3] * lhs;
+    temp[0] = v[0] * a;
+    temp[1] = v[1] * a;
+    temp[2] = v[2] * a;
+    temp[3] = v[3] * a;
     return temp;
 }
 
-std::array<double, 4> operator+(const std::array<double, 4>& lhs, const std::array<double, 4>& rhs) {
+std::array<double, 4> operator+(const std::array<double, 4>& a, const std::array<double, 4>& b) {
     std::array<double, 4> temp;
-    temp[0] = rhs[0] + lhs[0];
-    temp[1] = rhs[1] + lhs[1];
-    temp[2] = rhs[2] + lhs[2];
-    temp[3] = rhs[3] + lhs[3];
+    temp[0] = a[0] + b[0];
+    temp[1] = a[1] + b[1];
+    temp[2] = a[2] + b[2];
+    temp[3] = a[3] + b[3];
     return temp;
 }
 
-double myFmuComponent::get_x_tt(double th_t, double th) {
-    return (m * sin(th) * (len * th_t * th_t + g * cos(th))) / (-m * cos(th) * cos(th) + M + m);
+double myFmuComponent::calcX_dd(double theta, double theta_d) {
+    if (approximateOn)
+        return (m * theta * (len * theta_d * theta_d + g)) / M;
+
+    double s = std::sin(theta);
+    double c = std::cos(theta);
+    return (m * s * (len * theta_d * theta_d + g * c)) / (M + m * s * s);
 }
 
-double myFmuComponent::get_th_tt(double th_t, double th) {
-    return -(sin(th) * (len * m * cos(th) * th_t * th_t + M * g + g * m)) / (len * (-m * cos(th) * cos(th) + M + m));
+double myFmuComponent::calcTheta_dd(double theta, double theta_d) {
+    if (approximateOn)
+        return -(theta * (len * m * theta_d * theta_d + M * g + g * m)) / (len * M);
+
+    double s = std::sin(theta);
+    double c = std::cos(theta);
+    return -(s * (len * m * c * theta_d * theta_d + M * g + g * m)) / (len * (M + m * s * s));
 }
 
-double myFmuComponent::get_x_tt_linear(double th_t, double th) {
-    return (m * th * (len * th_t * th_t + g)) / M;
-}
-
-double myFmuComponent::get_th_tt_linear(double th_t, double th) {
-    return -(th * (len * m * th_t * th_t + M * g + g * m)) / (len * M);
-}
-
-void myFmuComponent::get_q_t(const std::array<double, 4>& _q, std::array<double, 4>& q_t) {
-    q_t[0] = approximateOn ? get_x_tt_linear(_q[2], _q[3]) : get_x_tt(_q[2], _q[3]);
-    q_t[1] = _q[0];
-    q_t[2] = approximateOn ? get_th_tt_linear(_q[2], _q[3]) : get_th_tt(_q[2], _q[3]);
-    q_t[3] = _q[2];
+myFmuComponent::vec4 myFmuComponent::calcRHS(double t, const vec4& q) {
+    vec4 rhs;
+    rhs[0] = q[2];
+    rhs[1] = q[3];
+    rhs[2] = calcX_dd(q[1], q[3]);
+    rhs[3] = calcTheta_dd(q[1], q[3]);
+    return rhs;
 }
 
 // -----------------------------------------------------------------------------
@@ -192,22 +226,17 @@ fmi2Status myFmuComponent::_doStep(fmi2Real currentCommunicationPoint,
                                    fmi2Real communicationStepSize,
                                    fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
     while (m_time < currentCommunicationPoint + communicationStepSize) {
-        fmi2Real _stepSize = std::min((currentCommunicationPoint + communicationStepSize - m_time),
-                                      std::min(communicationStepSize, m_stepSize));
+        fmi2Real h = std::min((currentCommunicationPoint + communicationStepSize - m_time),
+                              std::min(communicationStepSize, m_stepSize));
 
-        std::array<double, 4> k1 = {0, 0, 0, 0};
-        std::array<double, 4> k2 = {0, 0, 0, 0};
-        std::array<double, 4> k3 = {0, 0, 0, 0};
-        std::array<double, 4> k4 = {0, 0, 0, 0};
+        auto k1 = calcRHS(m_time, q);
+        auto k2 = calcRHS(m_time + h / 2, q + 0.5 * h * k1);
+        auto k3 = calcRHS(m_time + h / 2, q + 0.5 * h * k2);
+        auto k4 = calcRHS(m_time + h, q + h * k3);
 
-        get_q_t(q, k1);                           // = q_t(q(step, :));
-        get_q_t(q + (0.5 * _stepSize) * k1, k2);  // = q_t(q(step, :) + stepsize*k1/2);
-        get_q_t(q + (0.5 * _stepSize) * k2, k3);  // = q_t(q(step, :) + stepsize*k2/2);
-        get_q_t(q + _stepSize * k3, k4);          // = q_t(q(step, :) + stepsize*k3);
+        q = q + (h / 6) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 
-        q_t = (1.0 / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
-        q = q + _stepSize * q_t;
-        m_time = m_time + _stepSize;
+        m_time = m_time + h;
 
         sendToLog("Step at time: " + std::to_string(m_time) + " succeeded.\n", fmi2Status::fmi2OK, "logAll");
     }
