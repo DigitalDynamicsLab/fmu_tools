@@ -222,6 +222,12 @@ class FmuComponentBase {
                       fmi2Real communicationStepSize,
                       fmi2Boolean noSetFMUStatePriorToCurrentPoint);
 
+    fmi2Status SetTime(const fmi2Real time);
+
+    fmi2Status SetContinuousStates(const fmi2Real x[], size_t nx);
+
+    fmi2Status GetDerivatives(fmi2Real derivatives[], size_t nx);
+
     /// Create the modelDescription.xml file in the given location \a path.
     void ExportModelDescription(std::string path);
 
@@ -281,7 +287,28 @@ class FmuComponentBase {
 
     virtual fmi2Status _doStep(fmi2Real currentCommunicationPoint,
                                fmi2Real communicationStepSize,
-                               fmi2Boolean noSetFMUStatePriorToCurrentPoint) = 0;
+                               fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
+        if (is_cosimulation_available())
+            throw std::runtime_error("An FMU for co-simulation must implement _doStep");
+
+        return fmi2OK;
+    }
+
+    virtual fmi2Status _setTime(fmi2Real time) { return fmi2Status::fmi2OK; }
+
+    virtual fmi2Status _setContinuousStates(const fmi2Real x[], size_t nx) {
+        if (is_modelexchange_available())
+            throw std::runtime_error("An FMU for model exchange must implement _setContinuousStates");
+
+        return fmi2OK;
+    }
+
+    virtual fmi2Status _getDerivatives(fmi2Real derivatives[], size_t nx) {
+        if (is_modelexchange_available())
+            throw std::runtime_error("An FMU for model exchange must implement _getDerivatives");
+
+        return fmi2OK;
+    }
 
     virtual void _preModelDescriptionExport() {}
     virtual void _postModelDescriptionExport() {}

@@ -394,8 +394,15 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
     // Add ModelExchange node
     if (is_modelexchange_available()) {
         rapidxml::xml_node<>* modExNode = doc_ptr->allocate_node(rapidxml::node_element, "ModelExchange");
+        modExNode->append_attribute(doc_ptr->allocate_attribute("modelIdentifier", m_modelIdentifier.c_str()));
+        modExNode->append_attribute(doc_ptr->allocate_attribute("needsExecutionTool", "false"));
+        modExNode->append_attribute(doc_ptr->allocate_attribute("completedIntegratorStepNotNeeded", "false"));
+        modExNode->append_attribute(doc_ptr->allocate_attribute("canBeInstantiatedOnlyOncePerProcess", "false"));
+        modExNode->append_attribute(doc_ptr->allocate_attribute("canNotUseMemoryManagementFunctions", "false"));
+        modExNode->append_attribute(doc_ptr->allocate_attribute("canGetAndSetFMUState", "false"));
+        modExNode->append_attribute(doc_ptr->allocate_attribute("canSerializeFMUstate", "false"));
+        modExNode->append_attribute(doc_ptr->allocate_attribute("providesDirectionalDerivative", "false"));
         rootNode->append_node(modExNode);
-        throw std::runtime_error("Developer error: ModelExchange not supported in modelDescription.xml");
     }
 
     // Add UnitDefinitions node
@@ -589,7 +596,7 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         outputsNode->append_node(unknownNode);
     }
     modelStructNode->append_node(outputsNode);
-    
+
     //     ...Derivatives
     //// TODO
 
@@ -654,13 +661,12 @@ fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
     // invoke any pre step callbacks (e.g., to process input variables)
     executePreStepCallbacks();
 
-    fmi2Status doStep_status =
-        _doStep(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPoint);
+    fmi2Status status = _doStep(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPoint);
 
     // invoke any post step callbacks (e.g., to update auxiliary variables)
     executePostStepCallbacks();
 
-    switch (doStep_status) {
+    switch (status) {
         case fmi2OK:
             m_fmuMachineState = FmuMachineStateType::stepCompleted;
             break;
@@ -684,7 +690,41 @@ fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
             break;
     }
 
-    return doStep_status;
+    return status;
+}
+
+fmi2Status FmuComponentBase::SetTime(fmi2Real time) {
+    m_time = time;
+
+    fmi2Status status = _setTime(time);
+
+    //// TODO - anything else here?
+
+    return status;
+}
+
+fmi2Status FmuComponentBase::SetContinuousStates(const fmi2Real x[], size_t nx) {
+    fmi2Status status = _setContinuousStates(x, nx);
+
+    //// TODO - interpret/process status?
+    ////   Set FMU machine state (m_fmuMachineState)
+
+    return status;
+}
+
+fmi2Status FmuComponentBase::GetDerivatives(fmi2Real derivatives[], size_t nx) {
+    // invoke any pre step callbacks (e.g., to process input variables)
+    executePreStepCallbacks();
+
+    fmi2Status status = _getDerivatives(derivatives, nx);
+
+    // invoke any post step callbacks (e.g., to update auxiliary variables)
+    executePostStepCallbacks();
+
+    //// TODO - interpret/process status?
+    ////   Set FMU machine state (m_fmuMachineState)
+
+    return status;
 }
 
 void FmuComponentBase::addUnitDefinition(const UnitDefinitionType& unit_definition) {
@@ -832,21 +872,53 @@ fmi2Status fmi2GetDirectionalDerivative(fmi2Component c,
     return fmi2Status::fmi2OK;
 }
 
-////// Model Exchange
-// fmi2Status fmi2EnterEventMode(fmi2Component c){ return fmi2Status::fmi2OK; }
-// fmi2Status fmi2NewDiscreteStates(fmi2Component c, fmi2EventInfo* fmi2eventInfo){ return fmi2Status::fmi2OK; }
-// fmi2Status fmi2EnterContinuousTimeMode(fmi2Component c){ return fmi2Status::fmi2OK; }
-// fmi2Status fmi2CompletedIntegratorStep(fmi2Component c, fmi2Boolean noSetFMUStatePriorToCurrentPoint,
-// fmi2Boolean* enterEventMode, fmi2Boolean* terminateSimulation){ return fmi2Status::fmi2OK; } fmi2Status
-// fmi2SetTime(fmi2Component c, fmi2Real time){ return fmi2Status::fmi2OK; } fmi2Status
-// fmi2SetContinuousStates(fmi2Component c, const fmi2Real x[], size_t nx){ return fmi2Status::fmi2OK; }
-// fmi2Status fmi2GetDerivatives(fmi2Component c, fmi2Real derivatives[], size_t nx){ return fmi2Status::fmi2OK;
-// } fmi2Status fmi2GetEventIndicators(fmi2Component c, fmi2Real eventIndicators[], size_t ni){ return
-// fmi2Status::fmi2OK; } fmi2Status fmi2GetContinuousStates(fmi2Component c, fmi2Real x[], size_t nx){ return
-// fmi2Status::fmi2OK; } fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component c, fmi2Real x_nominal[],
-// size_t nx){ return fmi2Status::fmi2OK; }
+// Model Exchange
+
+fmi2Status fmi2EnterEventMode(fmi2Component c) {
+    return fmi2Status::fmi2OK;
+}
+
+fmi2Status fmi2NewDiscreteStates(fmi2Component c, fmi2EventInfo* fmi2eventInfo) {
+    return fmi2Status::fmi2OK;
+}
+
+fmi2Status fmi2EnterContinuousTimeMode(fmi2Component c) {
+    return fmi2Status::fmi2OK;
+}
+
+fmi2Status fmi2CompletedIntegratorStep(fmi2Component c,
+                                       fmi2Boolean noSetFMUStatePriorToCurrentPoint,
+                                       fmi2Boolean* enterEventMode,
+                                       fmi2Boolean* terminateSimulation) {
+    return fmi2Status::fmi2OK;
+}
+
+fmi2Status fmi2SetTime(fmi2Component c, fmi2Real time) {
+    return reinterpret_cast<FmuComponentBase*>(c)->SetTime(time);
+}
+
+fmi2Status fmi2SetContinuousStates(fmi2Component c, const fmi2Real x[], size_t nx) {
+    return reinterpret_cast<FmuComponentBase*>(c)->SetContinuousStates(x, nx);
+}
+
+fmi2Status fmi2GetDerivatives(fmi2Component c, fmi2Real derivatives[], size_t nx) {
+    return reinterpret_cast<FmuComponentBase*>(c)->GetDerivatives(derivatives, nx);
+}
+
+fmi2Status fmi2GetEventIndicators(fmi2Component c, fmi2Real eventIndicators[], size_t ni) {
+    return fmi2Status::fmi2OK;
+}
+
+fmi2Status fmi2GetContinuousStates(fmi2Component c, fmi2Real x[], size_t nx) {
+    return fmi2Status::fmi2OK;
+}
+
+fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component c, fmi2Real x_nominal[], size_t nx) {
+    return fmi2Status::fmi2OK;
+}
 
 // Co-Simulation
+
 fmi2Status fmi2SetRealInputDerivatives(fmi2Component c,
                                        const fmi2ValueReference vr[],
                                        size_t nvr,
@@ -854,6 +926,7 @@ fmi2Status fmi2SetRealInputDerivatives(fmi2Component c,
                                        const fmi2Real value[]) {
     return fmi2Status::fmi2OK;
 }
+
 fmi2Status fmi2GetRealOutputDerivatives(fmi2Component c,
                                         const fmi2ValueReference vr[],
                                         size_t nvr,
@@ -873,18 +946,23 @@ fmi2Status fmi2DoStep(fmi2Component c,
 fmi2Status fmi2CancelStep(fmi2Component c) {
     return fmi2Status::fmi2OK;
 }
+
 fmi2Status fmi2GetStatus(fmi2Component c, const fmi2StatusKind s, fmi2Status* value) {
     return fmi2Status::fmi2OK;
 }
+
 fmi2Status fmi2GetRealStatus(fmi2Component c, const fmi2StatusKind s, fmi2Real* value) {
     return fmi2Status::fmi2OK;
 }
+
 fmi2Status fmi2GetIntegerStatus(fmi2Component c, const fmi2StatusKind s, fmi2Integer* value) {
     return fmi2Status::fmi2OK;
 }
+
 fmi2Status fmi2GetBooleanStatus(fmi2Component c, const fmi2StatusKind s, fmi2Boolean* value) {
     return fmi2Status::fmi2OK;
 }
+
 fmi2Status fmi2GetStringStatus(fmi2Component c, const fmi2StatusKind s, fmi2String* value) {
     return fmi2Status::fmi2OK;
 }
