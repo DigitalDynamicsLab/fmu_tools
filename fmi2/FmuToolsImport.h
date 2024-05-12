@@ -124,9 +124,24 @@ class FmuUnit {
     fmi2Status ExitInitializationMode();
 
     /// Advance state of the FMU from currentCommunicationPoint to currentCommunicationPoint+communicationStepSize.
+    /// Available only for an FMU that iplements the CoSimulation interface.
     fmi2Status DoStep(fmi2Real currentCommunicationPoint,
                       fmi2Real communicationStepSize,
                       fmi2Boolean noSetFMUStatePriorToCurrentPoint);
+
+    /// Set a new time instant and re-initialize caching of variables that depend on time.
+    /// Available only for an FMU that iplements the ModelExchange interface.
+    fmi2Status SetTime(const fmi2Real time);
+
+    /// Set a new (continuous) state vector and re-initialize caching of variables that depend on the states. Argument
+    /// nx is the length of vector x and is provided for checking purposes.
+    /// Available only for an FMU that iplements the ModelExchange interface.
+    fmi2Status SetContinuousStates(const fmi2Real x[], size_t nx);
+
+    /// Compute state derivatives at the current time instant and for the current states. The derivatives are returned
+    /// as a vector with nx elements.
+    /// Available only for an FMU that iplements the ModelExchange interface.
+    fmi2Status GetDerivatives(fmi2Real derivatives[], size_t nx);
 
     template <class T>
     fmi2Status GetVariable(fmi2ValueReference vr, T& value, FmuVariable::Type vartype) noexcept(false);
@@ -175,16 +190,28 @@ class FmuUnit {
     std::string generationDateAndTime;
     std::string variableNamingConvention;
     std::string numberOfEventIndicators;
-    std::string info_cosimulation_modelIdentifier;
-    std::string info_cosimulation_needsExecutionTool;
-    std::string info_cosimulation_canHandleVariableCommunicationStepSize;
-    std::string info_cosimulation_canInterpolateInputs;
-    std::string info_cosimulation_maxOutputDerivativeOrder;
-    std::string info_cosimulation_canRunAsynchronuously;
-    std::string info_cosimulation_canBeInstantiatedOnlyOncePerProcess;
-    std::string info_cosimulation_canNotUseMemoryManagementFunctions;
-    std::string info_cosimulation_canGetAndSetFMUstate;
-    std::string info_cosimulation_canSerializeFMUstate;
+
+    bool cosim;
+    std::string info_cosim_modelIdentifier;
+    std::string info_cosim_needsExecutionTool;
+    std::string info_cosim_canHandleVariableCommunicationStepSize;
+    std::string info_cosim_canInterpolateInputs;
+    std::string info_cosim_maxOutputDerivativeOrder;
+    std::string info_cosim_canRunAsynchronuously;
+    std::string info_cosim_canBeInstantiatedOnlyOncePerProcess;
+    std::string info_cosim_canNotUseMemoryManagementFunctions;
+    std::string info_cosim_canGetAndSetFMUstate;
+    std::string info_cosim_canSerializeFMUstate;
+
+    bool modex;
+    std::string info_modex_modelIdentifier;
+    std::string info_modex_needsExecutionTool;
+    std::string info_modex_completedIntegratorStepNotNeeded;
+    std::string info_modex_canBeInstantiatedOnlyOncePerProcess;
+    std::string info_modex_canNotUseMemoryManagementFunctions;
+    std::string info_modex_canGetAndSetFMUState;
+    std::string info_modex_canSerializeFMUstate;
+    std::string info_modex_providesDirectionalDerivative;
 
     std::map<std::string, FmuVariable> scalarVariables;
 
@@ -224,13 +251,17 @@ class FmuUnit {
 
     fmi2DoStepTYPE* _fmi2DoStep;
 
+    fmi2SetTimeTYPE* _fmi2SetTime;
+    fmi2SetContinuousStatesTYPE* _fmi2SetContinuousStates;
+    fmi2GetDerivativesTYPE* _fmi2GetDerivatives;
+
   private:
     DYNLIB_HANDLE dynlib_handle;
 };
 
 // -----------------------------------------------------------------------------
 
-FmuUnit::FmuUnit() {
+FmuUnit::FmuUnit() : cosim(false), modex(false) {
     // default binaries directory in FMU unzipped directory
     binaries_dir = "/binaries/" + std::string(FMU_OS_SUFFIX);
 }
@@ -272,7 +303,7 @@ void FmuUnit::LoadXML() {
     // Parse the buffer using the xml file parsing library into doc
     doc_ptr->parse<0>(&buffer[0]);
 
-    // Find our root node
+    // Find the root node
     auto root_node = doc_ptr->first_node("fmiModelDescription");
     if (!root_node)
         throw std::runtime_error("Not a valid FMU. Missing <fmiModelDescription> in XML. \n");
@@ -302,42 +333,78 @@ void FmuUnit::LoadXML() {
         numberOfEventIndicators = attr->value();
     }
 
-    // Find our cosimulation node
+    // Find the cosimulation node
     auto cosimulation_node = root_node->first_node("CoSimulation");
     if (cosimulation_node) {
         if (auto attr = cosimulation_node->first_attribute("modelIdentifier")) {
-            info_cosimulation_modelIdentifier = attr->value();
+            info_cosim_modelIdentifier = attr->value();
         }
         if (auto attr = cosimulation_node->first_attribute("needsExecutionTool")) {
-            info_cosimulation_needsExecutionTool = attr->value();
+            info_cosim_needsExecutionTool = attr->value();
         }
         if (auto attr = cosimulation_node->first_attribute("canHandleVariableCommunicationStepSize")) {
-            info_cosimulation_canHandleVariableCommunicationStepSize = attr->value();
+            info_cosim_canHandleVariableCommunicationStepSize = attr->value();
         }
         if (auto attr = cosimulation_node->first_attribute("canInterpolateInputs")) {
-            info_cosimulation_canInterpolateInputs = attr->value();
+            info_cosim_canInterpolateInputs = attr->value();
         }
         if (auto attr = cosimulation_node->first_attribute("maxOutputDerivativeOrder")) {
-            info_cosimulation_maxOutputDerivativeOrder = attr->value();
+            info_cosim_maxOutputDerivativeOrder = attr->value();
         }
         if (auto attr = cosimulation_node->first_attribute("canRunAsynchronuously")) {
-            info_cosimulation_canRunAsynchronuously = attr->value();
+            info_cosim_canRunAsynchronuously = attr->value();
         }
         if (auto attr = cosimulation_node->first_attribute("canBeInstantiatedOnlyOncePerProcess")) {
-            info_cosimulation_canBeInstantiatedOnlyOncePerProcess = attr->value();
+            info_cosim_canBeInstantiatedOnlyOncePerProcess = attr->value();
         }
         if (auto attr = cosimulation_node->first_attribute("canNotUseMemoryManagementFunctions")) {
-            info_cosimulation_canNotUseMemoryManagementFunctions = attr->value();
+            info_cosim_canNotUseMemoryManagementFunctions = attr->value();
         }
         if (auto attr = cosimulation_node->first_attribute("canGetAndSetFMUstate")) {
-            info_cosimulation_canGetAndSetFMUstate = attr->value();
+            info_cosim_canGetAndSetFMUstate = attr->value();
         }
         if (auto attr = cosimulation_node->first_attribute("canSerializeFMUstate")) {
-            info_cosimulation_canSerializeFMUstate = attr->value();
+            info_cosim_canSerializeFMUstate = attr->value();
         }
+        cosim = true;
     }
 
-    // Find our variable container node
+    // Find the model exchange node
+    auto modelexchange_node = root_node->first_node("ModelExchange");
+    if (modelexchange_node) {
+        if (auto attr = modelexchange_node->first_attribute("modelIdentifier")) {
+            info_modex_modelIdentifier = attr->value();
+        }
+        if (auto attr = modelexchange_node->first_attribute("needsExecutionTool")) {
+            info_modex_needsExecutionTool = attr->value();
+        }
+        if (auto attr = modelexchange_node->first_attribute("completedIntegratorStepNotNeeded")) {
+            info_modex_completedIntegratorStepNotNeeded = attr->value();
+        }
+
+        if (auto attr = modelexchange_node->first_attribute("canBeInstantiatedOnlyOncePerProcess")) {
+            info_modex_canBeInstantiatedOnlyOncePerProcess = attr->value();
+        }
+        if (auto attr = modelexchange_node->first_attribute("canNotUseMemoryManagementFunctions")) {
+            info_modex_canNotUseMemoryManagementFunctions = attr->value();
+        }
+        if (auto attr = modelexchange_node->first_attribute("canGetAndSetFMUState")) {
+            info_modex_canGetAndSetFMUState = attr->value();
+        }
+        if (auto attr = modelexchange_node->first_attribute("canSerializeFMUstate")) {
+            info_modex_canSerializeFMUstate = attr->value();
+        }
+        if (auto attr = modelexchange_node->first_attribute("providesDirectionalDerivative")) {
+            info_modex_providesDirectionalDerivative = attr->value();
+        }
+        modex = true;
+    }
+
+    if (!cosim && !modex) {
+        throw std::runtime_error("Not a valid FMU. Missing both <CoSimulation> and <ModelExchange> in XML. \n");
+    }
+
+    // Find the variable container node
     auto variables_node = root_node->first_node("ModelVariables");
     if (!variables_node)
         throw std::runtime_error("Not a valid FMU. Missing <ModelVariables> in XML. \n");
@@ -446,7 +513,7 @@ void FmuUnit::LoadXML() {
 
 void FmuUnit::LoadSharedLibrary() {
     std::string dynlib_dir = directory + "/" + binaries_dir;
-    std::string dynlib_name = dynlib_dir + "/" + info_cosimulation_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
+    std::string dynlib_name = dynlib_dir + "/" + info_cosim_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
 
     dynlib_handle = RuntimeLinkLibrary(dynlib_dir, dynlib_name);
 
@@ -472,7 +539,14 @@ void FmuUnit::LoadSharedLibrary() {
     LOAD_FMI_FUNCTION(fmi2SetInteger);
     LOAD_FMI_FUNCTION(fmi2SetBoolean);
     LOAD_FMI_FUNCTION(fmi2SetString);
-    LOAD_FMI_FUNCTION(fmi2DoStep);
+    if (cosim) {
+        LOAD_FMI_FUNCTION(fmi2DoStep);
+    }
+    if (modex) {
+        LOAD_FMI_FUNCTION(fmi2SetTime);
+        LOAD_FMI_FUNCTION(fmi2SetContinuousStates);
+        LOAD_FMI_FUNCTION(fmi2GetDerivatives);
+    }
 }
 
 void FmuUnit::BuildVariablesTree() {
@@ -496,8 +570,6 @@ void FmuUnit::BuildVariablesTree() {
             }
             ++ntokens;
         }
-        // GetLog() << "Leaf! " << iv.second.name << " tree node name:" << token << "ref=" << iv.second.valueReference
-        // <<"\n";
         tree_node->leaf = &iv.second;
     }
 }
@@ -623,7 +695,7 @@ void FmuUnit::Instantiate(std::string tool_name, std::string resource_dir, bool 
                                  guid.c_str(),                              // guid
                                  resource_dir.c_str(),                      // resource dir
                                  (const fmi2CallbackFunctions*)&callbacks,  // function callbacks
-                                 visible ? fmi2True : fmi2False,                                 // visible
+                                 visible ? fmi2True : fmi2False,            // visible
                                  logging);                                  // logging
 
     if (!component)
@@ -664,9 +736,39 @@ fmi2Status FmuUnit::ExitInitializationMode() {
 fmi2Status FmuUnit::DoStep(fmi2Real currentCommunicationPoint,
                            fmi2Real communicationStepSize,
                            fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
+    if (!cosim)
+        throw std::runtime_error("DoStep available only for a CoSimulation FMU. \n");
+
     auto status = _fmi2DoStep(this->component,                                   //
                               currentCommunicationPoint, communicationStepSize,  //
                               noSetFMUStatePriorToCurrentPoint);                 //
+    return status;
+}
+
+fmi2Status FmuUnit::SetTime(const fmi2Real time) {
+    if (!modex)
+        throw std::runtime_error("SetTime available only for a ModelExchange FMU. \n");
+
+    auto status = _fmi2SetTime(this->component, time);
+
+    return status;
+}
+
+fmi2Status FmuUnit::SetContinuousStates(const fmi2Real x[], size_t nx) {
+    if (!modex)
+        throw std::runtime_error("SetContinuousStates available only for a ModelExchange FMU. \n");
+
+    auto status = _fmi2SetContinuousStates(this->component, x, nx);
+
+    return status;
+}
+
+fmi2Status FmuUnit::GetDerivatives(fmi2Real derivatives[], size_t nx) {
+    if (!modex)
+        throw std::runtime_error("GetDerivatives available only for a ModelExchange FMU. \n");
+
+    auto status = _fmi2GetDerivatives(this->component, derivatives, nx);
+
     return status;
 }
 
