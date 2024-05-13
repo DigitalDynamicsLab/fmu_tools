@@ -95,10 +95,9 @@ void FmuVariableExport::GetValue(fmi2String* varptr) const {
 }
 
 void FmuVariableExport::SetStartVal(fmi2String startval) {
-    if (allowed_start)
-        has_start = true;
-    else
+    if (!allowed_start)
         return;
+    has_start = true;
     this->start = std::string(startval);
 }
 
@@ -255,13 +254,11 @@ void FmuComponentBase::SetDebugLogging(std::string cat, bool value) {
     }
 }
 
-//// Developer Note: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only; the
-/// reason is
-/// as / follows: e.g. both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any
-/// possible / splitting depending on type if we accept to have both fmi2Integer and fmi2Boolean considered as
-/// the same type we / can drop the 'scalartype' argument but the risk is that a variable might end up being
-/// flagged as Integer while / it's actually a Boolean and it is not nice. At least, in this way, we do not have
-/// any redundant code.
+// Developer Note: unfortunately it is not possible to retrieve the fmi2 type based on the var_ptr only.
+// Both fmi2Integer and fmi2Boolean are actually alias of type int, thus impeding any possible splitting based on type.
+// If we accept to have both fmi2Integer and fmi2Boolean considered as the same type we can drop the 'scalartype'
+// argument but the risk is that a variable might end up being flagged as Integer while it's actually a Boolean.
+// At least, in this way, we do not have any redundant code.
 const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExport::VarbindType& varbind,
                                                           std::string name,
                                                           FmuVariable::Type scalartype,
@@ -325,32 +322,66 @@ bool FmuComponentBase::RebindVariable(FmuVariableExport::VarbindType varbind, st
     return false;
 }
 
-void FmuComponentBase::AddFmuVariableDependencies(const std::string& variable_name,
-                                                  const std::vector<std::string>& dependency_names) {
-    for (const auto& dependency_name : dependency_names) {
-        addDependency(variable_name, dependency_name);
-    }
+void FmuComponentBase::DeclareStateDerivative(const std::string& derivative_name,
+                                              const std::string& state_name,
+                                              const std::vector<std::string>& dependency_names) {
+    addDerivative(derivative_name, state_name, dependency_names);
 }
 
-void FmuComponentBase::addDependency(const std::string& variable_name, const std::string& dependency_name) {
+void FmuComponentBase::addDerivative(const std::string& derivative_name,
+                                     const std::string& state_name,
+                                     const std::vector<std::string>& dependency_names) {
+    // Check that a variable with specified state name exists
+    {
+        std::set<FmuVariableExport>::iterator it = this->findByName(state_name);
+        if (it == m_scalarVariables.end())
+            throw std::runtime_error("No state variable with given name exists.");
+    }
+
+    // Check that a variable with specified derivative name exists
+    {
+        std::set<FmuVariableExport>::iterator it = this->findByName(derivative_name);
+        if (it == m_scalarVariables.end())
+            throw std::runtime_error("No state derivative variable with given name exists.");
+    }
+
+    m_derivatives.insert({derivative_name, {state_name, dependency_names}});
+}
+
+std::string FmuComponentBase::isDerivative(const std::string& name) {
+    auto state = m_derivatives.find(name);
+    if (state == m_derivatives.end())
+        return "";
+    return state->second.first;
+}
+
+void FmuComponentBase::DeclareVariableDependencies(const std::string& variable_name,
+                                                   const std::vector<std::string>& dependency_names) {
+    addDependencies(variable_name, dependency_names);
+}
+
+void FmuComponentBase::addDependencies(const std::string& variable_name,
+                                       const std::vector<std::string>& dependency_names) {
     // Check that a variable with specified name exists
     {
         std::set<FmuVariableExport>::iterator it = this->findByName(variable_name);
         if (it == m_scalarVariables.end())
-            throw std::runtime_error("No (primary) variable with given name exists.");
+            throw std::runtime_error("No primary variable with given name exists.");
     }
 
-    // Check that the specified dependency corresponds to an existing variable
-    std::set<FmuVariableExport>::iterator it = this->findByName(dependency_name);
-    if (it == m_scalarVariables.end())
-        throw std::runtime_error("No (dependency) variable with given name exists.");
+    // Check that the specified dependencies corresponds to existing variables
+    for (const auto& dependency_name : dependency_names) {
+        std::set<FmuVariableExport>::iterator it = this->findByName(dependency_name);
+        if (it == m_scalarVariables.end())
+            throw std::runtime_error("No dependency variable with given name exists.");
+    }
 
     // If a dependency list already exists for the specified variable, append to it; otherwise, initialize it
     auto list = m_variableDependencies.find(variable_name);
     if (list != m_variableDependencies.end()) {
-        list->second.push_back(dependency_name);
+        list->second.insert(list->second.end(), dependency_names.begin(), dependency_names.end());
     } else {
-        m_variableDependencies.insert({variable_name, {dependency_name}});
+        m_variableDependencies.insert({variable_name, dependency_names});
     }
 }
 
@@ -516,12 +547,29 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         {FmuVariable::CausalityType::local, "local"},
         {FmuVariable::CausalityType::independent, "independent"}};
 
+
+    // Traverse all variables and cache their index (map by variable name).
+    // Include in list of output variables as appropriate.
     std::unordered_map<std::string, int> variableIndices;  // indices of all variables
     std::vector<int> outputIndices;                        // indices of output variables
     int crt_index = 1;                                     // start index value
 
+    for (auto it = m_scalarVariables.begin(); it != m_scalarVariables.end();
+         ++it) {
+        variableIndices[it->GetName()] = crt_index;
+        if (it->GetCausality() == FmuVariable::CausalityType::output)
+            outputIndices.push_back(crt_index);
+        crt_index++;
+    }
+
+    // Traverse all variables and create XML nodes
     for (std::set<FmuVariableExport>::const_iterator it = m_scalarVariables.begin(); it != m_scalarVariables.end();
          ++it) {
+        // Create a comment node with the variable index
+        stringbuf.push_back("Index: " + std::to_string(variableIndices[it->GetName()]));
+        rapidxml::xml_node<>* idNode = doc_ptr->allocate_node(rapidxml::node_comment, "", stringbuf.back().c_str());
+        modelVarsNode->append_node(idNode);
+
         // Create a ScalarVariable node
         rapidxml::xml_node<>* scalarVarNode = doc_ptr->allocate_node(rapidxml::node_element, "ScalarVariable");
         scalarVarNode->append_attribute(doc_ptr->allocate_attribute("name", it->GetName().c_str()));
@@ -540,7 +588,6 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         if (it->GetInitial() != FmuVariable::InitialType::none)
             scalarVarNode->append_attribute(
                 doc_ptr->allocate_attribute("initial", InitialType_strings.at(it->GetInitial()).c_str()));
-        modelVarsNode->append_node(scalarVarNode);
 
         rapidxml::xml_node<>* unitNode =
             doc_ptr->allocate_node(rapidxml::node_element, Type_strings.at(it->GetType()).c_str());
@@ -550,13 +597,14 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
             stringbuf.push_back(it->GetStartVal_toString());
             unitNode->append_attribute(doc_ptr->allocate_attribute("start", stringbuf.back().c_str()));
         }
+        auto state_name = isDerivative(it->GetName());
+        if (!state_name.empty()) {
+            stringbuf.push_back(std::to_string(variableIndices[state_name]));
+            unitNode->append_attribute(doc_ptr->allocate_attribute("derivative", stringbuf.back().c_str()));
+        }
         scalarVarNode->append_node(unitNode);
 
-        // Cache index of this variable (map by variable name); include in list of output variables if needed
-        variableIndices[it->GetName()] = crt_index;
-        if (it->GetCausality() == FmuVariable::CausalityType::output)
-            outputIndices.push_back(crt_index);
-        crt_index++;
+        modelVarsNode->append_node(scalarVarNode);
     }
 
     rootNode->append_node(modelVarsNode);
@@ -598,7 +646,25 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
     modelStructNode->append_node(outputsNode);
 
     //     ...Derivatives
-    //// TODO
+    rapidxml::xml_node<>* derivativesNode = doc_ptr->allocate_node(rapidxml::node_element, "Derivatives");
+    for (const auto& d : m_derivatives) {
+        rapidxml::xml_node<>* unknownNode = doc_ptr->allocate_node(rapidxml::node_element, "Unknown");
+
+        stringbuf.push_back(std::to_string(variableIndices[d.first]));
+        unknownNode->append_attribute(doc_ptr->allocate_attribute("index", stringbuf.back().c_str()));
+
+        std::string dependencies = "";
+        for (const auto& dep : d.second.second) {
+            dependencies += std::to_string(variableIndices[dep]) + " ";
+        }
+        stringbuf.push_back(dependencies);
+        unknownNode->append_attribute(doc_ptr->allocate_attribute("dependencies", stringbuf.back().c_str()));
+
+        //// TODO: dependeciesKind
+
+        derivativesNode->append_node(unknownNode);
+    }
+    modelStructNode->append_node(derivativesNode);
 
     //     ...InitialUnknowns
     rapidxml::xml_node<>* initialUnknownsNode = doc_ptr->allocate_node(rapidxml::node_element, "InitialUnknowns");

@@ -97,6 +97,7 @@ bool is_pointer_variant(const FmuVariableBindType& myVariant);
 
 // =============================================================================
 
+/// Implementation of an FMU variable for export (generation of model description XML).
 class FmuVariableExport : public FmuVariable {
   public:
     using VarbindType = FmuVariableBindType;
@@ -116,6 +117,7 @@ class FmuVariableExport : public FmuVariable {
 
     void Bind(VarbindType newvarbind) { varbind = newvarbind; }
 
+    /// Set the value of this FMU variable (for all cases, except variables of type fmi2String).
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
     void SetValue(const T& val) const {
         if (is_pointer_variant(this->varbind))
@@ -124,38 +126,39 @@ class FmuVariableExport : public FmuVariable {
             varns::get<FunGetSet<T>>(this->varbind).second(val);
     }
 
+    /// Set the value of this FMU variable of type fmi2String.
     void SetValue(const fmi2String& val) const;
 
+    /// Get the value of this FMU variable (for all cases, except variables of type fmi2String).
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
     void GetValue(T* varptr) const {
         *varptr = is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind)
                                                     : varns::get<FunGetSet<T>>(this->varbind).first();
     }
 
+    /// Get the value of this FMU variable of type fmi2String.
     void GetValue(fmi2String* varptr) const;
 
+    /// Set the start value for this FMU variable (for all cases, except variables of type fmi2String).
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
     void SetStartVal(T startval) {
-        if (allowed_start)
-            has_start = true;
-        else
+        if (!allowed_start)
             return;
-
+        has_start = true;
         this->start = startval;
     }
 
+    /// Set the start value for this FMU variable of type fmi2String.
     void SetStartVal(fmi2String startval);
 
     void ExposeCurrentValueAsStart();
-
-    std::string GetStartVal_toString() const;
 
   protected:
     bool allowed_start = true;
     bool required_start = false;
 
-    VarbindType varbind;
-    StartType start;
+    VarbindType varbind;     // value of this variable
+    StartType start;         // start value for this variable
 
     // TODO: in C++17 should be possible to either use constexpr or use lambda with 'overload' keyword
     template <typename T>
@@ -163,6 +166,10 @@ class FmuVariableExport : public FmuVariable {
 
     template <typename T>
     void setStartFromVar(T* var_ptr);
+
+    std::string GetStartVal_toString() const;
+
+    friend class FmuComponentBase;
 };
 
 // -----------------------------------------------------------------------------
@@ -189,6 +196,11 @@ void FmuVariableExport::setStartFromVar(T* var_ptr) {
 
 // =============================================================================
 
+/// Base class for an FMU component (used for export).
+/// (1) This class provides support for:
+/// - defining FMU variables (cauality, variability, start value, etc)
+/// - defining FMU model structure (outputs, derivatives, variable dependencies, etc)
+/// (2) This class defines the virtual methods that an FMU must implement
 class FmuComponentBase {
   public:
     FmuComponentBase(fmi2String instanceName,
@@ -275,11 +287,26 @@ class FmuComponentBase {
         FmuVariable::VariabilityType variability = FmuVariable::VariabilityType::continuous,
         FmuVariable::InitialType initial = FmuVariable::InitialType::none);
 
-    /// Add variable dependencies.
+    /// Declare a state derivative variables, specifying the corresponding state and dependencies on other variables.
     /// Calls to this function must be made *after* all FMU variables were defined.
-    void AddFmuVariableDependencies(const std::string& variable_name, const std::vector<std::string>& dependency_names);
+    void DeclareStateDerivative(const std::string& derivative_name,
+                                const std::string& state_name,
+                                const std::vector<std::string>& dependency_names);
+
+    /// Declare variable dependencies.
+    /// Calls to this function must be made *after* all FMU variables were defined.
+    void DeclareVariableDependencies(const std::string& variable_name,
+                                     const std::vector<std::string>& dependency_names);
 
     bool RebindVariable(FmuVariableExport::VarbindType varbind, std::string name);
+
+    /// Add a function to be executed before doStep (co-simulation FMU) or before getDerivatives (model exchange FMU).
+    /// Such functions can be used to implement FMU-specific pre-processing of input variables.
+    void AddPreStepFunction(std::function<void(void)> function) { m_preStepCallbacks.push_back(function); }
+
+    /// Add a function to be executed after doStep (co-simulation FMU) or after getDerivatives (model exchange FMU).
+    /// Such functions can be used to implement FMU-specific post-processing to prepare output variables.
+    void AddPostStepFunction(std::function<void(void)> function) { m_postStepCallbacks.push_back(function); }
 
   protected:
     virtual bool is_cosimulation_available() const = 0;
@@ -316,8 +343,18 @@ class FmuComponentBase {
     virtual void _enterInitializationMode() {}
     virtual void _exitInitializationMode() {}
 
-    /// Include a dependency of "variable_name" on "dependency_name".
-    virtual void addDependency(const std::string& variable_name, const std::string& dependency_name);
+  protected:
+    /// Add a declaration of a state derivative.
+    virtual void addDerivative(const std::string& derivative_name,
+                               const std::string& state_name,
+                               const std::vector<std::string>& dependency_names);
+
+    /// Check if the variable with specified name is a state derivative.
+    /// If true, return the name of the corresponding state variable. Otherwise, return an empty string.
+    std::string isDerivative(const std::string& name);
+
+    /// Add a declaration of dependency of "variable_name" on the variables in the "dependency_names" list.
+    virtual void addDependencies(const std::string& variable_name, const std::vector<std::string>& dependency_names);
 
     void initializeType(fmi2Type fmuType);
 
@@ -343,11 +380,8 @@ class FmuComponentBase {
 
     bool m_visible;
 
-    /// list of available logging categories + flag to enabled their logging
     const std::unordered_set<std::string> m_logCategories_debug;  ///< list of log categories considered to be of debug
-    bool m_debug_logging_enabled = true;
-
-
+    bool m_debug_logging_enabled = true;                          ///< enable logging?
 
     // DefaultExperiment
     fmi2Real m_startTime = 0;
@@ -366,8 +400,9 @@ class FmuComponentBase {
     std::map<FmuVariable::Type, unsigned int> m_valueReferenceCounter;
 
     std::set<FmuVariableExport> m_scalarVariables;
-    std::unordered_map<std::string, std::vector<std::string>> m_variableDependencies;
     std::unordered_map<std::string, UnitDefinitionType> m_unitDefinitions;
+    std::unordered_map<std::string, std::pair<std::string, std::vector<std::string>>> m_derivatives;
+    std::unordered_map<std::string, std::vector<std::string>> m_variableDependencies;
 
     std::list<std::function<void(void)>> m_preStepCallbacks;
     std::list<std::function<void(void)>> m_postStepCallbacks;

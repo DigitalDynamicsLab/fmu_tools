@@ -34,7 +34,8 @@ FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,
 // -----------------------------------------------------------------------------
 
 // During construction of the FMU component:
-// - list the log categories that this FMU should handle, together with a flag that specifies if they have to be enabled dy default
+// - list the log categories that this FMU should handle
+// - specify a flag to enable/disable logging
 // - specify which log categories are to be considered as debug
 myFmuComponent::myFmuComponent(fmi2String instanceName,
                                fmi2Type fmuType,
@@ -61,7 +62,9 @@ myFmuComponent::myFmuComponent(fmi2String instanceName,
            {"logStatusDiscard", true},
            {"logStatusFatal", true},
            {"logAll", true}},
-          {"logStatusWarning", "logStatusDiscard", "logStatusError", "logStatusFatal", "logStatusPending"}) {
+          {"logStatusWarning", "logStatusDiscard", "logStatusError", "logStatusFatal", "logStatusPending"}),
+      x_dd(0),
+      theta_dd(0) {
     initializeType(fmuType);
 
     // Define new units if needed
@@ -81,30 +84,37 @@ myFmuComponent::myFmuComponent(fmi2String instanceName,
                                  FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
     auto& fmu_M = AddFmuVariable(&M, "M", FmuVariable::Type::Real, "kg", "cart mass",
                                  FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
-  
-    auto& fmu_approximateOn =
-        AddFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::Boolean, "1", "use approximated model",
-                       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
-    AddFmuVariable(&q[0], "x", FmuVariable::Type::Real, "m", "cart position",                     //
-                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,  //
-                   FmuVariable::InitialType::exact);                                              //
-    AddFmuVariable(&q[1], "theta", FmuVariable::Type::Real, "rad", "pendulum angle",              //
-                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,  //
-                   FmuVariable::InitialType::exact);                                              //
-    AddFmuVariable(&q[2], "x_t", FmuVariable::Type::Real, "m/s", "cart velocity",                 //
-                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,  //
-                   FmuVariable::InitialType::exact);                                              //
-    AddFmuVariable(&q[3], "theta_t", FmuVariable::Type::Real, "rad/s", "pendulum ang velocity",   //
-                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,  //
-                   FmuVariable::InitialType::exact);                                              //
+    AddFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::Boolean, "1", "use approximated model",
+                   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
-    AddFmuVariable(&x_dd, "x_tt", FmuVariable::Type::Real, "m/s2", "cart linear acceleration",
-                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
-                   FmuVariable::InitialType::calculated);
-    AddFmuVariable(&theta_dd, "theta_tt", FmuVariable::Type::Real, "rad/s2", "pendulum angular acceleration",
-                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
-                   FmuVariable::InitialType::calculated);
+    AddFmuVariable(&q[0], "x", FmuVariable::Type::Real, "m", "cart position",                       //
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,    //
+                   FmuVariable::InitialType::exact);                                                //
+    AddFmuVariable(&q[2], "der(x)", FmuVariable::Type::Real, "m/s", "derivative of cart position",  //
+                   FmuVariable::CausalityType::local, FmuVariable::VariabilityType::continuous,     //
+                   FmuVariable::InitialType::calculated);                                           //
+
+    AddFmuVariable(&q[1], "theta", FmuVariable::Type::Real, "rad", "pendulum angle",                       //
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,           //
+                   FmuVariable::InitialType::exact);                                                       //
+    AddFmuVariable(&q[3], "der(theta)", FmuVariable::Type::Real, "rad/s", "derivative of pendulum angle",  //
+                   FmuVariable::CausalityType::local, FmuVariable::VariabilityType::continuous,            //
+                   FmuVariable::InitialType::calculated);                                                  //
+
+    AddFmuVariable(&q[2], "v", FmuVariable::Type::Real, "m/s", "cart velocity",                   //
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,  //
+                   FmuVariable::InitialType::exact);                                              //
+    AddFmuVariable(&x_dd, "der(v)", FmuVariable::Type::Real, "m/s2", "cart linear acceleration",  //
+                   FmuVariable::CausalityType::local, FmuVariable::VariabilityType::continuous,   //
+                   FmuVariable::InitialType::calculated);                                         //
+
+    AddFmuVariable(&q[3], "omg", FmuVariable::Type::Real, "rad/s", "pendulum angular velocity",                //
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,               //
+                   FmuVariable::InitialType::exact);                                                           //
+    AddFmuVariable(&theta_dd, "der(omg)", FmuVariable::Type::Real, "rad/s2", "pendulum angular acceleration",  //
+                   FmuVariable::CausalityType::local, FmuVariable::VariabilityType::continuous,                //
+                   FmuVariable::InitialType::calculated);                                                      //
 
     /// One can also pass std::functions to get/set the value of the variable if queried
     // AddFmuVariable(std::make_pair(
@@ -121,18 +131,25 @@ myFmuComponent::myFmuComponent(fmi2String instanceName,
 
     // Set name of file expected to be present in the FMU resources directory
     filename = "myData.txt";
-    auto& fmu_Filename =
-        AddFmuVariable(&filename, "filename", FmuVariable::Type::String, "kg", "additional mass on cart",
-                       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    AddFmuVariable(&filename, "filename", FmuVariable::Type::String, "kg", "additional mass on cart",  //
+                   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);        //
+
+    // Specify state derivatives
+    DeclareStateDerivative("der(x)", "x", {"v"});
+    DeclareStateDerivative("der(theta)", "theta", {"omg"});
+    DeclareStateDerivative("der(v)", "v", {"theta", "omg", "len", "m", "M"});
+    DeclareStateDerivative("der(omg)", "omg", {"theta", "omg", "len", "m", "M"});
 
     // Variable dependencies must be specified for:
     // - variables with causality 'output' for which 'initial' is 'approx' or 'calculated'
     // - variables with causality 'calculatedParameter'
-    AddFmuVariableDependencies("x_tt", {"len", "m", "M"});
-    AddFmuVariableDependencies("theta_tt", {"len", "m", "M"});
-    
+    DeclareVariableDependencies("der(x)", {"v"});
+    DeclareVariableDependencies("der(theta)", {"omg"});
+    DeclareVariableDependencies("der(v)", {"theta", "omg", "len", "m", "M"});
+    DeclareVariableDependencies("der(omg)", {"theta", "omg", "len", "m", "M"});
+
     // Specify functions to calculate FMU outputs (at end of step)
-    m_postStepCallbacks.push_back([this]() { this->calcAccelerations(); });
+    AddPostStepFunction([this]() { this->calcAccelerations(); });
 
     // Log location of resources directory
     sendToLog("Resources directory location: " + std::string(fmuResourceLocation) + ".\n", fmi2Status::fmi2OK, "logAll");

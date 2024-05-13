@@ -34,7 +34,8 @@ FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,
 // -----------------------------------------------------------------------------
 
 // During construction of the FMU component:
-// - list the log categories that this FMU should handle, together with a flag that specifies if they have to be enabled dy default
+// - list the log categories that this FMU should handle
+// - specify a flag to enable/disable logging
 // - specify which log categories are to be considered as debug
 myFmuComponent::myFmuComponent(fmi2String instanceName,
                                fmi2Type fmuType,
@@ -61,7 +62,9 @@ myFmuComponent::myFmuComponent(fmi2String instanceName,
            {"logStatusDiscard", true},
            {"logStatusFatal", true},
            {"logAll", true}},
-          {"logStatusWarning", "logStatusDiscard", "logStatusError", "logStatusFatal", "logStatusPending"}) {
+          {"logStatusWarning", "logStatusDiscard", "logStatusError", "logStatusFatal", "logStatusPending"}),
+      x_dd(0),
+      theta_dd(0) {
     initializeType(fmuType);
 
     // Define new units if needed
@@ -121,18 +124,17 @@ myFmuComponent::myFmuComponent(fmi2String instanceName,
 
     // Set name of file expected to be present in the FMU resources directory
     filename = "myData.txt";
-    auto& fmu_Filename =
-        AddFmuVariable(&filename, "filename", FmuVariable::Type::String, "kg", "additional mass on cart",
-                       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
+    AddFmuVariable(&filename, "filename", FmuVariable::Type::String, "kg", "additional mass on cart",  //
+                   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);        //
 
     // Variable dependencies must be specified for:
     // - variables with causality 'output' for which 'initial' is 'approx' or 'calculated'
     // - variables with causality 'calculatedParameter'
-    AddFmuVariableDependencies("x_tt", {"len", "m", "M"});
-    AddFmuVariableDependencies("theta_tt", {"len", "m", "M"});
+    DeclareVariableDependencies("x_tt", {"len", "m", "M"});
+    DeclareVariableDependencies("theta_tt", {"len", "m", "M"});
     
     // Specify functions to calculate FMU outputs (at end of step)
-    m_postStepCallbacks.push_back([this]() { this->calcAccelerations(); });
+    AddPostStepFunction([this]() { this->calcAccelerations(); });
 
     // Log location of resources directory
     sendToLog("Resources directory location: " + std::string(fmuResourceLocation) + ".\n", fmi2Status::fmi2OK, "logAll");
