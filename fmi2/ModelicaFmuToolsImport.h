@@ -47,7 +47,7 @@ class FmuModelicaUnit : public FmuUnit {
   public:
     FmuModelicaUnit() : FmuUnit() {}
 
-    virtual void LoadUnzipped(const std::string& directory) override;
+    virtual void LoadUnzipped(Type type, const std::string& directory) override;
 
     void BuildBodyList(FmuVariableTreeNode* mynode) {}
     void BuildVisualizersList(FmuVariableTreeNode* mynode);
@@ -58,8 +58,8 @@ class FmuModelicaUnit : public FmuUnit {
 
 // -----------------------------------------------------------------------------
 
-void FmuModelicaUnit::LoadUnzipped(const std::string& directory) {
-    FmuUnit::LoadUnzipped(directory);
+void FmuModelicaUnit::LoadUnzipped(Type type, const std::string& directory) {
+    FmuUnit::LoadUnzipped(type, directory);
 
     BuildBodyList(&tree_variables);
     BuildVisualizersList(&tree_variables);

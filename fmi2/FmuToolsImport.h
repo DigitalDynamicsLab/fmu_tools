@@ -19,6 +19,8 @@
 #include "miniz-cpp/zip_file.hpp"
 #include "filesystem.hpp"
 
+// =============================================================================
+
 #define LOAD_FMI_FUNCTION(funcName)                                                                    \
     this->_##funcName = (funcName##TYPE*)get_function_ptr(this->dynlib_handle, #funcName);             \
     if (!this->_##funcName)                                                                            \
@@ -53,15 +55,18 @@ class FmuVariableTreeNode {
 /// It contains functions to load the shared library in run-time, to parse the XML, to set/get variables, etc.
 class FmuUnit {
   public:
+    enum class Type { COSIMULATION, MODEL_EXCHANGE };
+
     FmuUnit();
     virtual ~FmuUnit() {}
 
-    /// Load the FMU from the directory, assuming it has been already unzipped
-    virtual void LoadUnzipped(const std::string& directory);
-
     /// Load the FMU, optionally defining where the FMU will be unzipped (default is the temporary folder)
-    void Load(const std::string& fmupath,
+    void Load(Type type,
+              const std::string& fmupath,
               const std::string& unzipdir = fs::temp_directory_path().generic_string() + std::string("/_fmu_temp"));
+
+    /// Load the FMU from the directory, assuming it has been already unzipped
+    virtual void LoadUnzipped(Type type, const std::string& directory);
 
     /// Return the folder in which the FMU has been unzipped
     std::string GetUnzippedFolder() const { return directory; }
@@ -71,6 +76,9 @@ class FmuUnit {
 
     /// Return types platform.
     std::string GetTypesPlatform() const;
+
+    /// Return the number of state variables.
+    int GetNumStates() const { return nx; }
 
     /// Instantiate the model.
     void Instantiate(std::string tool_name, std::string resource_dir, bool logging = false, bool visible = false);
@@ -92,13 +100,13 @@ class FmuUnit {
     fmi2Status ExitInitializationMode();
 
     /// Advance state of the FMU from currentCommunicationPoint to currentCommunicationPoint+communicationStepSize.
-    /// Available only for an FMU that iplements the CoSimulation interface.
+    /// Available only for an FMU that implements the CoSimulation interface.
     fmi2Status DoStep(fmi2Real currentCommunicationPoint,
                       fmi2Real communicationStepSize,
                       fmi2Boolean noSetFMUStatePriorToCurrentPoint);
 
     /// Set a new time instant and re-initialize caching of variables that depend on time.
-    /// Available only for an FMU that iplements the ModelExchange interface.
+    /// Available only for an FMU that implements the ModelExchange interface.
     fmi2Status SetTime(const fmi2Real time);
 
     /// Set a new (continuous) state vector and re-initialize caching of variables that depend on the states. Argument
@@ -133,8 +141,8 @@ class FmuUnit {
     /// Parse XML and create the list of variables.
     void LoadXML();
 
-    /// Load the shared library in run-time and do the dynamic linking to the needed FMU functions.
-    void LoadSharedLibrary();
+    /// Load the shared library in run-time and do the dynamic linking to the required FMU functions.
+    void LoadSharedLibrary(Type type);
 
     /// Construct a tree of variables from the flat variable list.
     void BuildVariablesTree();
@@ -177,7 +185,10 @@ class FmuUnit {
     std::string info_modex_canSerializeFMUstate;
     std::string info_modex_providesDirectionalDerivative;
 
-    std::map<std::string, FmuVariable> scalarVariables;
+    std::map<std::string, FmuVariable> scalarVariables;    ///< FMU variables
+    std::unordered_map<std::string, int> variableIndices;  ///< variable indices
+
+    int nx;  ///< number of state variables
 
     FmuVariableTreeNode tree_variables;
 
@@ -217,26 +228,18 @@ class FmuUnit {
     fmi2GetDerivativesTYPE* _fmi2GetDerivatives;
 
   private:
+    Type m_type;
     DYNLIB_HANDLE dynlib_handle;
 };
 
 // -----------------------------------------------------------------------------
 
-FmuUnit::FmuUnit() : cosim(false), modex(false) {
+FmuUnit::FmuUnit() : cosim(false), modex(false), nx(0) {
     // default binaries directory in FMU unzipped directory
     binaries_dir = "/binaries/" + std::string(FMU_OS_SUFFIX);
 }
 
-void FmuUnit::LoadUnzipped(const std::string& directory) {
-    this->directory = directory;
-
-    LoadXML();
-    LoadSharedLibrary();
-
-    BuildVariablesTree();
-}
-
-void FmuUnit::Load(const std::string& filepath, const std::string& unzipdir) {
+void FmuUnit::Load(Type type, const std::string& filepath, const std::string& unzipdir) {
     std::cout << "Unzipping FMU: " << filepath << " in: " << unzipdir << std::endl;
     std::error_code ec;
     fs::remove_all(unzipdir, ec);
@@ -244,7 +247,23 @@ void FmuUnit::Load(const std::string& filepath, const std::string& unzipdir) {
     miniz_cpp::zip_file fmufile(filepath);
     fmufile.extractall(unzipdir);
 
-    LoadUnzipped(unzipdir);
+    LoadUnzipped(type, unzipdir);
+}
+
+void FmuUnit::LoadUnzipped(Type type, const std::string& directory) {
+    m_type = type;
+    this->directory = directory;
+
+    LoadXML();
+
+    if (type == Type::COSIMULATION && !cosim)
+        throw std::runtime_error("Attempting to load CoSimulation FMU, but not a CS FMU.");
+    if (type == Type::MODEL_EXCHANGE && !modex)
+        throw std::runtime_error("Attempting to load as ModelExchange, but not an ME FMU.");
+
+    LoadSharedLibrary(type);
+
+    BuildVariablesTree();
 }
 
 void FmuUnit::LoadXML() {
@@ -369,28 +388,37 @@ void FmuUnit::LoadXML() {
     if (!variables_node)
         throw std::runtime_error("Not a valid FMU. Missing <ModelVariables> in XML. \n");
 
-    // Iterate over the variables (valueReference starts at 1)
+    // Initialize variable index and lists of state and state derivative variables
+    int crt_index = 1;
+    std::vector<int> state_indices;
+    std::vector<int> deriv_indices;
+
+    // Iterate over the variable nodes and load container of FMU variables
     for (auto variable_node = variables_node->first_node("ScalarVariable"); variable_node;
          variable_node = variable_node->next_sibling()) {
-        FmuVariable::Type mvar_type;
-        std::string mvar_name;
+        FmuVariable::Type var_type;
+        std::string var_name;
 
         // fetch properties
         if (auto attr = variable_node->first_attribute("name"))
-            mvar_name = attr->value();
+            var_name = attr->value();
         else
             throw std::runtime_error("Cannot find 'name' property in variable.\n");
 
+        // Load index of this variable
+        variableIndices[var_name] = crt_index;
+        crt_index++;
+
         if (variable_node->first_node("Real"))
-            mvar_type = FmuVariable::Type::Real;
+            var_type = FmuVariable::Type::Real;
         else if (variable_node->first_node("String"))
-            mvar_type = FmuVariable::Type::String;
+            var_type = FmuVariable::Type::String;
         else if (variable_node->first_node("Integer"))
-            mvar_type = FmuVariable::Type::Integer;
+            var_type = FmuVariable::Type::Integer;
         else if (variable_node->first_node("Boolean"))
-            mvar_type = FmuVariable::Type::Boolean;
+            var_type = FmuVariable::Type::Boolean;
         else
-            mvar_type = FmuVariable::Type::Real;
+            var_type = FmuVariable::Type::Real;
 
         fmi2ValueReference valref;
         std::string description = "";
@@ -398,6 +426,7 @@ void FmuUnit::LoadXML() {
         std::string causality = "";
         std::string initial = "";
 
+        // valueReference is 1-based
         if (auto attr = variable_node->first_attribute("valueReference"))
             valref = std::stoul(attr->value());
         else
@@ -462,7 +491,7 @@ void FmuUnit::LoadXML() {
         else
             throw std::runtime_error("variability is badly formatted.");
 
-        FmuVariable mvar(mvar_name, mvar_type, causality_enum, variability_enum, initial_enum);
+        FmuVariable mvar(var_name, var_type, causality_enum, variability_enum, initial_enum);
         mvar.SetValueReference(valref);
 
         scalarVariables[mvar.GetName()] = mvar;
@@ -471,9 +500,19 @@ void FmuUnit::LoadXML() {
     delete doc_ptr;
 }
 
-void FmuUnit::LoadSharedLibrary() {
+void FmuUnit::LoadSharedLibrary(Type type) {
+    std::string modelIdentifier;
+    switch (type) {
+        case Type::COSIMULATION:
+            modelIdentifier = info_cosim_modelIdentifier;
+            break;
+        case Type::MODEL_EXCHANGE:
+            modelIdentifier = info_modex_modelIdentifier;
+            break;
+    }
+
     std::string dynlib_dir = directory + "/" + binaries_dir;
-    std::string dynlib_name = dynlib_dir + "/" + info_cosim_modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
+    std::string dynlib_name = dynlib_dir + "/" + modelIdentifier + std::string(SHARED_LIBRARY_SUFFIX);
 
     dynlib_handle = RuntimeLinkLibrary(dynlib_dir, dynlib_name);
 
@@ -569,8 +608,10 @@ void FmuUnit::Instantiate(std::string tool_name, std::string resource_dir, bool 
     callbacks.componentEnvironment = NULL;
 
     // Instantiate both slaves
+    fmi2Type fmi2_type = (m_type == Type::COSIMULATION ? fmi2CoSimulation : fmi2ModelExchange);
+
     component = _fmi2Instantiate(tool_name.c_str(),                         // instance name
-                                 fmi2CoSimulation,                          // type
+                                 fmi2_type,                                 // type
                                  guid.c_str(),                              // guid
                                  resource_dir.c_str(),                      // resource dir
                                  (const fmi2CallbackFunctions*)&callbacks,  // function callbacks

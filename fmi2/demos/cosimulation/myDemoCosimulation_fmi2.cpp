@@ -19,10 +19,9 @@ int main(int argc, char* argv[]) {
     FmuUnit my_fmu;
 
     try {
-        ////my_fmu.LoadUnzipped(unzipped_fmu_folder);
-        my_fmu.Load(FMU_FILENAME, FMU_UNPACK_DIRECTORY);  // FMU unpacked in provided directory
-        ////my_fmu.Load(FMU_FILENAME);                        // FMU unpacked in a directory in /tmp
-
+        my_fmu.Load(FmuUnit::Type::COSIMULATION, FMU_FILENAME, FMU_UNPACK_DIRECTORY);
+        ////my_fmu.Load(FmuUnit::Type::COSIMULATION, FMU_FILENAME);                 // unpack in a directory in /tmp
+        ////my_fmu.LoadUnzipped(FmuUnit::Type::COSIMULATION, unzipped_fmu_folder);  // already unpacked
     } catch (std::exception& my_exception) {
         std::cout << "ERROR loading FMU: " << my_exception.what() << "\n";
     }
