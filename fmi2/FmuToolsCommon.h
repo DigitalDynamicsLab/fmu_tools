@@ -229,32 +229,28 @@ class FmuVariable {
     /// Return true if a start value is specified for this variable.
     bool HasStartVal() const { return has_start; }
 
+    /// Check if setting this variable is allowed, given the FMU type and current FMU state.
     bool IsSetAllowed(fmi2Type fmi_type, FmuMachineStateType fmu_machine_state) const {
-        if (fmi_type == fmi2Type::fmi2CoSimulation) {
-            if (variability != VariabilityType::constant) {
-                if (initial == InitialType::approx)
-                    return fmu_machine_state == FmuMachineStateType::instantiated ||
-                           fmu_machine_state == FmuMachineStateType::anySettableState;
-                else if (initial == InitialType::exact)
-                    return fmu_machine_state == FmuMachineStateType::instantiated ||
-                           fmu_machine_state == FmuMachineStateType::initializationMode ||
-                           fmu_machine_state == FmuMachineStateType::anySettableState;
-            }
-
-            if (causality == CausalityType::input ||
-                (causality == CausalityType::parameter && variability == VariabilityType::tunable))
-                return fmu_machine_state == FmuMachineStateType::initializationMode ||
-                       fmu_machine_state == FmuMachineStateType::stepCompleted ||
+        if (variability != VariabilityType::constant) {
+            if (initial == InitialType::approx)
+                return fmu_machine_state == FmuMachineStateType::instantiated ||
                        fmu_machine_state == FmuMachineStateType::anySettableState;
-
-            return false;
-        } else {
-            // TODO for ModelExchange
+            else if (initial == InitialType::exact)
+                return fmu_machine_state == FmuMachineStateType::instantiated ||
+                       fmu_machine_state == FmuMachineStateType::initializationMode ||
+                       fmu_machine_state == FmuMachineStateType::anySettableState;
         }
+
+        if (causality == CausalityType::input ||
+            (causality == CausalityType::parameter && variability == VariabilityType::tunable))
+            return fmu_machine_state == FmuMachineStateType::initializationMode ||
+                   fmu_machine_state == FmuMachineStateType::stepCompleted ||
+                   fmu_machine_state == FmuMachineStateType::anySettableState;
 
         return false;
     }
 
+    /// Return a string with the name of the specified FMU variable type.
     static std::string Type_toString(Type type) {
         switch (type) {
             case FmuVariable::Type::Real:
