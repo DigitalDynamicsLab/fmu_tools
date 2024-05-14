@@ -227,15 +227,23 @@ class FmuComponentBase {
 
     template <class T>
     fmi2Status fmi2GetVariable(const fmi2ValueReference vr[], size_t nvr, T value[], FmuVariable::Type vartype) {
-        // TODO, when multiple variables are requested it might be better to iterate through scalarVariables just once
-        //  and check if they match any of the nvr requested variables
+        //// TODO
+        //// when multiple variables are requested it might be better to iterate through scalarVariables just once
+        //// and check if they match any of the nvr requested variables
         for (size_t s = 0; s < nvr; ++s) {
             auto it = this->findByValrefType(vr[s], vartype);
-            if (it != this->m_scalarVariables.end()) {
+
+            if (it == this->m_scalarVariables.end()) {
+                // requested a variable that does not exist
+                auto msg = "fmi2GetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
+                           " with value reference " + std::to_string(vr[s]) + " does NOT exist.\n";
+                sendToLog(msg, fmi2Status::fmi2Error, "logStatusError");
+                return fmi2Status::fmi2Error;
+            } else {
                 it->GetValue(&value[s]);
-            } else
-                return fmi2Status::fmi2Error;  // requested a variable that does not exist
+            }
         }
+
         return fmi2Status::fmi2OK;
     }
 
@@ -243,11 +251,25 @@ class FmuComponentBase {
     fmi2Status fmi2SetVariable(const fmi2ValueReference vr[], size_t nvr, const T value[], FmuVariable::Type vartype) {
         for (size_t s = 0; s < nvr; ++s) {
             std::set<FmuVariableExport>::iterator it = this->findByValrefType(vr[s], vartype);
-            if (it != this->m_scalarVariables.end() && it->IsSetAllowed(this->m_fmuType, this->m_fmuMachineState)) {
+
+            if (it == this->m_scalarVariables.end()) {
+                // requested a variable that does not exist
+                auto msg = "fmi2SetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
+                           " with value reference " + std::to_string(vr[s]) + " does NOT exist.\n";
+                sendToLog(msg, fmi2Status::fmi2Error, "logStatusError");
+                return fmi2Status::fmi2Error;
+            } else if (!it->IsSetAllowed(this->m_fmuType, this->m_fmuMachineState)) {
+                // requested variable cannot be set in the current FMU state
+                auto msg = "fmi2SetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
+                           " with value reference " + std::to_string(vr[s]) +
+                           " NOT ALLOWED to be set in current state.\n";
+                sendToLog(msg, fmi2Status::fmi2Error, "logStatusError");
+                return fmi2Status::fmi2Error;
+            } else {
                 it->SetValue(value[s]);
-            } else
-                return fmi2Status::fmi2Error;  // requested a variable that does not exist or that cannot be set
+            }
         }
+
         return fmi2Status::fmi2OK;
     }
 
