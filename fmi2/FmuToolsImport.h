@@ -56,8 +56,6 @@ class FmuVariableTreeNode {
 /// It contains functions to load the shared library in run-time, to parse the XML, to set/get variables, etc.
 class FmuUnit {
   public:
-    enum class Type { COSIMULATION, MODEL_EXCHANGE };
-
     FmuUnit();
     virtual ~FmuUnit() {}
 
@@ -65,12 +63,12 @@ class FmuUnit {
     void SetVerbose(bool verbose) { m_verbose = verbose; }
 
     /// Load the FMU, optionally defining where the FMU will be unzipped (default is the temporary folder).
-    void Load(Type type,
+    void Load(fmi2Type fmuType,
               const std::string& fmupath,
               const std::string& unzipdir = fs::temp_directory_path().generic_string() + std::string("/_fmu_temp"));
 
     /// Load the FMU from the specified directory, assuming it has been already unzipped.
-    virtual void LoadUnzipped(Type type, const std::string& directory);
+    virtual void LoadUnzipped(fmi2Type fmuType, const std::string& directory);
 
     /// Return the folder in which the FMU has been unzipped.
     std::string GetUnzippedFolder() const { return m_directory; }
@@ -85,10 +83,13 @@ class FmuUnit {
     int GetNumStates() const { return nx; }
 
     /// Instantiate the model.
-    void Instantiate(std::string tool_name, std::string resource_dir, bool logging = false, bool visible = false);
+    void Instantiate(const std::string& instanceName,
+                     const std::string& resource_dir,
+                     bool logging = false,
+                     bool visible = false);
 
     /// Instantiate the model, setting as resources folder the one from the unzipped FMU.
-    void Instantiate(std::string tool_name, bool logging = false, bool visible = false);
+    void Instantiate(const std::string& instanceName, bool logging = false, bool visible = false);
 
     /// Set debug logging level.
     fmi2Status SetDebugLogging(fmi2Boolean loggingOn, const std::vector<std::string>& logCategories);
@@ -149,7 +150,7 @@ class FmuUnit {
     void LoadXML();
 
     /// Load the shared library in run-time and do the dynamic linking to the required FMU functions.
-    void LoadSharedLibrary(Type type);
+    void LoadSharedLibrary(fmi2Type fmuType);
 
     /// Construct a tree of variables from the flat variable list.
     void BuildVariablesTree();
@@ -236,7 +237,7 @@ class FmuUnit {
     std::string m_directory;
     std::string m_bin_directory;
 
-    Type m_type;
+    fmi2Type m_fmuType;
     bool m_verbose;
 
     DYNLIB_HANDLE dynlib_handle;
@@ -249,7 +250,7 @@ FmuUnit::FmuUnit() : cosim(false), modex(false), nx(0), m_verbose(false) {
     m_bin_directory = "/binaries/" + std::string(FMU_OS_SUFFIX);
 }
 
-void FmuUnit::Load(Type type, const std::string& filepath, const std::string& unzipdir) {
+void FmuUnit::Load(fmi2Type fmuType, const std::string& filepath, const std::string& unzipdir) {
     if (m_verbose) {
         std::cout << "Unzipping FMU: " << filepath << std::endl;
         std::cout << "           in: " << unzipdir << std::endl;
@@ -261,21 +262,21 @@ void FmuUnit::Load(Type type, const std::string& filepath, const std::string& un
     miniz_cpp::zip_file fmufile(filepath);
     fmufile.extractall(unzipdir);
 
-    LoadUnzipped(type, unzipdir);
+    LoadUnzipped(fmuType, unzipdir);
 }
 
-void FmuUnit::LoadUnzipped(Type type, const std::string& directory) {
-    m_type = type;
+void FmuUnit::LoadUnzipped(fmi2Type fmuType, const std::string& directory) {
+    m_fmuType = fmuType;
     m_directory = directory;
 
     LoadXML();
 
-    if (type == Type::COSIMULATION && !cosim)
+    if (fmuType == fmi2Type::fmi2CoSimulation && !cosim)
         throw std::runtime_error("Attempting to load CoSimulation FMU, but not a CS FMU.");
-    if (type == Type::MODEL_EXCHANGE && !modex)
+    if (fmuType == fmi2Type::fmi2ModelExchange && !modex)
         throw std::runtime_error("Attempting to load as ModelExchange, but not an ME FMU.");
 
-    LoadSharedLibrary(type);
+    LoadSharedLibrary(fmuType);
 
     BuildVariablesTree();
 }
@@ -565,13 +566,13 @@ void FmuUnit::LoadXML() {
     delete doc_ptr;
 }
 
-void FmuUnit::LoadSharedLibrary(Type type) {
+void FmuUnit::LoadSharedLibrary(fmi2Type fmuType) {
     std::string modelIdentifier;
-    switch (type) {
-        case Type::COSIMULATION:
+    switch (fmuType) {
+        case fmi2Type::fmi2CoSimulation:
             modelIdentifier = info_cosim_modelIdentifier;
             break;
-        case Type::MODEL_EXCHANGE:
+        case fmi2Type::fmi2ModelExchange:
             modelIdentifier = info_modex_modelIdentifier;
             break;
     }
@@ -677,7 +678,10 @@ std::string FmuUnit::GetTypesPlatform() const {
     return std::string(_fmi2GetTypesPlatform());
 }
 
-void FmuUnit::Instantiate(std::string tool_name, std::string resource_dir, bool logging, bool visible) {
+void FmuUnit::Instantiate(const std::string& instanceName,
+                          const std::string& resource_dir,
+                          bool logging,
+                          bool visible) {
     if (m_verbose)
         std::cout << "Instantiate FMU\n" << std::endl;
 
@@ -687,11 +691,8 @@ void FmuUnit::Instantiate(std::string tool_name, std::string resource_dir, bool 
     callbacks.stepFinished = NULL;
     callbacks.componentEnvironment = NULL;
 
-    // Instantiate FMU with appropriate type
-    fmi2Type fmi2_type = (m_type == Type::COSIMULATION ? fmi2CoSimulation : fmi2ModelExchange);
-
-    component = _fmi2Instantiate(tool_name.c_str(),                         // instance name
-                                 fmi2_type,                                 // type
+    component = _fmi2Instantiate(instanceName.c_str(),                      // instance name
+                                 m_fmuType,                                 // type
                                  guid.c_str(),                              // guid
                                  resource_dir.c_str(),                      // resource dir
                                  (const fmi2CallbackFunctions*)&callbacks,  // function callbacks
@@ -702,8 +703,8 @@ void FmuUnit::Instantiate(std::string tool_name, std::string resource_dir, bool 
         throw std::runtime_error("Failed to instantiate the FMU.");
 }
 
-void FmuUnit::Instantiate(std::string tool_name, bool logging, bool visible) {
-    Instantiate(tool_name, "file:///" + m_directory + "/resources", logging, visible);
+void FmuUnit::Instantiate(const std::string& instanceName, bool logging, bool visible) {
+    Instantiate(instanceName, "file:///" + m_directory + "/resources", logging, visible);
 }
 
 fmi2Status FmuUnit::SetDebugLogging(fmi2Boolean loggingOn, const std::vector<std::string>& logCategories) {

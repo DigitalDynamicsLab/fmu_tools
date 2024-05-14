@@ -20,9 +20,9 @@ int main(int argc, char* argv[]) {
     my_fmu.SetVerbose(true);
 
     try {
-        my_fmu.Load(FmuUnit::Type::COSIMULATION, FMU_FILENAME, FMU_UNPACK_DIRECTORY);
-        ////my_fmu.Load(FmuUnit::Type::COSIMULATION, FMU_FILENAME);                 // unpack in  /tmp
-        ////my_fmu.LoadUnzipped(FmuUnit::Type::COSIMULATION, unzipped_fmu_folder);  // already unpacked
+        my_fmu.Load(fmi2Type::fmi2CoSimulation, FMU_FILENAME, FMU_UNPACK_DIRECTORY);
+        ////my_fmu.Load(fmi2Type::fmi2CoSimulation, FMU_FILENAME);                 // unpack in  /tmp
+        ////my_fmu.LoadUnzipped(fmi2Type::fmi2CoSimulation, unzipped_fmu_folder);  // already unpacked
     } catch (std::exception& my_exception) {
         std::cout << "ERROR loading FMU: " << my_exception.what() << "\n";
     }
