@@ -8,6 +8,8 @@
 #   FMU_RESOURCES_DIRECTORY (optional)
 #   FMU_GUID_NAMESPACE (optional, default randomly-generated)
 #   FMU_TESTING (optional, default OFF)
+#   FMU_CS (optional, default OFF)
+#   FMU_ME (optional, default OFF)
 #   USE_CUSTOM_TYPESPLATFORM (optional, default OFF)
 #   FMU_MSG_PREFIX (optional, default "")
 #
@@ -260,7 +262,7 @@ add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
 # Target to run fmuCheck on the FMU and test result output 
 # --------------------------------------------------------
 
-if (FMU_TESTING)
+if (FMU_TESTING AND (FMU_CS OR FMU_ME))
     if(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
         ## Call fmuChecker on the FMU, parse its output
         set(fmi_testchecker fmi_testchecker_${FMU_MODEL_IDENTIFIER})
@@ -281,10 +283,21 @@ if (FMU_TESTING)
         add_dependencies(${fmi_testchecker} ${FMU_MODEL_IDENTIFIER})
 
         ## call the execution of fmuChecker
+        if (FMU_CS)
+        message(STATUS "${FMU_MSG_PREFIX}   enabling testing as CoSimulation FMU")
         add_custom_command(TARGET ${fmi_testchecker}
                         PRE_BUILD
                         COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" -e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\"
-                        COMMENT "\nTesting FMU with fmuChecker")
+                        COMMENT "\nTesting CS FMU with fmuChecker")
+        endif()
+
+        if (FMU_ME)
+        message(STATUS "${FMU_MSG_PREFIX}   enabling testing as ModelExchange FMU")
+        add_custom_command(TARGET ${fmi_testchecker}
+                        PRE_BUILD
+                        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" -e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k me -s 1 -h 1e-3 \"${FMU_FILENAME}\"
+                        COMMENT "\nTesting ME FMU with fmuChecker")
+        endif()
 
         if(PROJECT_IS_TOP_LEVEL)
             ## enable the testing
@@ -310,7 +323,7 @@ if (FMU_TESTING)
     endif()
 else()
     message(STATUS "${FMU_MSG_PREFIX}Testing disabled")
-endif(FMU_TESTING)
+endif()
 
 # -------------------------------------------------
 # Propagate variable to upper levels
