@@ -307,6 +307,11 @@ class FmuComponentBase {
     void AddPostStepFunction(std::function<void(void)> function) { m_postStepCallbacks.push_back(function); }
 
   protected:
+    // This section declares the virtual methods that a concrete FMU must implement.
+    // - some of these functions have a default implementation
+    // - some are required for all FMUs (pure virtual)
+    // - others are required only for specific FMU types (e.g., _doStep must be implemented for CS, but not for ME)
+
     virtual bool is_cosimulation_available() const = 0;
     virtual bool is_modelexchange_available() const = 0;
 
@@ -317,6 +322,26 @@ class FmuComponentBase {
             throw std::runtime_error("An FMU for co-simulation must implement _doStep");
 
         return fmi2OK;
+    }
+
+    virtual fmi2Status FmuComponentBase::_newDiscreteStates(fmi2EventInfo* fmi2eventInfo) {
+        fmi2eventInfo->newDiscreteStatesNeeded = fmi2False;
+        fmi2eventInfo->terminateSimulation = fmi2False;
+        fmi2eventInfo->nominalsOfContinuousStatesChanged = fmi2False;
+        fmi2eventInfo->valuesOfContinuousStatesChanged = fmi2False;
+        fmi2eventInfo->nextEventTimeDefined = fmi2False;
+        fmi2eventInfo->nextEventTime = 0;
+
+        return fmi2Status::fmi2OK;
+    }
+
+    virtual fmi2Status _completedIntegratorStep(fmi2Boolean noSetFMUStatePriorToCurrentPoint,
+                                                fmi2Boolean* enterEventMode,
+                                                fmi2Boolean* terminateSimulation) {
+        *enterEventMode = fmi2False;
+        *terminateSimulation = fmi2False;
+
+        return fmi2Status::fmi2OK;
     }
 
     virtual fmi2Status _setTime(fmi2Real time) { return fmi2Status::fmi2OK; }
@@ -371,6 +396,10 @@ class FmuComponentBase {
     // These functions are used to implement the actual model exchange functions imposed by the FMI2 standard.
     // In turn, they call overrides of virtual methods provided by a concrete FMU.
 
+    fmi2Status NewDiscreteStates(fmi2EventInfo* fmi2eventInfo);
+    fmi2Status CompletedIntegratorStep(fmi2Boolean noSetFMUStatePriorToCurrentPoint,
+                                       fmi2Boolean* enterEventMode,
+                                       fmi2Boolean* terminateSimulation);
     fmi2Status SetTime(const fmi2Real time);
     fmi2Status GetContinuousStates(fmi2Real x[], size_t nx);
     fmi2Status SetContinuousStates(const fmi2Real x[], size_t nx);

@@ -759,6 +759,24 @@ fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
     return status;
 }
 
+fmi2Status FmuComponentBase::NewDiscreteStates(fmi2EventInfo* fmi2eventInfo) {
+    fmi2Status status = _newDiscreteStates(fmi2eventInfo);
+
+    //// TODO - anything else here?
+
+    return status;
+}
+
+fmi2Status FmuComponentBase::CompletedIntegratorStep(fmi2Boolean noSetFMUStatePriorToCurrentPoint,
+                                   fmi2Boolean* enterEventMode,
+                                                     fmi2Boolean* terminateSimulation) {
+    fmi2Status status = _completedIntegratorStep(noSetFMUStatePriorToCurrentPoint, enterEventMode, terminateSimulation);
+
+    //// TODO - anything else here?
+
+    return status;
+}
+
 fmi2Status FmuComponentBase::SetTime(fmi2Real time) {
     m_time = time;
 
@@ -953,7 +971,7 @@ fmi2Status fmi2EnterEventMode(fmi2Component c) {
 }
 
 fmi2Status fmi2NewDiscreteStates(fmi2Component c, fmi2EventInfo* fmi2eventInfo) {
-    return fmi2Status::fmi2OK;
+    return reinterpret_cast<FmuComponentBase*>(c)->NewDiscreteStates(fmi2eventInfo);
 }
 
 fmi2Status fmi2EnterContinuousTimeMode(fmi2Component c) {
@@ -964,7 +982,8 @@ fmi2Status fmi2CompletedIntegratorStep(fmi2Component c,
                                        fmi2Boolean noSetFMUStatePriorToCurrentPoint,
                                        fmi2Boolean* enterEventMode,
                                        fmi2Boolean* terminateSimulation) {
-    return fmi2Status::fmi2OK;
+    return reinterpret_cast<FmuComponentBase*>(c)->CompletedIntegratorStep(noSetFMUStatePriorToCurrentPoint,
+                                                                           enterEventMode, terminateSimulation);
 }
 
 fmi2Status fmi2SetTime(fmi2Component c, fmi2Real time) {
