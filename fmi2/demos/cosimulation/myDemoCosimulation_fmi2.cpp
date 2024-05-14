@@ -42,26 +42,25 @@ int main(int argc, char* argv[]) {
     // my_fmu._fmi2SetDebugLogging(my_fmu.component, fmi2True, categoriesVector.size(), categoriesArray.data());
 
     // Set up experiment
-    my_fmu._fmi2SetupExperiment(my_fmu.component,
-                                fmi2False,  // tolerance defined
-                                0.0,        // tolerance
-                                0.0,        // start time
-                                fmi2False,  // do not use stop time
-                                1.0         // stop time (dummy)
+    my_fmu.SetupExperiment(fmi2False,  // no tolerance defined
+                           0.0,        // tolerance (dummy)
+                           0.0,        // start time
+                           fmi2False,  // do not use stop time
+                           1.0         // stop time (dummy)
     );
 
     // Initialize FMU
-    my_fmu._fmi2EnterInitializationMode(my_fmu.component);
+    my_fmu.EnterInitializationMode();
     {
         fmi2ValueReference valref = 3;
         fmi2Real m_in = 1.5;
-        my_fmu._fmi2SetReal(my_fmu.component, &valref, 1, &m_in);
+        my_fmu.SetVariable(valref, m_in, FmuVariable::Type::Real);
 
         fmi2Real m_out;
-        my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &m_out);
+        my_fmu.GetVariable(valref, m_out, FmuVariable::Type::Real);
         std::cout << "m_out: " << m_out << std::endl;
     }
-    my_fmu._fmi2ExitInitializationMode(my_fmu.component);
+    my_fmu.ExitInitializationMode();
 
     // Prepare output file
     std::ofstream ofile("results.out");
@@ -81,16 +80,16 @@ int main(int argc, char* argv[]) {
         time += dt;
 
         // Advance FMU state to new time
-        my_fmu._fmi2DoStep(my_fmu.component, time, dt, fmi2True);
+        my_fmu.DoStep(time, dt, fmi2True);
     }
 
     // Close output file
     ofile.close();
 
-    // Getting FMU variables through FMI functions, i.e. through valueRef
+    // Getting FMU variables through valueRef
     fmi2Real val_real;
     for (fmi2ValueReference valref = 1; valref < 12; valref++) {
-        my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &val_real);
+        my_fmu.GetVariable(valref, val_real, FmuVariable::Type::Real);
         std::cout << "REAL: valref: " << valref << " | val: " << val_real << std::endl;
     }
 
@@ -99,7 +98,7 @@ int main(int argc, char* argv[]) {
 
     fmi2Boolean val_bool;
     for (fmi2ValueReference valref = 1; valref < 2; valref++) {
-        my_fmu._fmi2GetBoolean(my_fmu.component, &valref, 1, &val_bool);
+        my_fmu.GetVariable(valref, val_bool, FmuVariable::Type::Boolean);
         std::cout << "BOOLEAN: valref: " << valref << " | val: " << val_bool << std::endl;
     }
 

@@ -37,18 +37,17 @@ int main(int argc, char* argv[]) {
     int num_states = my_fmu.GetNumStates();
 
     // Set up experiment
-    my_fmu._fmi2SetupExperiment(my_fmu.component,
-                                fmi2False,  // tolerance defined
-                                0.0,        // tolerance
-                                0.0,        // start time
-                                fmi2False,  // do not use stop time
-                                1.0         // stop time (dummy)
+    my_fmu.SetupExperiment(fmi2False,  // no tolerance defined
+                           0.0,        // tolerance (dummy)
+                           0.0,        // start time
+                           fmi2False,  // do not use stop time
+                           1.0         // stop time (dummy)
     );
 
     // Initialize FMU
-    my_fmu._fmi2EnterInitializationMode(my_fmu.component);
+    my_fmu.EnterInitializationMode();
     // ...set/get FMU variables
-    my_fmu._fmi2ExitInitializationMode(my_fmu.component);
+    my_fmu.ExitInitializationMode();
 
     // States and derivatives
     std::vector<fmi2Real> states(num_states);

@@ -52,8 +52,9 @@ class FmuVariableTreeNode {
 
 // =============================================================================
 
-/// Class for managing a FMU.
-/// It contains functions to load the shared library in run-time, to parse the XML, to set/get variables, etc.
+/// Class for managing an FMU.
+/// Provides functions to parse the model description XML file, load the shared library in run-time, set/get variables,
+/// and invoke FMI functions on the FMU.
 class FmuUnit {
   public:
     FmuUnit();
@@ -80,7 +81,7 @@ class FmuUnit {
     std::string GetTypesPlatform() const;
 
     /// Return the number of state variables.
-    int GetNumStates() const { return nx; }
+    size_t GetNumStates() const { return m_nx; }
 
     /// Instantiate the model.
     void Instantiate(const std::string& instanceName,
@@ -105,13 +106,13 @@ class FmuUnit {
     fmi2Status ExitInitializationMode();
 
     /// Advance state of the FMU from currentCommunicationPoint to currentCommunicationPoint+communicationStepSize.
-    /// Available only for an FMU that implements the CoSimulation interface.
+    /// Available only for an FMU that implements the Co-Simulation interface.
     fmi2Status DoStep(fmi2Real currentCommunicationPoint,
                       fmi2Real communicationStepSize,
                       fmi2Boolean noSetFMUStatePriorToCurrentPoint);
 
     /// Set a new time instant and re-initialize caching of variables that depend on time.
-    /// Available only for an FMU that implements the ModelExchange interface.
+    /// Available only for an FMU that implements the Model Exchange interface.
     fmi2Status SetTime(const fmi2Real time);
 
     /// Get the (continuous) state vector.
@@ -119,12 +120,12 @@ class FmuUnit {
 
     /// Set a new (continuous) state vector and re-initialize caching of variables that depend on the states. Argument
     /// nx is the length of vector x and is provided for checking purposes.
-    /// Available only for an FMU that iplements the ModelExchange interface.
+    /// Available only for an FMU that iplements the Model Exchange interface.
     fmi2Status SetContinuousStates(const fmi2Real x[], size_t nx);
 
     /// Compute state derivatives at the current time instant and for the current states. The derivatives are returned
     /// as a vector with nx elements.
-    /// Available only for an FMU that iplements the ModelExchange interface.
+    /// Available only for an FMU that iplements the Model Exchange interface.
     fmi2Status GetDerivatives(fmi2Real derivatives[], size_t nx);
 
     template <class T>
@@ -146,19 +147,6 @@ class FmuUnit {
     fmi2Status SetVariable(const std::string& varname, const bool& value) noexcept(false);
 
   protected:
-    /// Parse XML and create the list of variables.
-    void LoadXML();
-
-    /// Load the shared library in run-time and do the dynamic linking to the required FMU functions.
-    void LoadSharedLibrary(fmi2Type fmuType);
-
-    /// Construct a tree of variables from the flat variable list.
-    void BuildVariablesTree();
-
-    /// Dump the tree of variables (recursive)
-    void DumpTree(FmuVariableTreeNode* mynode, int tab);
-
-  public:
     std::string modelName;
     std::string guid;
     std::string fmiVersion;
@@ -193,12 +181,9 @@ class FmuUnit {
     std::map<std::string, FmuVariable> scalarVariables;    ///< FMU variables
     std::unordered_map<std::string, int> variableIndices;  ///< variable indices
 
-    int nx;  ///< number of state variables
-
     FmuVariableTreeNode tree_variables;
 
   public:
-    // private:
     fmi2CallbackFunctions callbacks;
 
     fmi2Component component;
@@ -234,18 +219,32 @@ class FmuUnit {
     fmi2GetDerivativesTYPE* _fmi2GetDerivatives;
 
   private:
+    /// Parse XML and create the list of variables.
+    void LoadXML();
+
+    /// Load the shared library in run-time and do the dynamic linking to the required FMU functions.
+    void LoadSharedLibrary(fmi2Type fmuType);
+
+    /// Construct a tree of variables from the flat variable list.
+    void BuildVariablesTree();
+
+    /// Dump the tree of variables (recursive)
+    void DumpTree(FmuVariableTreeNode* mynode, int tab);
+
     std::string m_directory;
     std::string m_bin_directory;
 
     fmi2Type m_fmuType;
     bool m_verbose;
 
+    size_t m_nx;  ///< number of state variables
+
     DYNLIB_HANDLE dynlib_handle;
 };
 
 // -----------------------------------------------------------------------------
 
-FmuUnit::FmuUnit() : cosim(false), modex(false), nx(0), m_verbose(false) {
+FmuUnit::FmuUnit() : cosim(false), modex(false), m_nx(0), m_verbose(false) {
     // default binaries directory in FMU unzipped directory
     m_bin_directory = "/binaries/" + std::string(FMU_OS_SUFFIX);
 }
@@ -272,9 +271,9 @@ void FmuUnit::LoadUnzipped(fmi2Type fmuType, const std::string& directory) {
     LoadXML();
 
     if (fmuType == fmi2Type::fmi2CoSimulation && !cosim)
-        throw std::runtime_error("Attempting to load CoSimulation FMU, but not a CS FMU.");
+        throw std::runtime_error("Attempting to load Co-Simulation FMU, but not a CS FMU.");
     if (fmuType == fmi2Type::fmi2ModelExchange && !modex)
-        throw std::runtime_error("Attempting to load as ModelExchange, but not an ME FMU.");
+        throw std::runtime_error("Attempting to load as Model Exchange, but not an ME FMU.");
 
     LoadSharedLibrary(fmuType);
 
@@ -506,18 +505,18 @@ void FmuUnit::LoadXML() {
         rapidxml::xml_node<>* type_node = nullptr;
         FmuVariable::Type var_type;
 
-        if (auto node = var_node->first_node("Real")) {
+        if (auto rnode = var_node->first_node("Real")) {
             var_type = FmuVariable::Type::Real;
-            type_node = node;
-        } else if (auto node = var_node->first_node("String")) {
+            type_node = rnode;
+        } else if (auto snode = var_node->first_node("String")) {
             var_type = FmuVariable::Type::String;
-            type_node = node;
-        } else if (auto node = var_node->first_node("Integer")) {
+            type_node = snode;
+        } else if (auto inode = var_node->first_node("Integer")) {
             var_type = FmuVariable::Type::Integer;
-            type_node = node;
-        } else if (auto node = var_node->first_node("Boolean")) {
+            type_node = inode;
+        } else if (auto bnode = var_node->first_node("Boolean")) {
             var_type = FmuVariable::Type::Boolean;
-            type_node = node;
+            type_node = bnode;
         } else {
             var_type = FmuVariable::Type::Real;
         }
@@ -547,13 +546,13 @@ void FmuUnit::LoadXML() {
         scalarVariables[var_name] = var;
     }
 
-    nx = state_indices.size();
-    if (deriv_indices.size() != nx)
+    m_nx = state_indices.size();
+    if (deriv_indices.size() != m_nx)
         throw std::runtime_error("Incompatible number of states and state derivatives in XML file.");
 
     if (m_verbose) {
         std::cout << "  Found " << scalarVariables.size() << " FMU variables" << std::endl;
-        if (nx > 0) {
+        if (m_nx > 0) {
             std::cout << "     States      ";
             std::copy(state_indices.begin(), state_indices.end(), std::ostream_iterator<int>(std::cout, " "));
             std::cout << std::endl;

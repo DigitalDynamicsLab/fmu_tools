@@ -215,17 +215,7 @@ class FmuComponentBase {
 
     virtual ~FmuComponentBase() {}
 
-    void SetDefaultExperiment(fmi2Boolean toleranceDefined,
-                              fmi2Real tolerance,
-                              fmi2Real startTime,
-                              fmi2Boolean stopTimeDefined,
-                              fmi2Real stopTime);
-
     const std::set<FmuVariableExport>& GetScalarVariables() const { return m_scalarVariables; }
-
-    void EnterInitializationMode();
-
-    void ExitInitializationMode();
 
     /// Enable/disable the logging for a specific log category.
     virtual void SetDebugLogging(std::string cat, bool val);
@@ -234,10 +224,6 @@ class FmuComponentBase {
     void ExportModelDescription(std::string path);
 
     double GetTime() const { return m_time; }
-
-    void executePreStepCallbacks();
-
-    void executePostStepCallbacks();
 
     template <class T>
     fmi2Status fmi2GetVariable(const fmi2ValueReference vr[], size_t nvr, T value[], FmuVariable::Type vartype) {
@@ -298,23 +284,6 @@ class FmuComponentBase {
     /// Such functions can be used to implement FMU-specific post-processing to prepare output variables.
     void AddPostStepFunction(std::function<void(void)> function) { m_postStepCallbacks.push_back(function); }
 
-    // Co-Simulation FMI functions.
-    // These functions are used to implement the co-simulation functions imposed by the FMI2 standard.
-    // In turn, they call overrides of virtual methods provided by a concrete FMU.
-
-    fmi2Status DoStep(fmi2Real currentCommunicationPoint,
-                      fmi2Real communicationStepSize,
-                      fmi2Boolean noSetFMUStatePriorToCurrentPoint);
-
-    // Model Exchange FMI functions.
-    // These functions are used to implement the model exchange functions imposed by the FMI2 standard.
-    // In turn, they call overrides of virtual methods provided by a concrete FMU.
-
-    fmi2Status SetTime(const fmi2Real time);
-    fmi2Status GetContinuousStates(fmi2Real x[], size_t nx);
-    fmi2Status SetContinuousStates(const fmi2Real x[], size_t nx);
-    fmi2Status GetDerivatives(fmi2Real derivatives[], size_t nx);
-
   protected:
     virtual bool is_cosimulation_available() const = 0;
     virtual bool is_modelexchange_available() const = 0;
@@ -357,6 +326,34 @@ class FmuComponentBase {
     virtual void _enterInitializationMode() {}
     virtual void _exitInitializationMode() {}
 
+  public:
+    void SetDefaultExperiment(fmi2Boolean toleranceDefined,
+                              fmi2Real tolerance,
+                              fmi2Real startTime,
+                              fmi2Boolean stopTimeDefined,
+                              fmi2Real stopTime);
+
+    void EnterInitializationMode();
+
+    void ExitInitializationMode();
+
+    // Co-Simulation FMI functions.
+    // These functions are used to implement the actual co-simulation functions imposed by the FMI2 standard.
+    // In turn, they call overrides of virtual methods provided by a concrete FMU.
+
+    fmi2Status DoStep(fmi2Real currentCommunicationPoint,
+                      fmi2Real communicationStepSize,
+                      fmi2Boolean noSetFMUStatePriorToCurrentPoint);
+
+    // Model Exchange FMI functions.
+    // These functions are used to implement the actual model exchange functions imposed by the FMI2 standard.
+    // In turn, they call overrides of virtual methods provided by a concrete FMU.
+
+    fmi2Status SetTime(const fmi2Real time);
+    fmi2Status GetContinuousStates(fmi2Real x[], size_t nx);
+    fmi2Status SetContinuousStates(const fmi2Real x[], size_t nx);
+    fmi2Status GetDerivatives(fmi2Real derivatives[], size_t nx);
+
   protected:
     /// Add a declaration of a state derivative.
     virtual void addDerivative(const std::string& derivative_name,
@@ -387,6 +384,9 @@ class FmuComponentBase {
 
     std::set<FmuVariableExport>::iterator findByValrefType(fmi2ValueReference vr, FmuVariable::Type vartype);
     std::set<FmuVariableExport>::iterator findByName(const std::string& name);
+
+    void executePreStepCallbacks();
+    void executePostStepCallbacks();
 
     std::string m_instanceName;
     std::string m_fmuGUID;
@@ -424,7 +424,6 @@ class FmuComponentBase {
     fmi2CallbackFunctions m_callbackFunctions;
     FmuMachineStateType m_fmuMachineState;
 
-  private:
     std::unordered_map<std::string, bool> m_logCategories_enabled;
 };
 
