@@ -239,6 +239,14 @@ void myFmuComponent::_exitInitializationMode() {
               fmi2Status::fmi2OK, "logAll");
 }
 
+fmi2Status myFmuComponent::_getContinuousStates(fmi2Real x[], size_t nx) {
+    for (size_t i = 0; i < nx; i++) {
+        x[i] = q[i];
+    }
+
+    return fmi2Status::fmi2OK;
+}
+
 fmi2Status myFmuComponent::_setContinuousStates(const fmi2Real x[], size_t nx) {
     for (size_t i = 0; i < nx; i++) {
         q[i] = x[i];

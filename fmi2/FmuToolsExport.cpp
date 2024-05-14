@@ -769,6 +769,14 @@ fmi2Status FmuComponentBase::SetTime(fmi2Real time) {
     return status;
 }
 
+fmi2Status FmuComponentBase::GetContinuousStates(fmi2Real x[], size_t nx) {
+    fmi2Status status = _getContinuousStates(x, nx);
+
+    //// TODO - interpret/process status?
+
+    return status;
+}
+
 fmi2Status FmuComponentBase::SetContinuousStates(const fmi2Real x[], size_t nx) {
     fmi2Status status = _setContinuousStates(x, nx);
 
@@ -976,7 +984,7 @@ fmi2Status fmi2GetEventIndicators(fmi2Component c, fmi2Real eventIndicators[], s
 }
 
 fmi2Status fmi2GetContinuousStates(fmi2Component c, fmi2Real x[], size_t nx) {
-    return fmi2Status::fmi2OK;
+    return reinterpret_cast<FmuComponentBase*>(c)->GetContinuousStates(x, nx);
 }
 
 fmi2Status fmi2GetNominalsOfContinuousStates(fmi2Component c, fmi2Real x_nominal[], size_t nx) {

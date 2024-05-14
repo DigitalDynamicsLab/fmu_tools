@@ -230,16 +230,6 @@ class FmuComponentBase {
     /// Enable/disable the logging for a specific log category.
     virtual void SetDebugLogging(std::string cat, bool val);
 
-    fmi2Status DoStep(fmi2Real currentCommunicationPoint,
-                      fmi2Real communicationStepSize,
-                      fmi2Boolean noSetFMUStatePriorToCurrentPoint);
-
-    fmi2Status SetTime(const fmi2Real time);
-
-    fmi2Status SetContinuousStates(const fmi2Real x[], size_t nx);
-
-    fmi2Status GetDerivatives(fmi2Real derivatives[], size_t nx);
-
     /// Create the modelDescription.xml file in the given location \a path.
     void ExportModelDescription(std::string path);
 
@@ -308,6 +298,23 @@ class FmuComponentBase {
     /// Such functions can be used to implement FMU-specific post-processing to prepare output variables.
     void AddPostStepFunction(std::function<void(void)> function) { m_postStepCallbacks.push_back(function); }
 
+    // Co-Simulation FMI functions.
+    // These functions are used to implement the co-simulation functions imposed by the FMI2 standard.
+    // In turn, they call overrides of virtual methods provided by a concrete FMU.
+
+    fmi2Status DoStep(fmi2Real currentCommunicationPoint,
+                      fmi2Real communicationStepSize,
+                      fmi2Boolean noSetFMUStatePriorToCurrentPoint);
+
+    // Model Exchange FMI functions.
+    // These functions are used to implement the model exchange functions imposed by the FMI2 standard.
+    // In turn, they call overrides of virtual methods provided by a concrete FMU.
+
+    fmi2Status SetTime(const fmi2Real time);
+    fmi2Status GetContinuousStates(fmi2Real x[], size_t nx);
+    fmi2Status SetContinuousStates(const fmi2Real x[], size_t nx);
+    fmi2Status GetDerivatives(fmi2Real derivatives[], size_t nx);
+
   protected:
     virtual bool is_cosimulation_available() const = 0;
     virtual bool is_modelexchange_available() const = 0;
@@ -322,6 +329,13 @@ class FmuComponentBase {
     }
 
     virtual fmi2Status _setTime(fmi2Real time) { return fmi2Status::fmi2OK; }
+
+    virtual fmi2Status _getContinuousStates(fmi2Real x[], size_t nx) {
+        if (is_modelexchange_available())
+            throw std::runtime_error("An FMU for model exchange must implement _getContinuousStates");
+
+        return fmi2OK;
+    }
 
     virtual fmi2Status _setContinuousStates(const fmi2Real x[], size_t nx) {
         if (is_modelexchange_available())

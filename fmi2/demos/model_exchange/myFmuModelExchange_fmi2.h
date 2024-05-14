@@ -35,6 +35,7 @@ class myFmuComponent : public FmuComponentBase {
     virtual void _enterInitializationMode() override;
     virtual void _exitInitializationMode() override;
 
+    virtual fmi2Status _getContinuousStates(fmi2Real x[], size_t nx) override;
     virtual fmi2Status _setContinuousStates(const fmi2Real x[], size_t nx) override;
     virtual fmi2Status _getDerivatives(fmi2Real derivatives[], size_t nx) override;
 

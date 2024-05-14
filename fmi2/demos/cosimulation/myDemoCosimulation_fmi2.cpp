@@ -17,20 +17,18 @@ std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
 
 int main(int argc, char* argv[]) {
     FmuUnit my_fmu;
+    my_fmu.SetVerbose(true);
 
     try {
         my_fmu.Load(FmuUnit::Type::COSIMULATION, FMU_FILENAME, FMU_UNPACK_DIRECTORY);
-        ////my_fmu.Load(FmuUnit::Type::COSIMULATION, FMU_FILENAME);                 // unpack in a directory in /tmp
+        ////my_fmu.Load(FmuUnit::Type::COSIMULATION, FMU_FILENAME);                 // unpack in  /tmp
         ////my_fmu.LoadUnzipped(FmuUnit::Type::COSIMULATION, unzipped_fmu_folder);  // already unpacked
     } catch (std::exception& my_exception) {
         std::cout << "ERROR loading FMU: " << my_exception.what() << "\n";
     }
 
-    std::cout << "FMU Version:  " << my_fmu._fmi2GetVersion() << "\n";
-    std::cout << "FMU Platform: " << my_fmu._fmi2GetTypesPlatform() << "\n";
-
-    ////my_fmu.Instantiate("FmuComponent", my_fmu.GetUnzippedFolder() + "resources");
-    my_fmu.Instantiate("FmuComponent");  // automatic loading of default resources
+    my_fmu.Instantiate("FmuComponent");  // use default resources dir
+    ////my_fmu.Instantiate("FmuComponent", my_fmu.GetUnzippedFolder() + "resources");  // specify resources dir
 
     std::vector<std::string> categoriesVector = {"logAll"};
     my_fmu.SetDebugLogging(fmi2True, categoriesVector);
@@ -43,17 +41,17 @@ int main(int argc, char* argv[]) {
 
     // my_fmu._fmi2SetDebugLogging(my_fmu.component, fmi2True, categoriesVector.size(), categoriesArray.data());
 
-    double start_time = 0;
-    double stop_time = 2;
+    // Set up experiment
     my_fmu._fmi2SetupExperiment(my_fmu.component,
                                 fmi2False,  // tolerance defined
                                 0.0,        // tolerance
-                                start_time,
-                                fmi2False,  // use stop time
-                                stop_time);
+                                0.0,        // start time
+                                fmi2False,  // do not use stop time
+                                1.0         // stop time (dummy)
+    );
 
+    // Initialize FMU
     my_fmu._fmi2EnterInitializationMode(my_fmu.component);
-
     {
         fmi2ValueReference valref = 3;
         fmi2Real m_in = 1.5;
@@ -63,26 +61,30 @@ int main(int argc, char* argv[]) {
         my_fmu._fmi2GetReal(my_fmu.component, &valref, 1, &m_out);
         std::cout << "m_out: " << m_out << std::endl;
     }
-
     my_fmu._fmi2ExitInitializationMode(my_fmu.component);
 
-    // Test a simulation loop
-    double time = 0;
-    double dt = 0.01;
-    constexpr int n_steps = 1000;
-
+    // Prepare output file
     std::ofstream ofile("results.out");
 
-    for (int i = 0; i < n_steps; ++i) {
+    // Co-simulation loop
+    double time = 0;
+    double time_end = 10;
+    double dt = 0.01;
+
+    while (time < time_end) {
         double x, theta;
         my_fmu.GetVariable("x", x, FmuVariable::Type::Real);
         my_fmu.GetVariable("theta", theta, FmuVariable::Type::Real);
         ofile << time << " " << x << " " << theta << std::endl;
 
-        my_fmu._fmi2DoStep(my_fmu.component, time, dt, fmi2True);
-
+        // Set next communication time
         time += dt;
+
+        // Advance FMU state to new time
+        my_fmu._fmi2DoStep(my_fmu.component, time, dt, fmi2True);
     }
+
+    // Close output file
     ofile.close();
 
     // Getting FMU variables through FMI functions, i.e. through valueRef
