@@ -162,7 +162,7 @@ FmuComponentBase::FmuComponentBase(fmi2String instanceName,
 
     AddFmuVariable(&m_time, "time", FmuVariable::Type::Real, "s", "time");
 
-    //// Parse URL according to https://datatracker.ietf.org/doc/html/rfc3986
+    // Parse URL according to https://datatracker.ietf.org/doc/html/rfc3986
     std::string m_resources_location_str = std::string(fmuResourceLocation);
 
     std::regex url_patternA("^(\\w+):\\/\\/[^\\/]*\\/([^#\\?]+)");
@@ -188,7 +188,7 @@ FmuComponentBase::FmuComponentBase(fmi2String instanceName,
                   "logStatusWarning");
     }
 
-    //// Compare GUID
+    // Compare GUID
     if (std::string(fmuGUID).compare(m_fmuGUID)) {
         sendToLog("GUID used for instantiation not matching with source.\n", fmi2Status::fmi2Warning,
                   "logStatusWarning");
@@ -430,7 +430,7 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         modExNode->append_attribute(doc_ptr->allocate_attribute("completedIntegratorStepNotNeeded", "false"));
         modExNode->append_attribute(doc_ptr->allocate_attribute("canBeInstantiatedOnlyOncePerProcess", "false"));
         modExNode->append_attribute(doc_ptr->allocate_attribute("canNotUseMemoryManagementFunctions", "false"));
-        modExNode->append_attribute(doc_ptr->allocate_attribute("canGetAndSetFMUState", "false"));
+        modExNode->append_attribute(doc_ptr->allocate_attribute("canGetAndSetFMUstate", "false"));
         modExNode->append_attribute(doc_ptr->allocate_attribute("canSerializeFMUstate", "false"));
         modExNode->append_attribute(doc_ptr->allocate_attribute("providesDirectionalDerivative", "false"));
         rootNode->append_node(modExNode);
