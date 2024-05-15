@@ -339,7 +339,7 @@ class FmuComponentBase {
         return fmi2OK;
     }
 
-    virtual fmi2Status FmuComponentBase::_newDiscreteStates(fmi2EventInfo* fmi2eventInfo) {
+    virtual fmi2Status _newDiscreteStates(fmi2EventInfo* fmi2eventInfo) {
         fmi2eventInfo->newDiscreteStatesNeeded = fmi2False;
         fmi2eventInfo->terminateSimulation = fmi2False;
         fmi2eventInfo->nominalsOfContinuousStatesChanged = fmi2False;
