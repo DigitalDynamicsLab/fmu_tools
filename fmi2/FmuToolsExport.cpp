@@ -309,7 +309,7 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
     newvar.SetDescription(description);
 
     // check that the attributes of the variable would allow a no-set variable
-    const FmuMachineStateType tempFmuState = FmuMachineStateType::anySettableState;
+    ////const FmuMachineStateType tempFmuState = FmuMachineStateType::anySettableState;
 
     newvar.ExposeCurrentValueAsStart();
     // varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(var_ptr_expanded);},

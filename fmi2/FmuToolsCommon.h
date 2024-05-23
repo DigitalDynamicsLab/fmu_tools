@@ -120,7 +120,6 @@ class FmuVariable {
                 VariabilityType _variability = VariabilityType::continuous,
                 InitialType _initial = InitialType::none)
         : name(_name),
-          index(-1),
           valueReference(0),
           unitname("1"),
           type(_type),
@@ -199,7 +198,6 @@ class FmuVariable {
     FmuVariable(const FmuVariable& other) {
         type = other.type;
         name = other.name;
-        index = other.index;
         valueReference = other.valueReference;
         unitname = other.unitname;
         causality = other.causality;
@@ -217,7 +215,6 @@ class FmuVariable {
 
         type = other.type;
         name = other.name;
-        index = other.index;
         valueReference = other.valueReference;
         unitname = other.unitname;
         causality = other.causality;
@@ -306,7 +303,6 @@ class FmuVariable {
   protected:
     Type type = Type::Unknown;          // variable type
     std::string name;                   // variable name
-    int index;                          // index of this variable in the mode description XML
     fmi2ValueReference valueReference;  // reference among variables of same type
     std::string unitname;               // variable units
     CausalityType causality;            // variable causality

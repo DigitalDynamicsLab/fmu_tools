@@ -82,13 +82,13 @@ int main(int argc, char* argv[]) {
 
     try {
         createModelDescriptionPtr(output_path, FmuType::COSIMULATION);
-    } catch (std::exception& e) {
+    } catch (std::exception&) {
         has_CoSimulation = false;
     }
 
     try {
         createModelDescriptionPtr(output_path, FmuType::MODEL_EXCHANGE);
-    } catch (std::exception& e) {
+    } catch (std::exception&) {
         has_ModelExchange = false;
     }
 

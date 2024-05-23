@@ -45,6 +45,35 @@
 
 // =============================================================================
 
+class FmuVariableImport : public FmuVariable {
+  public:
+    FmuVariableImport() : FmuVariableImport("", FmuVariable::Type::Real) {}
+
+    FmuVariableImport(const std::string& _name,
+                      FmuVariable::Type _type,
+                      CausalityType _causality = CausalityType::local,
+                      VariabilityType _variability = VariabilityType::continuous,
+                      InitialType _initial = InitialType::none,
+                      int _index = -1)
+        : FmuVariable(_name, _type, _causality, _variability, _initial),
+          index(_index),
+          is_state(false),
+          is_deriv(false) {}
+
+    int GetIndex() const { return index; }
+    bool IsState() const { return is_state; }
+    bool IsDeriv() const { return is_deriv; }
+
+  private:
+    int index;      // index of this variable in the mode description XML
+    bool is_state;  // true is this is a state variable
+    bool is_deriv;  // true if this is a state derivative variable
+
+    friend class FmuUnit;
+};
+
+// =============================================================================
+
 /// Class for a node in a tree of FMU variables.
 /// The tree is constructed by analyzing the flat list of variables in the XML.
 /// In the XML one has the flattened list such as for example
@@ -60,7 +89,7 @@ class FmuVariableTreeNode {
     std::string object_name;
 
     std::map<std::string, FmuVariableTreeNode> children;
-    FmuVariable* leaf = nullptr;
+    FmuVariableImport* leaf = nullptr;
 
     FmuVariableTreeNode() {}
 };
@@ -72,6 +101,8 @@ class FmuVariableTreeNode {
 /// and invoke FMI functions on the FMU.
 class FmuUnit {
   public:
+    typedef std::map<std::string, FmuVariableImport> VarList;
+
     FmuUnit();
     virtual ~FmuUnit() {}
 
@@ -106,6 +137,12 @@ class FmuUnit {
 
     /// Instantiate the model, setting as resources folder the one from the unzipped FMU.
     void Instantiate(const std::string& instanceName, bool logging = false, bool visible = false);
+
+    /// Get the list of FMU variables.
+    const VarList& GetVariablesList() const { return scalarVariables; }
+
+    /// Print the tree of variables
+    void PrintVariablesTree(int tab) { PrintVariablesTree(&tree_variables, tab); }
 
     /// Set debug logging level.
     fmi2Status SetDebugLogging(fmi2Boolean loggingOn, const std::vector<std::string>& logCategories);
@@ -193,8 +230,7 @@ class FmuUnit {
     std::string info_modex_canSerializeFMUstate;
     std::string info_modex_providesDirectionalDerivative;
 
-    std::map<std::string, FmuVariable> scalarVariables;    ///< FMU variables
-    std::unordered_map<std::string, int> variableIndices;  ///< variable indices
+    VarList scalarVariables;  ///< FMU variables
 
     FmuVariableTreeNode tree_variables;
 
@@ -243,8 +279,11 @@ class FmuUnit {
     /// Construct a tree of variables from the flat variable list.
     void BuildVariablesTree();
 
-    /// Dump the tree of variables (recursive)
-    void DumpTree(FmuVariableTreeNode* mynode, int tab);
+    /// Print the tree of variables (recursive).
+    void PrintVariablesTree(FmuVariableTreeNode* mynode, int tab);
+
+    /// Find a variable by its index.
+    VarList::iterator FindByIndex(int index);
 
     std::string m_directory;
     std::string m_bin_directory;
@@ -537,11 +576,13 @@ void FmuUnit::LoadXML() {
         }
 
         // Check if variable is a derivative, check for unit and start value
+        bool is_deriv = false;
         std::string unit = "";
         if (type_node) {
             if (auto attr = type_node->first_attribute("derivative")) {
                 state_indices.push_back(std::stoi(attr->value()));
                 deriv_indices.push_back(crt_index);
+                is_deriv = true;
             }
             if (auto attr = type_node->first_attribute("unit")) {
                 unit = attr->value();
@@ -551,14 +592,19 @@ void FmuUnit::LoadXML() {
             }
         }
 
-        // Cache index of this variable
-        variableIndices[var_name] = crt_index;
-
-        // Create and cache the new variable
-        FmuVariable var(var_name, var_type, causality_enum, variability_enum, initial_enum);
+        // Create and cache the new variable (also caching its index)
+        FmuVariableImport var(var_name, var_type, causality_enum, variability_enum, initial_enum, crt_index);
+        var.is_deriv = is_deriv;
         var.SetValueReference(valref);
 
         scalarVariables[var_name] = var;
+    }
+
+    // Traverse the list of state indices and mark the corresponding FMU variable as a state
+    for (const auto& si : state_indices) {
+        auto it = FindByIndex(si);
+        if (it != scalarVariables.end())
+            it->second.is_state = true;
     }
 
     m_nx = state_indices.size();
@@ -665,7 +711,7 @@ void FmuUnit::BuildVariablesTree() {
     }
 }
 
-void FmuUnit::DumpTree(FmuVariableTreeNode* mynode, int tab) {
+void FmuUnit::PrintVariablesTree(FmuVariableTreeNode* mynode, int tab) {
     for (auto& in : mynode->children) {
         for (int itab = 0; itab < tab; ++itab) {
             std::cout << "\t";
@@ -680,8 +726,15 @@ void FmuUnit::DumpTree(FmuVariableTreeNode* mynode, int tab) {
         }
 
         std::cout << "\n";
-        DumpTree(&in.second, tab + 1);
+        PrintVariablesTree(&in.second, tab + 1);
     }
+}
+
+FmuUnit::VarList::iterator FmuUnit::FindByIndex(int index) {
+    auto predicate_same_index = [index](const std::pair<std::string, FmuVariableImport>& var) {
+        return var.second.GetIndex() == index;
+    };
+    return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_same_index);
 }
 
 std::string FmuUnit::GetVersion() const {
