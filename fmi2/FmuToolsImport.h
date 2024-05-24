@@ -24,6 +24,7 @@
 #include <iostream>
 #include <system_error>
 #include <algorithm>
+#include <iterator>
 
 #include "FmuToolsCommon.h"
 #include "FmuToolsRuntimeLinking.h"
