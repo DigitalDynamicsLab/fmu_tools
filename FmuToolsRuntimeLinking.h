@@ -21,7 +21,7 @@
 #include <iostream>
 #include "filesystem.hpp"
 
-#if defined(_MSC_VER) || defined(WIN32) || defined(__MINGW32__)
+#if defined(_MSC_VER) || defined(_WIN32) || defined(__MINGW32__)
 #    define WIN32_LEAN_AND_MEAN
 #    include <windows.h>
 #    include <Errhandlingapi.h>
@@ -44,7 +44,7 @@
 /// @param dynlib_dir The directory where the shared library is located.
 /// @param dynlib_name The name of the shared library.
 DYNLIB_HANDLE RuntimeLinkLibrary(const std::string& dynlib_dir, const std::string& dynlib_name){
-#if WIN32
+#ifdef _WIN32
     if (!SetDllDirectory(dynlib_dir.c_str())){
         std::cerr << "ERROR: Could not locate the DLL directory." << std::endl;
         throw std::runtime_error("Could not locate the DLL directory.");
@@ -71,7 +71,7 @@ DYNLIB_HANDLE RuntimeLinkLibrary(const std::string& dynlib_dir, const std::strin
 /// Gets the location of the shared library.
 std::string GetLibraryLocation(){
     fs::path library_path;
-#if WIN32
+#ifdef _WIN32
     HMODULE hModule = nullptr;
     if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCSTR)&GetLibraryLocation, &hModule))
     {
