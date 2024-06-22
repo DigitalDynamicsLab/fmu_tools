@@ -13,8 +13,8 @@
 // Classes for exporting FMUs (FMI 2.0)
 // =============================================================================
 
-#ifndef FMUTOOLS_EXPORT_H
-#define FMUTOOLS_EXPORT_H
+#ifndef FMUTOOLS_FMI2_EXPORT_H
+#define FMUTOOLS_FMI2_EXPORT_H
 
 #include <algorithm>
 #include <cassert>

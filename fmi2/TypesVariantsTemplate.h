@@ -13,8 +13,8 @@
 // Definitions for the types platform (FMI 2.0)
 // =============================================================================
 
-#ifndef TYPESVARIANTS_H
-#define TYPESVARIANTS_H
+#ifndef FMUTOOLS_FMI2_TYPESVARIANTS_H
+#define FMUTOOLS_FMI2_TYPESVARIANTS_H
 
 #include <string>
 

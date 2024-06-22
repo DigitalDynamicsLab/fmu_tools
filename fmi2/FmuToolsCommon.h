@@ -13,8 +13,8 @@
 // Definition of the FMU variable base class and common utilities (FMI 2.0)
 // =============================================================================
 
-#ifndef FMUTOOLS_COMMON_H
-#define FMUTOOLS_COMMON_H
+#ifndef FMUTOOLS_FMI2_COMMON_H
+#define FMUTOOLS_FMI2_COMMON_H
 
 #include <stdexcept>
 #include <string>
