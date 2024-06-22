@@ -81,15 +81,10 @@ struct LoggingUtilities {
 /// Objects of this type are created during:
 /// - FMU export (and encoded in the model description XML)
 /// - FMU import (retrieved from the model description XML)
+/// The model description XML lists variables grouped by type, in increasing order of the Type enum values.
 class FmuVariable {
   public:
-    enum class Type {
-        Real = 0,  // numbering gives the order in which each type is printed in the modelDescription.xml
-        Integer = 1,
-        Boolean = 2,
-        String = 3,
-        Unknown = 4
-    };
+    enum class Type { Real = 0, Integer = 1, Boolean = 2, String = 3, Unknown = 4 };
 
     enum class CausalityType { parameter, calculatedParameter, input, output, local, independent };
 
@@ -113,68 +108,77 @@ class FmuVariable {
           initial(_initial),
           description(""),
           has_start(false) {
-        // set default value for "initial" if empty: reference FMIReference 2.0.2 - Section 2.2.7 Definition of Model
-        // Variables
+        // Readibility replacements
+        bool c_parameter = (causality == CausalityType::parameter);
+        bool c_calculated = (causality == CausalityType::calculatedParameter);
+        bool c_input = (causality == CausalityType::input);
+        bool c_output = (causality == CausalityType::output);
+        bool c_local = (causality == CausalityType::local);
+        bool c_independent = (causality == CausalityType::independent);
 
+        bool v_constant = (variability == VariabilityType::constant);
+        bool v_fixed = (variability == VariabilityType::fixed);
+        bool v_tunable = (variability == VariabilityType::tunable);
+        bool v_discrete = (variability == VariabilityType::discrete);
+        bool v_continuous = (variability == VariabilityType::continuous);
+
+        bool i_none = (initial == InitialType::none);
+        bool i_exact = (initial == InitialType::exact);
+        bool i_approx = (initial == InitialType::approx);
+        bool i_calculated = (initial == InitialType::calculated);
+
+        // Set "initial" property if empty (see Table on page 51 of the FMI2.0.4 specification)
         // (A)
-        if ((variability == VariabilityType::constant &&
-             (causality == CausalityType::output || causality == CausalityType::local)) ||
-            (variability == VariabilityType::fixed || variability == VariabilityType::tunable) &&
-                causality == CausalityType::parameter) {
-            if (initial == InitialType::none)
+        if (((v_constant) && (c_output || c_local)) || ((v_fixed || v_tunable) && (c_parameter))) {
+            if (i_none)
                 initial = InitialType::exact;
-            else if (initial != InitialType::exact)
+            else if (!i_exact)
                 throw std::runtime_error("initial not set properly.");
         }
         // (B)
-        else if ((variability == VariabilityType::fixed || variability == VariabilityType::tunable) &&
-                 (causality == CausalityType::calculatedParameter || causality == CausalityType::local)) {
-            if (initial == InitialType::none)
+        else if ((v_fixed || v_tunable) && (c_calculated || c_local)) {
+            if (i_none)
                 initial = InitialType::calculated;
-            else if (initial != InitialType::approx && initial != InitialType::calculated)
+            else if (!i_approx && !i_calculated)
                 throw std::runtime_error("initial not set properly.");
         }
         // (C)
-        else if ((variability == VariabilityType::discrete || variability == VariabilityType::continuous) &&
-                 (causality == CausalityType::output || causality == CausalityType::local)) {
-            if (initial == InitialType::none)
+        else if ((v_discrete || v_continuous) && (c_output || c_local)) {
+            if (i_none)
                 initial = InitialType::calculated;
         }
 
-        // From FMI Reference
+        // From page 51 of FMI2.0.4 specification:
         // (1) If causality = "independent", it is neither allowed to define a value for initial nor a value for start.
         // (2) If causality = "input", it is not allowed to define a value for initial and a value for start must be
-        // defined. (3) [not relevant] If (C) and initial = "exact", then the variable is explicitly defined by its
-        // start value in Initialization Mode
-        if (causality == CausalityType::independent && initial != InitialType::none)
+        // defined.
+        // (3) [not relevant] If (C) and initial = "exact", then the variable is explicitly defined by its start value
+        // in Initialization Mode
+        if (c_independent && !i_none)
             throw std::runtime_error(
                 "If causality = 'independent', it is neither allowed to define a value for initial nor a value for "
                 "start.");
 
-        if (causality == CausalityType::input && initial != InitialType::none)
+        if (c_input && !i_none)
             throw std::runtime_error(
                 "If causality = 'input', it is not allowed to define a value for initial and a value for start must be "
                 "defined.");
 
-        // Incompatible variability/causality settings
+        // Incompatible variability/causality settings (see Table on page 51 of the FMI2.0.4 specification)
         // (a)
-        if (variability == VariabilityType::constant &&
-            (causality == CausalityType::parameter || causality == CausalityType::calculatedParameter ||
-             causality == CausalityType::input))
+        if (v_constant && (c_parameter || c_calculated || c_input))
             throw std::runtime_error(
                 "constants always have their value already set, thus their causality can be only 'output' or 'local'");
         // (b)
-        if ((variability == VariabilityType::discrete || variability == VariabilityType::continuous) &&
-            (causality == CausalityType::parameter || causality == CausalityType::calculatedParameter))
+        if ((v_discrete || v_continuous) && (c_parameter || c_calculated))
             throw std::runtime_error(
-                "parameters and calculatedParameters cannot be discrete nor continuous, since the latters mean that "
-                "they could change over time");
+                "parameters and calculatedParameters cannot be discrete nor continuous, as they do not change over "
+                "time.");
         // (c)
-        if (causality == CausalityType::independent && variability != VariabilityType::continuous)
+        if (c_independent && !v_continuous)
             throw std::runtime_error("For an 'independent' variable only variability = 'continuous' makes sense.");
         // (d) + (e)
-        if (causality == CausalityType::input &&
-            (variability == VariabilityType::fixed || variability == VariabilityType::tunable))
+        if (c_input && (v_fixed || v_tunable))
             throw std::runtime_error(
                 "A fixed or tunable 'input'|'output' have exactly the same properties as a fixed or tunable parameter. "
                 "For simplicity, only fixed and tunable parameters|calculatedParameters shall be defined.");
@@ -250,20 +254,20 @@ class FmuVariable {
     /// Return a string with the name of the specified FMU variable type.
     static std::string Type_toString(Type type) {
         switch (type) {
-            case FmuVariable::Type::Real:
+            case Type::Real:
                 return "Real";
                 break;
-            case FmuVariable::Type::Integer:
+            case Type::Integer:
                 return "Integer";
                 break;
-            case FmuVariable::Type::Boolean:
+            case Type::Boolean:
                 return "Boolean";
                 break;
-            case FmuVariable::Type::Unknown:
-                return "Unknown";
-                break;
-            case FmuVariable::Type::String:
+            case Type::String:
                 return "String";
+                break;
+            case Type::Unknown:
+                return "Unknown";
                 break;
             default:
                 throw std::runtime_error("Type_toString: received bad type.");
