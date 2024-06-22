@@ -23,6 +23,8 @@
 #include <unordered_map>
 #include <cassert>
 
+#include "FmuToolsDefinitions.h"
+
 #include "fmi2/fmi2_headers/fmi2FunctionTypes.h"
 #include "fmi2/fmi2_headers/fmi2Functions.h"
 
@@ -71,24 +73,6 @@ struct LoggingUtilities {
             category = "?";
         printf("[%s|%s] %s: %s", instanceName, fmi2Status_toString(status).c_str(), category, msg);
     }
-};
-
-// =============================================================================
-
-/// Enumeration of FMI2 machine state types.
-enum class FmuMachineStateType {
-    anySettableState,  // custom element, used to do checks
-    instantiated,
-    initializationMode,
-    stepCompleted,   // only CoSimulation
-    stepInProgress,  // only CoSimulation
-    stepFailed,      // only CoSimulation
-    stepCanceled,    // only CoSimulation
-    terminated,
-    error,
-    fatal,
-    eventMode,          // only ModelExchange
-    continuousTimeMode  // only ModelExchange
 };
 
 // =============================================================================
@@ -243,22 +227,22 @@ class FmuVariable {
     bool HasStartVal() const { return has_start; }
 
     /// Check if setting this variable is allowed, given the FMU type and current FMU state.
-    bool IsSetAllowed(fmi2Type fmi_type, FmuMachineStateType fmu_machine_state) const {
+    bool IsSetAllowed(fmi2Type fmi_type, FmuMachineState fmu_machine_state) const {
         if (variability != VariabilityType::constant) {
             if (initial == InitialType::approx)
-                return fmu_machine_state == FmuMachineStateType::instantiated ||
-                       fmu_machine_state == FmuMachineStateType::anySettableState;
+                return fmu_machine_state == FmuMachineState::instantiated ||
+                       fmu_machine_state == FmuMachineState::anySettableState;
             else if (initial == InitialType::exact)
-                return fmu_machine_state == FmuMachineStateType::instantiated ||
-                       fmu_machine_state == FmuMachineStateType::initializationMode ||
-                       fmu_machine_state == FmuMachineStateType::anySettableState;
+                return fmu_machine_state == FmuMachineState::instantiated ||
+                       fmu_machine_state == FmuMachineState::initializationMode ||
+                       fmu_machine_state == FmuMachineState::anySettableState;
         }
 
         if (causality == CausalityType::input ||
             (causality == CausalityType::parameter && variability == VariabilityType::tunable))
-            return fmu_machine_state == FmuMachineStateType::initializationMode ||
-                   fmu_machine_state == FmuMachineStateType::stepCompleted ||
-                   fmu_machine_state == FmuMachineStateType::anySettableState;
+            return fmu_machine_state == FmuMachineState::initializationMode ||
+                   fmu_machine_state == FmuMachineState::stepCompleted ||
+                   fmu_machine_state == FmuMachineState::anySettableState;
 
         return false;
     }

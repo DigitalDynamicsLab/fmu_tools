@@ -16,9 +16,28 @@
 #ifndef FMUTOOLS_DEFINITIONS_H
 #define FMUTOOLS_DEFINITIONS_H
 
+/// Enumeration of supported FMU types (interfaces).
 enum class FmuType {
-  MODEL_EXCHANGE,  // FMU for model exchange
-  COSIMULATION     // FMU for co-simulation
+  MODEL_EXCHANGE,  ///< FMU for model exchange
+  COSIMULATION     ///< FMU for co-simulation
+};
+
+/// Enumeration of FMI machine states.
+enum class FmuMachineState {
+    anySettableState,    // custom element, used to do checks
+    instantiated,        //
+    initializationMode,  //
+    stepCompleted,       // only CoSimulation
+    stepInProgress,      // only CoSimulation
+    stepFailed,          // only CoSimulation
+    stepCanceled,        // only CoSimulation
+    terminated,          //
+    error,               //
+    fatal,               //
+    eventMode,           // only ModelExchange
+    continuousTimeMode,  // only ModelExchange
+    configurationMode,   // only FMI3
+    reconfigurationMode  // only FMI3
 };
 
 #endif

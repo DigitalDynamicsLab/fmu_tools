@@ -443,7 +443,7 @@ class FmuComponentBase {
     std::list<std::function<void(void)>> m_postStepCallbacks;
 
     fmi2CallbackFunctions m_callbackFunctions;
-    FmuMachineStateType m_fmuMachineState;
+    FmuMachineState m_fmuMachineState;
 
     std::unordered_map<std::string, bool> m_logCategories_enabled;
 };

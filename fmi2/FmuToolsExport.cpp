@@ -171,7 +171,7 @@ FmuComponentBase::FmuComponentBase(fmi2String instanceName,
       m_visible(visible == fmi2True ? true : false),
       m_debug_logging_enabled(loggingOn == fmi2True ? true : false),
       m_modelIdentifier(FMU_MODEL_IDENTIFIER),
-      m_fmuMachineState(FmuMachineStateType::instantiated),
+      m_fmuMachineState(FmuMachineState::instantiated),
       m_logCategories_enabled(logCategories_init),
       m_logCategories_debug(logCategories_debug_init) {
     m_unitDefinitions["1"] = UnitDefinition("1");  // guarantee the existence of the default unit
@@ -251,14 +251,14 @@ void FmuComponentBase::SetDefaultExperiment(fmi2Boolean toleranceDefined,
 }
 
 void FmuComponentBase::EnterInitializationMode() {
-    m_fmuMachineState = FmuMachineStateType::initializationMode;
+    m_fmuMachineState = FmuMachineState::initializationMode;
     _enterInitializationMode();
 }
 
 void FmuComponentBase::ExitInitializationMode() {
     _exitInitializationMode();
-    m_fmuMachineState = FmuMachineStateType::stepCompleted;  // TODO: introduce additional state when after
-                                                             // initialization and before step?
+    m_fmuMachineState = FmuMachineState::stepCompleted;  // TODO: introduce additional state when after
+                                                         // initialization and before step?
 }
 
 void FmuComponentBase::SetDebugLogging(std::string cat, bool value) {
@@ -311,7 +311,7 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
     newvar.SetDescription(description);
 
     // check that the attributes of the variable would allow a no-set variable
-    ////const FmuMachineStateType tempFmuState = FmuMachineStateType::anySettableState;
+    ////const FmuMachineState tempFmuState = FmuMachineState::anySettableState;
 
     newvar.ExposeCurrentValueAsStart();
     // varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(var_ptr_expanded);},
@@ -749,22 +749,22 @@ fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
 
     switch (status) {
         case fmi2OK:
-            m_fmuMachineState = FmuMachineStateType::stepCompleted;
+            m_fmuMachineState = FmuMachineState::stepCompleted;
             break;
         case fmi2Warning:
-            m_fmuMachineState = FmuMachineStateType::stepCompleted;
+            m_fmuMachineState = FmuMachineState::stepCompleted;
             break;
         case fmi2Discard:
-            m_fmuMachineState = FmuMachineStateType::stepFailed;
+            m_fmuMachineState = FmuMachineState::stepFailed;
             break;
         case fmi2Error:
-            m_fmuMachineState = FmuMachineStateType::error;
+            m_fmuMachineState = FmuMachineState::error;
             break;
         case fmi2Fatal:
-            m_fmuMachineState = FmuMachineStateType::fatal;
+            m_fmuMachineState = FmuMachineState::fatal;
             break;
         case fmi2Pending:
-            m_fmuMachineState = FmuMachineStateType::stepInProgress;
+            m_fmuMachineState = FmuMachineState::stepInProgress;
             break;
         default:
             throw std::runtime_error("Developer error: unexpected status from _doStep");
