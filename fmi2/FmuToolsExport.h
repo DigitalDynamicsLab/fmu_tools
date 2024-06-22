@@ -228,7 +228,7 @@ class FmuComponentBase {
                            " with value reference " + std::to_string(vr[s]) + " does NOT exist.\n";
                 sendToLog(msg, fmi2Status::fmi2Error, "logStatusError");
                 return fmi2Status::fmi2Error;
-            } else if (!it->IsSetAllowed(this->m_fmuType, this->m_fmuMachineState)) {
+            } else if (!it->IsSetAllowed(this->m_fmuMachineState)) {
                 // requested variable cannot be set in the current FMU state
                 auto msg = "fmi2SetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
                            " with value reference " + std::to_string(vr[s]) +

@@ -230,8 +230,8 @@ class FmuVariable {
     /// Return true if a start value is specified for this variable.
     bool HasStartVal() const { return has_start; }
 
-    /// Check if setting this variable is allowed, given the FMU type and current FMU state.
-    bool IsSetAllowed(fmi2Type fmi_type, FmuMachineState fmu_machine_state) const {
+    /// Check if setting this variable is allowed given the current FMU state.
+    bool IsSetAllowed(FmuMachineState fmu_machine_state) const {
         if (variability != VariabilityType::constant) {
             if (initial == InitialType::approx)
                 return fmu_machine_state == FmuMachineState::instantiated ||
