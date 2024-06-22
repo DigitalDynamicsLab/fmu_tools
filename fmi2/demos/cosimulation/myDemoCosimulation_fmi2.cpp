@@ -20,6 +20,8 @@
 
 #include "fmi2/FmuToolsImport.h"
 
+using namespace fmi2;
+
 std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
 ////std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY;
 

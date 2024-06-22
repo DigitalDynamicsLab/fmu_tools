@@ -41,6 +41,8 @@
 
 // =============================================================================
 
+namespace fmi2 {
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -172,8 +174,8 @@ class FmuVariableExport : public FmuVariable {
     bool allowed_start = true;
     bool required_start = false;
 
-    VarbindType varbind;     // value of this variable
-    StartType start;         // start value for this variable
+    VarbindType varbind;  // value of this variable
+    StartType start;      // start value for this variable
 
     // TODO: in C++17 should be possible to either use constexpr or use lambda with 'overload' keyword
     template <typename T>
@@ -502,5 +504,7 @@ FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,
                                              const fmi2CallbackFunctions* functions,
                                              fmi2Boolean visible,
                                              fmi2Boolean loggingOn);
+
+}  // namespace fmi2
 
 #endif

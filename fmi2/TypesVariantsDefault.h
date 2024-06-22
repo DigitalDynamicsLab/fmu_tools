@@ -21,6 +21,7 @@
 #include "variant/variant_guard.hpp"
 #include "fmi2/fmi2_headers/fmi2TypesPlatform.h"
 
+namespace fmi2 {
 
 #define FMITYPESPLATFORM_DEFAULT
 
@@ -42,5 +43,7 @@ using FmuVariableStartType = varns::variant<  //
     fmi2Integer,                              //
     std::string                               //
     >;
+
+}  // namespace fmi2
 
 #endif

@@ -36,7 +36,7 @@
 #include "miniz-cpp/zip_file.hpp"
 #include "filesystem.hpp"
 
-// =============================================================================
+namespace fmi2 {
 
 #define LOAD_FMI_FUNCTION(funcName)                                                                    \
     this->_##funcName = (funcName##TYPE*)get_function_ptr(this->dynlib_handle, #funcName);             \
@@ -937,3 +937,5 @@ fmi2Status FmuUnit::GetVariable(const std::string& varname, bool& value) noexcep
 fmi2Status FmuUnit::SetVariable(const std::string& varname, const bool& value) noexcept(false) {
     return SetVariable(varname, value ? 1 : 0, FmuVariable::Type::Boolean);
 }
+
+}  // namespace fmi2

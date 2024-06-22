@@ -15,9 +15,9 @@
 
 #pragma once
 
-#include "FmuToolsImport.h"
+#include "fmi2/FmuToolsImport.h"
 
-// =============================================================================
+namespace fmi2 {
 
 /// Class holding a set of scalar variables for the coordinate system of a visualizer in the FMU.
 struct FmuModelicaBody {
@@ -158,3 +158,5 @@ void FmuModelicaUnit::BuildVisualizersList(FmuVariableTreeNode* mynode) {
         BuildVisualizersList(&in.second);
     }
 }
+
+}  // namespace fmi2

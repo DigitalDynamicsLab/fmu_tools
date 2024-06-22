@@ -23,7 +23,7 @@
 // #define FMI2_FUNCTION_PREFIX MyModel_
 #include "fmi2/FmuToolsExport.h"
 
-class myFmuComponent : public FmuComponentBase {
+class myFmuComponent : public fmi2::FmuComponentBase {
   public:
     myFmuComponent(fmi2String instanceName,
                    fmi2Type fmuType,

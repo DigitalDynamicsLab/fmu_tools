@@ -26,10 +26,12 @@
 // #define FMI2_FUNCTION_PREFIX MyModel_
 #include "myFmuCosimulation_fmi2.h"
 
+using namespace fmi2;
+
 // -----------------------------------------------------------------------------
 
 // Implement function declared in FmuToolsExport.h to create an instance of this FMU. 
-FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,
+FmuComponentBase* fmi2::fmi2Instantiate_getPointer(fmi2String instanceName,
                                              fmi2Type fmuType,
                                              fmi2String fmuGUID,
                                              fmi2String fmuResourceLocation,

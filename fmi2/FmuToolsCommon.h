@@ -26,7 +26,7 @@
 #include "fmi2/fmi2_headers/fmi2FunctionTypes.h"
 #include "fmi2/fmi2_headers/fmi2Functions.h"
 
-// =============================================================================
+namespace fmi2 {
 
 struct LoggingUtilities {
     static std::string fmi2Status_toString(fmi2Status status) {
@@ -75,6 +75,7 @@ struct LoggingUtilities {
 
 // =============================================================================
 
+/// Enumeration of FMI2 machine state types.
 enum class FmuMachineStateType {
     anySettableState,  // custom element, used to do checks
     instantiated,
@@ -312,5 +313,7 @@ class FmuVariable {
 
     bool has_start;  // start value provided
 };
+
+}  // namespace fmi2
 
 #endif

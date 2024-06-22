@@ -21,6 +21,8 @@
 
 #include "rapidxml/rapidxml_ext.hpp"
 
+namespace fmi2 {
+
 const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = {
     UD_kg,  UD_m,    UD_s,     UD_A,      UD_K, UD_mol, UD_cd, UD_rad,  //
     UD_m_s, UD_m_s2, UD_rad_s, UD_rad_s2,                               //
@@ -562,15 +564,13 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         {FmuVariable::CausalityType::local, "local"},
         {FmuVariable::CausalityType::independent, "independent"}};
 
-
     // Traverse all variables and cache their index (map by variable name).
     // Include in list of output variables as appropriate.
     std::unordered_map<std::string, int> variableIndices;  // indices of all variables
     std::vector<int> outputIndices;                        // indices of output variables
     int crt_index = 1;                                     // start index value
 
-    for (auto it = m_scalarVariables.begin(); it != m_scalarVariables.end();
-         ++it) {
+    for (auto it = m_scalarVariables.begin(); it != m_scalarVariables.end(); ++it) {
         variableIndices[it->GetName()] = crt_index;
         if (it->GetCausality() == FmuVariable::CausalityType::output)
             outputIndices.push_back(crt_index);
@@ -783,7 +783,7 @@ fmi2Status FmuComponentBase::NewDiscreteStates(fmi2EventInfo* fmi2eventInfo) {
 }
 
 fmi2Status FmuComponentBase::CompletedIntegratorStep(fmi2Boolean noSetFMUStatePriorToCurrentPoint,
-                                   fmi2Boolean* enterEventMode,
+                                                     fmi2Boolean* enterEventMode,
                                                      fmi2Boolean* terminateSimulation) {
     fmi2Status status = _completedIntegratorStep(noSetFMUStatePriorToCurrentPoint, enterEventMode, terminateSimulation);
 
@@ -849,9 +849,13 @@ void FmuComponentBase::sendToLog(std::string msg, fmi2Status status, std::string
     }
 }
 
+}  // namespace fmi2
+
 // =============================================================================
 // FMU FUNCTIONS
 // =============================================================================
+
+using namespace fmi2;
 
 fmi2Component fmi2Instantiate(fmi2String instanceName,
                               fmi2Type fmuType,
