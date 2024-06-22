@@ -23,7 +23,7 @@
 
 namespace fmi2 {
 
-const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions = {
+const std::unordered_set<UnitDefinition, UnitDefinition::Hash> common_unitdefinitions = {
     UD_kg,  UD_m,    UD_s,     UD_A,      UD_K, UD_mol, UD_cd, UD_rad,  //
     UD_m_s, UD_m_s2, UD_rad_s, UD_rad_s2,                               //
     UD_N,   UD_Nm,   UD_N_m2                                            //
@@ -174,8 +174,8 @@ FmuComponentBase::FmuComponentBase(fmi2String instanceName,
       m_fmuMachineState(FmuMachineStateType::instantiated),
       m_logCategories_enabled(logCategories_init),
       m_logCategories_debug(logCategories_debug_init) {
-    m_unitDefinitions["1"] = UnitDefinitionType("1");  // guarantee the existence of the default unit
-    m_unitDefinitions[""] = UnitDefinitionType("");    // guarantee the existence of the unassigned unit
+    m_unitDefinitions["1"] = UnitDefinition("1");  // guarantee the existence of the default unit
+    m_unitDefinitions[""] = UnitDefinition("");    // guarantee the existence of the unassigned unit
 
     AddFmuVariable(&m_time, "time", FmuVariable::Type::Real, "s", "time");
 
@@ -287,7 +287,7 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
     // check if unit definition exists
     auto match_unit = m_unitDefinitions.find(unitname);
     if (match_unit == m_unitDefinitions.end()) {
-        auto predicate_samename = [unitname](const UnitDefinitionType& var) { return var.name == unitname; };
+        auto predicate_samename = [unitname](const UnitDefinition& var) { return var.name == unitname; };
         auto match_commonunit =
             std::find_if(common_unitdefinitions.begin(), common_unitdefinitions.end(), predicate_samename);
         if (match_commonunit == common_unitdefinitions.end()) {
@@ -834,7 +834,7 @@ fmi2Status FmuComponentBase::GetDerivatives(fmi2Real derivatives[], size_t nx) {
     return status;
 }
 
-void FmuComponentBase::addUnitDefinition(const UnitDefinitionType& unit_definition) {
+void FmuComponentBase::addUnitDefinition(const UnitDefinition& unit_definition) {
     m_unitDefinitions[unit_definition.name] = unit_definition;
 }
 

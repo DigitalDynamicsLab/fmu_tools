@@ -30,14 +30,14 @@ using namespace fmi2;
 
 // -----------------------------------------------------------------------------
 
-// Implement function declared in FmuToolsExport.h to create an instance of this FMU. 
+// Implement function declared in FmuToolsExport.h to create an instance of this FMU.
 FmuComponentBase* fmi2::fmi2Instantiate_getPointer(fmi2String instanceName,
-                                             fmi2Type fmuType,
-                                             fmi2String fmuGUID,
-                                             fmi2String fmuResourceLocation,
-                                             const fmi2CallbackFunctions* functions,
-                                             fmi2Boolean visible,
-                                             fmi2Boolean loggingOn) {
+                                                   fmi2Type fmuType,
+                                                   fmi2String fmuGUID,
+                                                   fmi2String fmuResourceLocation,
+                                                   const fmi2CallbackFunctions* functions,
+                                                   fmi2Boolean visible,
+                                                   fmi2Boolean loggingOn) {
     return new myFmuComponent(instanceName, fmuType, fmuGUID, fmuResourceLocation, functions, visible, loggingOn);
 }
 
@@ -78,7 +78,7 @@ myFmuComponent::myFmuComponent(fmi2String instanceName,
     initializeType(fmuType);
 
     // Define new units if needed
-    UnitDefinitionType UD_J("J");
+    UnitDefinition UD_J("J");
     UD_J.kg = 1;
     UD_J.m = 2;
     UD_J.s = -2;

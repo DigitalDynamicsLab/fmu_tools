@@ -30,6 +30,7 @@
 #include <list>
 
 #include "FmuToolsDefinitions.h"
+#include "FmuToolsUnitDefinitions.h"
 #include "fmi2/FmuToolsCommon.h"
 #include "fmi2/fmi2_headers/fmi2Functions.h"
 
@@ -52,54 +53,6 @@ void FMI2_Export createModelDescription(const std::string& path, FmuType fmu_typ
 #ifdef __cplusplus
 }
 #endif
-
-// =============================================================================
-
-struct UnitDefinitionType {
-    UnitDefinitionType(const std::string& _name = "1") : name(_name) {}
-
-    UnitDefinitionType(const std::string& _name, int _kg, int _m, int _s, int _A, int _K, int _mol, int _cd, int _rad)
-        : name(_name), kg(_kg), m(_m), s(_s), A(_A), K(_K), mol(_mol), cd(_cd), rad(_rad) {}
-
-    virtual ~UnitDefinitionType() {}
-
-    std::string name;
-    int kg = 0;
-    int m = 0;
-    int s = 0;
-    int A = 0;
-    int K = 0;
-    int mol = 0;
-    int cd = 0;
-    int rad = 0;
-
-    struct Hash {
-        size_t operator()(const UnitDefinitionType& p) const { return std::hash<std::string>()(p.name); }
-    };
-
-    bool operator==(const UnitDefinitionType& other) const { return name == other.name; }
-};
-
-extern const std::unordered_set<UnitDefinitionType, UnitDefinitionType::Hash> common_unitdefinitions;
-
-// Default UnitDefinitionTypes          |name|kg, m, s, A, K,mol,cd,rad
-static const UnitDefinitionType UD_kg("kg", 1, 0, 0, 0, 0, 0, 0, 0);
-static const UnitDefinitionType UD_m("m", 0, 1, 0, 0, 0, 0, 0, 0);
-static const UnitDefinitionType UD_s("s", 0, 0, 1, 0, 0, 0, 0, 0);
-static const UnitDefinitionType UD_A("A", 0, 0, 0, 1, 0, 0, 0, 0);
-static const UnitDefinitionType UD_K("K", 0, 0, 0, 0, 1, 0, 0, 0);
-static const UnitDefinitionType UD_mol("mol", 0, 0, 0, 0, 0, 1, 0, 0);
-static const UnitDefinitionType UD_cd("cd", 0, 0, 0, 0, 0, 0, 1, 0);
-static const UnitDefinitionType UD_rad("rad", 0, 0, 0, 0, 0, 0, 0, 1);
-
-static const UnitDefinitionType UD_m_s("m/s", 0, 1, -1, 0, 0, 0, 0, 0);
-static const UnitDefinitionType UD_m_s2("m/s2", 0, 1, -2, 0, 0, 0, 0, 0);
-static const UnitDefinitionType UD_rad_s("rad/s", 0, 0, -1, 0, 0, 0, 0, 1);
-static const UnitDefinitionType UD_rad_s2("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1);
-
-static const UnitDefinitionType UD_N("N", 1, 1, -2, 0, 0, 0, 0, 0);
-static const UnitDefinitionType UD_Nm("Nm", 1, 2, -2, 0, 0, 0, 0, 0);
-static const UnitDefinitionType UD_N_m2("N/m2", 1, -1, -2, 0, 0, 0, 0, 0);
 
 // =============================================================================
 
@@ -437,7 +390,7 @@ class FmuComponentBase {
 
     void initializeType(fmi2Type fmuType);
 
-    void addUnitDefinition(const UnitDefinitionType& unit_definition);
+    void addUnitDefinition(const UnitDefinition& unit_definition);
 
     void clearUnitDefinitions() { m_unitDefinitions.clear(); }
 
@@ -482,7 +435,7 @@ class FmuComponentBase {
     std::map<FmuVariable::Type, unsigned int> m_valueReferenceCounter;
 
     std::set<FmuVariableExport> m_scalarVariables;
-    std::unordered_map<std::string, UnitDefinitionType> m_unitDefinitions;
+    std::unordered_map<std::string, UnitDefinition> m_unitDefinitions;
     std::unordered_map<std::string, std::pair<std::string, std::vector<std::string>>> m_derivatives;
     std::unordered_map<std::string, std::vector<std::string>> m_variableDependencies;
 
@@ -497,6 +450,8 @@ class FmuComponentBase {
 
 // -----------------------------------------------------------------------------
 
+/// Function to create an instance of a particular FMU.
+/// This function must be implemented by a concrete FMU and should return a new object of the concrete FMU type.
 FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,
                                              fmi2Type fmuType,
                                              fmi2String fmuGUID,
