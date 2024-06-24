@@ -280,21 +280,24 @@ class FmuComponentBase {
     // This section declares the virtual methods that a concrete FMU must implement.
     // - some of these functions have a default implementation
     // - some are required for all FMUs (pure virtual)
-    // - others are required only for specific FMU types (e.g., _doStep must be implemented for CS, but not for ME)
+    // - others are required only for specific FMU types (e.g., doStepIMPL must be implemented for CS, but not for ME)
 
     virtual bool is_cosimulation_available() const = 0;
     virtual bool is_modelexchange_available() const = 0;
 
-    virtual fmi2Status _doStep(fmi2Real currentCommunicationPoint,
-                               fmi2Real communicationStepSize,
-                               fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
+    virtual void preModelDescriptionExport() {}
+    virtual void postModelDescriptionExport() {}
+
+    virtual fmi2Status doStepIMPL(fmi2Real currentCommunicationPoint,
+                                  fmi2Real communicationStepSize,
+                                  fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
         if (is_cosimulation_available())
-            throw std::runtime_error("An FMU for co-simulation must implement _doStep");
+            throw std::runtime_error("An FMU for co-simulation must implement doStepIMPL");
 
         return fmi2OK;
     }
 
-    virtual fmi2Status _newDiscreteStates(fmi2EventInfo* fmi2eventInfo) {
+    virtual fmi2Status newDiscreteStatesIMPL(fmi2EventInfo* fmi2eventInfo) {
         fmi2eventInfo->newDiscreteStatesNeeded = fmi2False;
         fmi2eventInfo->terminateSimulation = fmi2False;
         fmi2eventInfo->nominalsOfContinuousStatesChanged = fmi2False;
@@ -305,43 +308,40 @@ class FmuComponentBase {
         return fmi2Status::fmi2OK;
     }
 
-    virtual fmi2Status _completedIntegratorStep(fmi2Boolean noSetFMUStatePriorToCurrentPoint,
-                                                fmi2Boolean* enterEventMode,
-                                                fmi2Boolean* terminateSimulation) {
+    virtual fmi2Status completedIntegratorStepIMPL(fmi2Boolean noSetFMUStatePriorToCurrentPoint,
+                                                   fmi2Boolean* enterEventMode,
+                                                   fmi2Boolean* terminateSimulation) {
         *enterEventMode = fmi2False;
         *terminateSimulation = fmi2False;
 
         return fmi2Status::fmi2OK;
     }
 
-    virtual fmi2Status _setTime(fmi2Real time) { return fmi2Status::fmi2OK; }
+    virtual fmi2Status setTimeIMPL(fmi2Real time) { return fmi2Status::fmi2OK; }
 
-    virtual fmi2Status _getContinuousStates(fmi2Real x[], size_t nx) {
+    virtual fmi2Status getContinuousStatesIMPL(fmi2Real x[], size_t nx) {
         if (is_modelexchange_available())
-            throw std::runtime_error("An FMU for model exchange must implement _getContinuousStates");
+            throw std::runtime_error("An FMU for model exchange must implement getContinuousStatesIMPL");
 
         return fmi2OK;
     }
 
-    virtual fmi2Status _setContinuousStates(const fmi2Real x[], size_t nx) {
+    virtual fmi2Status setContinuousStatesIMPL(const fmi2Real x[], size_t nx) {
         if (is_modelexchange_available())
-            throw std::runtime_error("An FMU for model exchange must implement _setContinuousStates");
+            throw std::runtime_error("An FMU for model exchange must implement setContinuousStatesIMPL");
 
         return fmi2OK;
     }
 
-    virtual fmi2Status _getDerivatives(fmi2Real derivatives[], size_t nx) {
+    virtual fmi2Status getDerivativesIMPL(fmi2Real derivatives[], size_t nx) {
         if (is_modelexchange_available())
-            throw std::runtime_error("An FMU for model exchange must implement _getDerivatives");
+            throw std::runtime_error("An FMU for model exchange must implement getDerivativesIMPL");
 
         return fmi2OK;
     }
 
-    virtual void _preModelDescriptionExport() {}
-    virtual void _postModelDescriptionExport() {}
-
-    virtual void _enterInitializationMode() {}
-    virtual void _exitInitializationMode() {}
+    virtual void enterInitializationModeIMPL() {}
+    virtual void exitInitializationModeIMPL() {}
 
   public:
     void SetDefaultExperiment(fmi2Boolean toleranceDefined,
@@ -452,13 +452,13 @@ class FmuComponentBase {
 
 /// Function to create an instance of a particular FMU.
 /// This function must be implemented by a concrete FMU and should return a new object of the concrete FMU type.
-FmuComponentBase* fmi2Instantiate_getPointer(fmi2String instanceName,
-                                             fmi2Type fmuType,
-                                             fmi2String fmuGUID,
-                                             fmi2String fmuResourceLocation,
-                                             const fmi2CallbackFunctions* functions,
-                                             fmi2Boolean visible,
-                                             fmi2Boolean loggingOn);
+FmuComponentBase* fmi2InstantiateIMPL(fmi2String instanceName,
+                                      fmi2Type fmuType,
+                                      fmi2String fmuGUID,
+                                      fmi2String fmuResourceLocation,
+                                      const fmi2CallbackFunctions* functions,
+                                      fmi2Boolean visible,
+                                      fmi2Boolean loggingOn);
 
 }  // namespace fmi2
 

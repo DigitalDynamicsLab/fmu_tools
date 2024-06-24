@@ -40,12 +40,12 @@ class myFmuComponent : public fmi2::FmuComponentBase {
     virtual bool is_cosimulation_available() const override { return false; }
     virtual bool is_modelexchange_available() const override { return true; }
 
-    virtual void _enterInitializationMode() override;
-    virtual void _exitInitializationMode() override;
+    virtual void enterInitializationModeIMPL() override;
+    virtual void exitInitializationModeIMPL() override;
 
-    virtual fmi2Status _getContinuousStates(fmi2Real x[], size_t nx) override;
-    virtual fmi2Status _setContinuousStates(const fmi2Real x[], size_t nx) override;
-    virtual fmi2Status _getDerivatives(fmi2Real derivatives[], size_t nx) override;
+    virtual fmi2Status getContinuousStatesIMPL(fmi2Real x[], size_t nx) override;
+    virtual fmi2Status setContinuousStatesIMPL(const fmi2Real x[], size_t nx) override;
+    virtual fmi2Status getDerivativesIMPL(fmi2Real derivatives[], size_t nx) override;
 
     // Problem-specific functions
     typedef std::array<double, 4> vec4;

@@ -31,13 +31,13 @@ using namespace fmi2;
 // -----------------------------------------------------------------------------
 
 // Implement function declared in FmuToolsExport.h to create an instance of this FMU.
-FmuComponentBase* fmi2::fmi2Instantiate_getPointer(fmi2String instanceName,
-                                                   fmi2Type fmuType,
-                                                   fmi2String fmuGUID,
-                                                   fmi2String fmuResourceLocation,
-                                                   const fmi2CallbackFunctions* functions,
-                                                   fmi2Boolean visible,
-                                                   fmi2Boolean loggingOn) {
+FmuComponentBase* fmi2::fmi2InstantiateIMPL(fmi2String instanceName,
+                                            fmi2Type fmuType,
+                                            fmi2String fmuGUID,
+                                            fmi2String fmuResourceLocation,
+                                            const fmi2CallbackFunctions* functions,
+                                            fmi2Boolean visible,
+                                            fmi2Boolean loggingOn) {
     return new myFmuComponent(instanceName, fmuType, fmuGUID, fmuResourceLocation, functions, visible, loggingOn);
 }
 
@@ -223,9 +223,9 @@ myFmuComponent::vec4 myFmuComponent::calcRHS(double t, const vec4& q) {
 
 // -----------------------------------------------------------------------------
 
-void myFmuComponent::_enterInitializationMode() {}
+void myFmuComponent::enterInitializationModeIMPL() {}
 
-void myFmuComponent::_exitInitializationMode() {
+void myFmuComponent::exitInitializationModeIMPL() {
     std::string myfile_location = m_resources_location + "/" + filename;
     std::ifstream resfile(myfile_location);
 
@@ -249,7 +249,7 @@ void myFmuComponent::_exitInitializationMode() {
               fmi2Status::fmi2OK, "logAll");
 }
 
-fmi2Status myFmuComponent::_getContinuousStates(fmi2Real x[], size_t nx) {
+fmi2Status myFmuComponent::getContinuousStatesIMPL(fmi2Real x[], size_t nx) {
     for (size_t i = 0; i < nx; i++) {
         x[i] = q[i];
     }
@@ -257,7 +257,7 @@ fmi2Status myFmuComponent::_getContinuousStates(fmi2Real x[], size_t nx) {
     return fmi2Status::fmi2OK;
 }
 
-fmi2Status myFmuComponent::_setContinuousStates(const fmi2Real x[], size_t nx) {
+fmi2Status myFmuComponent::setContinuousStatesIMPL(const fmi2Real x[], size_t nx) {
     for (size_t i = 0; i < nx; i++) {
         q[i] = x[i];
     }
@@ -265,7 +265,7 @@ fmi2Status myFmuComponent::_setContinuousStates(const fmi2Real x[], size_t nx) {
     return fmi2Status::fmi2OK;
 }
 
-fmi2Status myFmuComponent::_getDerivatives(fmi2Real derivatives[], size_t nx) {
+fmi2Status myFmuComponent::getDerivativesIMPL(fmi2Real derivatives[], size_t nx) {
     auto rhs = calcRHS(m_time, q);
 
     for (size_t i = 0; i < nx; i++) {

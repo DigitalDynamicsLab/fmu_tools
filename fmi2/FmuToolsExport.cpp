@@ -45,9 +45,13 @@ void createModelDescription(const std::string& path, FmuType fmu_type) {
     }
 
     fmi2CallbackFunctions callfun = {LoggingUtilities::logger_default, calloc, free, nullptr, nullptr};
-    FmuComponentBase* fmu = fmi2Instantiate_getPointer("", fmi2_type, FMU_GUID,
-                                                       ("file:///" + GetLibraryLocation() + "/../../resources").c_str(),
-                                                       &callfun, fmi2False, fmi2False);
+    FmuComponentBase* fmu = fmi2InstantiateIMPL("",                                                                //
+                                                fmi2_type,                                                         //
+                                                FMU_GUID,                                                          //
+                                                ("file:///" + GetLibraryLocation() + "/../../resources").c_str(),  //
+                                                &callfun,                                                          //
+                                                fmi2False, fmi2False                                               //
+    );
     fmu->ExportModelDescription(path);
     delete fmu;
 }
@@ -250,17 +254,6 @@ void FmuComponentBase::SetDefaultExperiment(fmi2Boolean toleranceDefined,
     m_stopTimeDefined = stopTimeDefined;
 }
 
-void FmuComponentBase::EnterInitializationMode() {
-    m_fmuMachineState = FmuMachineState::initializationMode;
-    _enterInitializationMode();
-}
-
-void FmuComponentBase::ExitInitializationMode() {
-    _exitInitializationMode();
-    m_fmuMachineState = FmuMachineState::stepCompleted;  // TODO: introduce additional state when after
-                                                         // initialization and before step?
-}
-
 void FmuComponentBase::SetDebugLogging(std::string cat, bool value) {
     try {
         m_logCategories_enabled[cat] = value;
@@ -402,8 +395,10 @@ void FmuComponentBase::addDependencies(const std::string& variable_name,
     }
 }
 
+// -----------------------------------------------------------------------------
+
 void FmuComponentBase::ExportModelDescription(std::string path) {
-    _preModelDescriptionExport();
+    preModelDescriptionExport();
 
     // Create the XML document
     rapidxml::xml_document<>* doc_ptr = new rapidxml::xml_document<>();
@@ -708,8 +703,10 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
 
     delete doc_ptr;
 
-    _postModelDescriptionExport();
+    postModelDescriptionExport();
 }
+
+// -----------------------------------------------------------------------------
 
 std::set<FmuVariableExport>::iterator FmuComponentBase::findByValrefType(fmi2ValueReference vr,
                                                                          FmuVariable::Type vartype) {
@@ -736,13 +733,26 @@ std::set<FmuVariableExport>::iterator FmuComponentBase::findByName(const std::st
     return std::find_if(m_scalarVariables.begin(), m_scalarVariables.end(), predicate_samename);
 }
 
+// -----------------------------------------------------------------------------
+
+void FmuComponentBase::EnterInitializationMode() {
+    m_fmuMachineState = FmuMachineState::initializationMode;
+    enterInitializationModeIMPL();
+}
+
+void FmuComponentBase::ExitInitializationMode() {
+    exitInitializationModeIMPL();
+    m_fmuMachineState = FmuMachineState::stepCompleted;  // TODO: introduce additional state when after
+                                                         // initialization and before step?
+}
+
 fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
                                     fmi2Real communicationStepSize,
                                     fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
     // invoke any pre step callbacks (e.g., to process input variables)
     executePreStepCallbacks();
 
-    fmi2Status status = _doStep(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPoint);
+    fmi2Status status = doStepIMPL(currentCommunicationPoint, communicationStepSize, noSetFMUStatePriorToCurrentPoint);
 
     // invoke any post step callbacks (e.g., to update auxiliary variables)
     executePostStepCallbacks();
@@ -767,7 +777,7 @@ fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
             m_fmuMachineState = FmuMachineState::stepInProgress;
             break;
         default:
-            throw std::runtime_error("Developer error: unexpected status from _doStep");
+            throw std::runtime_error("Developer error: unexpected status from doStepIMPL");
             break;
     }
 
@@ -775,7 +785,7 @@ fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
 }
 
 fmi2Status FmuComponentBase::NewDiscreteStates(fmi2EventInfo* fmi2eventInfo) {
-    fmi2Status status = _newDiscreteStates(fmi2eventInfo);
+    fmi2Status status = newDiscreteStatesIMPL(fmi2eventInfo);
 
     //// TODO - anything else here?
 
@@ -785,7 +795,8 @@ fmi2Status FmuComponentBase::NewDiscreteStates(fmi2EventInfo* fmi2eventInfo) {
 fmi2Status FmuComponentBase::CompletedIntegratorStep(fmi2Boolean noSetFMUStatePriorToCurrentPoint,
                                                      fmi2Boolean* enterEventMode,
                                                      fmi2Boolean* terminateSimulation) {
-    fmi2Status status = _completedIntegratorStep(noSetFMUStatePriorToCurrentPoint, enterEventMode, terminateSimulation);
+    fmi2Status status =
+        completedIntegratorStepIMPL(noSetFMUStatePriorToCurrentPoint, enterEventMode, terminateSimulation);
 
     //// TODO - anything else here?
 
@@ -795,7 +806,7 @@ fmi2Status FmuComponentBase::CompletedIntegratorStep(fmi2Boolean noSetFMUStatePr
 fmi2Status FmuComponentBase::SetTime(fmi2Real time) {
     m_time = time;
 
-    fmi2Status status = _setTime(time);
+    fmi2Status status = setTimeIMPL(time);
 
     //// TODO - anything else here?
 
@@ -803,7 +814,7 @@ fmi2Status FmuComponentBase::SetTime(fmi2Real time) {
 }
 
 fmi2Status FmuComponentBase::GetContinuousStates(fmi2Real x[], size_t nx) {
-    fmi2Status status = _getContinuousStates(x, nx);
+    fmi2Status status = getContinuousStatesIMPL(x, nx);
 
     //// TODO - interpret/process status?
 
@@ -811,7 +822,7 @@ fmi2Status FmuComponentBase::GetContinuousStates(fmi2Real x[], size_t nx) {
 }
 
 fmi2Status FmuComponentBase::SetContinuousStates(const fmi2Real x[], size_t nx) {
-    fmi2Status status = _setContinuousStates(x, nx);
+    fmi2Status status = setContinuousStatesIMPL(x, nx);
 
     //// TODO - interpret/process status?
     ////   Set FMU machine state (m_fmuMachineState)
@@ -823,7 +834,7 @@ fmi2Status FmuComponentBase::GetDerivatives(fmi2Real derivatives[], size_t nx) {
     // invoke any pre step callbacks (e.g., to process input variables)
     executePreStepCallbacks();
 
-    fmi2Status status = _getDerivatives(derivatives, nx);
+    fmi2Status status = getDerivativesIMPL(derivatives, nx);
 
     // invoke any post step callbacks (e.g., to update auxiliary variables)
     executePostStepCallbacks();
@@ -865,7 +876,7 @@ fmi2Component fmi2Instantiate(fmi2String instanceName,
                               fmi2Boolean visible,
                               fmi2Boolean loggingOn) {
     FmuComponentBase* fmu_ptr =
-        fmi2Instantiate_getPointer(instanceName, fmuType, fmuGUID, fmuResourceLocation, functions, visible, loggingOn);
+        fmi2InstantiateIMPL(instanceName, fmuType, fmuGUID, fmuResourceLocation, functions, visible, loggingOn);
     return reinterpret_cast<void*>(fmu_ptr);
 }
 

@@ -35,13 +35,13 @@ class myFmuComponent : public fmi2::FmuComponentBase {
 
     ~myFmuComponent() {}
 
-    virtual void _enterInitializationMode() override;
+    virtual void enterInitializationModeIMPL() override;
 
-    virtual void _exitInitializationMode() override;
+    virtual void exitInitializationModeIMPL() override;
 
-    virtual fmi2Status _doStep(fmi2Real currentCommunicationPoint,
-                               fmi2Real communicationStepSize,
-                               fmi2Boolean noSetFMUStatePriorToCurrentPoint) override;
+    virtual fmi2Status doStepIMPL(fmi2Real currentCommunicationPoint,
+                                  fmi2Real communicationStepSize,
+                                  fmi2Boolean noSetFMUStatePriorToCurrentPoint) override;
 
   private:
     virtual bool is_cosimulation_available() const override { return true; }

@@ -31,13 +31,13 @@ using namespace fmi2;
 // -----------------------------------------------------------------------------
 
 // Implement function declared in FmuToolsExport.h to create an instance of this FMU.
-FmuComponentBase* fmi2::fmi2Instantiate_getPointer(fmi2String instanceName,
-                                                   fmi2Type fmuType,
-                                                   fmi2String fmuGUID,
-                                                   fmi2String fmuResourceLocation,
-                                                   const fmi2CallbackFunctions* functions,
-                                                   fmi2Boolean visible,
-                                                   fmi2Boolean loggingOn) {
+FmuComponentBase* fmi2::fmi2InstantiateIMPL(fmi2String instanceName,
+                                            fmi2Type fmuType,
+                                            fmi2String fmuGUID,
+                                            fmi2String fmuResourceLocation,
+                                            const fmi2CallbackFunctions* functions,
+                                            fmi2Boolean visible,
+                                            fmi2Boolean loggingOn) {
     return new myFmuComponent(instanceName, fmuType, fmuGUID, fmuResourceLocation, functions, visible, loggingOn);
 }
 
@@ -208,9 +208,9 @@ myFmuComponent::vec4 myFmuComponent::calcRHS(double t, const vec4& q) {
 
 // -----------------------------------------------------------------------------
 
-void myFmuComponent::_enterInitializationMode() {}
+void myFmuComponent::enterInitializationModeIMPL() {}
 
-void myFmuComponent::_exitInitializationMode() {
+void myFmuComponent::exitInitializationModeIMPL() {
     std::string myfile_location = m_resources_location + "/" + filename;
     std::ifstream resfile(myfile_location);
 
@@ -234,9 +234,9 @@ void myFmuComponent::_exitInitializationMode() {
               fmi2Status::fmi2OK, "logAll");
 }
 
-fmi2Status myFmuComponent::_doStep(fmi2Real currentCommunicationPoint,
-                                   fmi2Real communicationStepSize,
-                                   fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
+fmi2Status myFmuComponent::doStepIMPL(fmi2Real currentCommunicationPoint,
+                                      fmi2Real communicationStepSize,
+                                      fmi2Boolean noSetFMUStatePriorToCurrentPoint) {
     while (m_time < currentCommunicationPoint + communicationStepSize) {
         fmi2Real h = std::min((currentCommunicationPoint + communicationStepSize - m_time),
                               std::min(communicationStepSize, m_stepSize));
