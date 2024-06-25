@@ -181,7 +181,9 @@ FmuComponentBase::FmuComponentBase(fmi2String instanceName,
     m_unitDefinitions["1"] = UnitDefinition("1");  // guarantee the existence of the default unit
     m_unitDefinitions[""] = UnitDefinition("");    // guarantee the existence of the unassigned unit
 
-    AddFmuVariable(&m_time, "time", FmuVariable::Type::Real, "s", "time");
+    AddFmuVariable(&m_time, "time", FmuVariable::Type::Real, "s", "time",  //
+                   FmuVariable::CausalityType::independent,                //
+                   FmuVariable::VariabilityType::continuous);
 
     // Parse URL according to https://datatracker.ietf.org/doc/html/rfc3986
     std::string m_resources_location_str = std::string(fmuResourceLocation);
@@ -295,7 +297,7 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
     // create new variable
     // check if same-name variable exists
     std::set<FmuVariableExport>::iterator it = this->findByName(name);
-    if (it != m_scalarVariables.end())
+    if (it != m_variables.end())
         throw std::runtime_error("Cannot add two FMU variables with the same name.");
 
     FmuVariableExport newvar(varbind, name, scalartype, causality, variability, initial);
@@ -310,7 +312,7 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
     // varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(var_ptr_expanded);},
     // var_ptr);
 
-    std::pair<std::set<FmuVariableExport>::iterator, bool> ret = m_scalarVariables.insert(newvar);
+    std::pair<std::set<FmuVariableExport>::iterator, bool> ret = m_variables.insert(newvar);
     if (!ret.second)
         throw std::runtime_error("Developer error: cannot insert new variable into FMU.");
 
@@ -319,12 +321,12 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
 
 bool FmuComponentBase::RebindVariable(FmuVariableExport::VarbindType varbind, std::string name) {
     std::set<FmuVariableExport>::iterator it = this->findByName(name);
-    if (it != m_scalarVariables.end()) {
+    if (it != m_variables.end()) {
         FmuVariableExport newvar(*it);
         newvar.Bind(varbind);
-        m_scalarVariables.erase(*it);
+        m_variables.erase(*it);
 
-        std::pair<std::set<FmuVariableExport>::iterator, bool> ret = m_scalarVariables.insert(newvar);
+        std::pair<std::set<FmuVariableExport>::iterator, bool> ret = m_variables.insert(newvar);
 
         return ret.second;
     }
@@ -344,14 +346,14 @@ void FmuComponentBase::addDerivative(const std::string& derivative_name,
     // Check that a variable with specified state name exists
     {
         std::set<FmuVariableExport>::iterator it = this->findByName(state_name);
-        if (it == m_scalarVariables.end())
+        if (it == m_variables.end())
             throw std::runtime_error("No state variable with given name exists.");
     }
 
     // Check that a variable with specified derivative name exists
     {
         std::set<FmuVariableExport>::iterator it = this->findByName(derivative_name);
-        if (it == m_scalarVariables.end())
+        if (it == m_variables.end())
             throw std::runtime_error("No state derivative variable with given name exists.");
     }
 
@@ -375,14 +377,14 @@ void FmuComponentBase::addDependencies(const std::string& variable_name,
     // Check that a variable with specified name exists
     {
         std::set<FmuVariableExport>::iterator it = this->findByName(variable_name);
-        if (it == m_scalarVariables.end())
+        if (it == m_variables.end())
             throw std::runtime_error("No primary variable with given name exists.");
     }
 
     // Check that the specified dependencies corresponds to existing variables
     for (const auto& dependency_name : dependency_names) {
         std::set<FmuVariableExport>::iterator it = this->findByName(dependency_name);
-        if (it == m_scalarVariables.end())
+        if (it == m_variables.end())
             throw std::runtime_error("No dependency variable with given name exists.");
     }
 
@@ -448,8 +450,13 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         rootNode->append_node(modExNode);
     }
 
-    // Add UnitDefinitions node
+    // NOTE: rapidxml does not copy the strings that we pass to print, but it just keeps the addresses until
+    // it's time to print them so we cannot use a temporary string to convert the number to string and then
+    // recycle it we cannot use std::vector because, in case of reallocation, it might move the array somewhere
+    // else thus invalidating the addresses. To address this, use a list that remains in scope for the duration.
     std::list<std::string> stringbuf;
+
+    // Add UnitDefinitions node
     rapidxml::xml_node<>* unitDefsNode = doc_ptr->allocate_node(rapidxml::node_element, "UnitDefinitions");
 
     for (auto& ud_pair : m_unitDefinitions) {
@@ -526,12 +533,6 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
     // Add ModelVariables node
     rapidxml::xml_node<>* modelVarsNode = doc_ptr->allocate_node(rapidxml::node_element, "ModelVariables");
 
-    // WARNING: rapidxml does not copy the strings that we pass to print, but it just keeps the addresses until
-    // it's time to print them so we cannot use a temporary string to convert the number to string and then
-    // recycle it we cannot use std::vector because, in case of reallocation, it might move the array somewhere
-    // else thus invalidating the addresses
-    std::list<std::string> valueref_str;
-
     // TODO: move elsewhere
     const std::unordered_map<FmuVariable::Type, std::string> Type_strings = {{FmuVariable::Type::Real, "Real"},
                                                                              {FmuVariable::Type::Integer, "Integer"},
@@ -565,7 +566,7 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
     std::vector<int> outputIndices;                        // indices of output variables
     int crt_index = 1;                                     // start index value
 
-    for (auto it = m_scalarVariables.begin(); it != m_scalarVariables.end(); ++it) {
+    for (auto it = m_variables.begin(); it != m_variables.end(); ++it) {
         variableIndices[it->GetName()] = crt_index;
         if (it->GetCausality() == FmuVariable::CausalityType::output)
             outputIndices.push_back(crt_index);
@@ -573,30 +574,29 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
     }
 
     // Traverse all variables and create XML nodes
-    for (std::set<FmuVariableExport>::const_iterator it = m_scalarVariables.begin(); it != m_scalarVariables.end();
-         ++it) {
+    for (auto it = m_variables.begin(); it != m_variables.end(); ++it) {
         // Create a comment node with the variable index
         stringbuf.push_back("Index: " + std::to_string(variableIndices[it->GetName()]));
         rapidxml::xml_node<>* idNode = doc_ptr->allocate_node(rapidxml::node_comment, "", stringbuf.back().c_str());
         modelVarsNode->append_node(idNode);
 
-        // Create a ScalarVariable node
-        rapidxml::xml_node<>* scalarVarNode = doc_ptr->allocate_node(rapidxml::node_element, "ScalarVariable");
-        scalarVarNode->append_attribute(doc_ptr->allocate_attribute("name", it->GetName().c_str()));
+        // Create a variable node
+        rapidxml::xml_node<>* varNode = doc_ptr->allocate_node(rapidxml::node_element, "ScalarVariable");
+        varNode->append_attribute(doc_ptr->allocate_attribute("name", it->GetName().c_str()));
 
-        valueref_str.push_back(std::to_string(it->GetValueReference()));
-        scalarVarNode->append_attribute(doc_ptr->allocate_attribute("valueReference", valueref_str.back().c_str()));
+        stringbuf.push_back(std::to_string(it->GetValueReference()));
+        varNode->append_attribute(doc_ptr->allocate_attribute("valueReference", stringbuf.back().c_str()));
 
         if (!it->GetDescription().empty())
-            scalarVarNode->append_attribute(doc_ptr->allocate_attribute("description", it->GetDescription().c_str()));
+            varNode->append_attribute(doc_ptr->allocate_attribute("description", it->GetDescription().c_str()));
         if (it->GetCausality() != FmuVariable::CausalityType::local)
-            scalarVarNode->append_attribute(
+            varNode->append_attribute(
                 doc_ptr->allocate_attribute("causality", CausalityType_strings.at(it->GetCausality()).c_str()));
         if (it->GetVariability() != FmuVariable::VariabilityType::continuous)
-            scalarVarNode->append_attribute(
+            varNode->append_attribute(
                 doc_ptr->allocate_attribute("variability", VariabilityType_strings.at(it->GetVariability()).c_str()));
         if (it->GetInitial() != FmuVariable::InitialType::none)
-            scalarVarNode->append_attribute(
+            varNode->append_attribute(
                 doc_ptr->allocate_attribute("initial", InitialType_strings.at(it->GetInitial()).c_str()));
 
         rapidxml::xml_node<>* unitNode =
@@ -612,15 +612,15 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
             stringbuf.push_back(std::to_string(variableIndices[state_name]));
             unitNode->append_attribute(doc_ptr->allocate_attribute("derivative", stringbuf.back().c_str()));
         }
-        scalarVarNode->append_node(unitNode);
+        varNode->append_node(unitNode);
 
-        modelVarsNode->append_node(scalarVarNode);
+        modelVarsNode->append_node(varNode);
     }
 
     rootNode->append_node(modelVarsNode);
 
     // Check that dependencies are defined for all variables that require them
-    for (const auto& var : m_scalarVariables) {
+    for (const auto& var : m_variables) {
         auto causality = var.GetCausality();
         auto initial = var.GetInitial();
 
@@ -646,53 +646,59 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
     rapidxml::xml_node<>* modelStructNode = doc_ptr->allocate_node(rapidxml::node_element, "ModelStructure");
 
     //      ...Outputs
-    rapidxml::xml_node<>* outputsNode = doc_ptr->allocate_node(rapidxml::node_element, "Outputs");
-    for (int index : outputIndices) {
-        rapidxml::xml_node<>* unknownNode = doc_ptr->allocate_node(rapidxml::node_element, "Unknown");
-        stringbuf.push_back(std::to_string(index));
-        unknownNode->append_attribute(doc_ptr->allocate_attribute("index", stringbuf.back().c_str()));
-        outputsNode->append_node(unknownNode);
+    if (!outputIndices.empty()) {
+        rapidxml::xml_node<>* outputsNode = doc_ptr->allocate_node(rapidxml::node_element, "Outputs");
+        for (int index : outputIndices) {
+            rapidxml::xml_node<>* unknownNode = doc_ptr->allocate_node(rapidxml::node_element, "Unknown");
+            stringbuf.push_back(std::to_string(index));
+            unknownNode->append_attribute(doc_ptr->allocate_attribute("index", stringbuf.back().c_str()));
+            outputsNode->append_node(unknownNode);
+        }
+        modelStructNode->append_node(outputsNode);
     }
-    modelStructNode->append_node(outputsNode);
 
     //     ...Derivatives
-    rapidxml::xml_node<>* derivativesNode = doc_ptr->allocate_node(rapidxml::node_element, "Derivatives");
-    for (const auto& d : m_derivatives) {
-        rapidxml::xml_node<>* unknownNode = doc_ptr->allocate_node(rapidxml::node_element, "Unknown");
+    if (!m_derivatives.empty()) {
+        rapidxml::xml_node<>* derivativesNode = doc_ptr->allocate_node(rapidxml::node_element, "Derivatives");
+        for (const auto& d : m_derivatives) {
+            rapidxml::xml_node<>* unknownNode = doc_ptr->allocate_node(rapidxml::node_element, "Unknown");
 
-        stringbuf.push_back(std::to_string(variableIndices[d.first]));
-        unknownNode->append_attribute(doc_ptr->allocate_attribute("index", stringbuf.back().c_str()));
+            stringbuf.push_back(std::to_string(variableIndices[d.first]));
+            unknownNode->append_attribute(doc_ptr->allocate_attribute("index", stringbuf.back().c_str()));
 
-        std::string dependencies = "";
-        for (const auto& dep : d.second.second) {
-            dependencies += std::to_string(variableIndices[dep]) + " ";
+            std::string dependencies = "";
+            for (const auto& dep : d.second.second) {
+                dependencies += std::to_string(variableIndices[dep]) + " ";
+            }
+            stringbuf.push_back(dependencies);
+            unknownNode->append_attribute(doc_ptr->allocate_attribute("dependencies", stringbuf.back().c_str()));
+
+            //// TODO: dependeciesKind
+
+            derivativesNode->append_node(unknownNode);
         }
-        stringbuf.push_back(dependencies);
-        unknownNode->append_attribute(doc_ptr->allocate_attribute("dependencies", stringbuf.back().c_str()));
-
-        //// TODO: dependeciesKind
-
-        derivativesNode->append_node(unknownNode);
+        modelStructNode->append_node(derivativesNode);
     }
-    modelStructNode->append_node(derivativesNode);
 
     //     ...InitialUnknowns
-    rapidxml::xml_node<>* initialUnknownsNode = doc_ptr->allocate_node(rapidxml::node_element, "InitialUnknowns");
-    for (const auto& v : m_variableDependencies) {
-        rapidxml::xml_node<>* unknownNode = doc_ptr->allocate_node(rapidxml::node_element, "Unknown");
-        auto v_index = variableIndices[v.first];
-        stringbuf.push_back(std::to_string(v_index));
-        unknownNode->append_attribute(doc_ptr->allocate_attribute("index", stringbuf.back().c_str()));
-        std::string dependencies = "";
-        for (const auto& d : v.second) {
-            auto d_index = variableIndices[d];
-            dependencies += std::to_string(d_index) + " ";
+    if (!m_variableDependencies.empty()) {
+        rapidxml::xml_node<>* initialUnknownsNode = doc_ptr->allocate_node(rapidxml::node_element, "InitialUnknowns");
+        for (const auto& v : m_variableDependencies) {
+            rapidxml::xml_node<>* unknownNode = doc_ptr->allocate_node(rapidxml::node_element, "Unknown");
+            auto v_index = variableIndices[v.first];
+            stringbuf.push_back(std::to_string(v_index));
+            unknownNode->append_attribute(doc_ptr->allocate_attribute("index", stringbuf.back().c_str()));
+            std::string dependencies = "";
+            for (const auto& d : v.second) {
+                auto d_index = variableIndices[d];
+                dependencies += std::to_string(d_index) + " ";
+            }
+            stringbuf.push_back(dependencies);
+            unknownNode->append_attribute(doc_ptr->allocate_attribute("dependencies", stringbuf.back().c_str()));
+            initialUnknownsNode->append_node(unknownNode);
         }
-        stringbuf.push_back(dependencies);
-        unknownNode->append_attribute(doc_ptr->allocate_attribute("dependencies", stringbuf.back().c_str()));
-        initialUnknownsNode->append_node(unknownNode);
+        modelStructNode->append_node(initialUnknownsNode);
     }
-    modelStructNode->append_node(initialUnknownsNode);
 
     rootNode->append_node(modelStructNode);
 
@@ -708,14 +714,6 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
 
 // -----------------------------------------------------------------------------
 
-std::set<FmuVariableExport>::iterator FmuComponentBase::findByValrefType(fmi2ValueReference vr,
-                                                                         FmuVariable::Type vartype) {
-    auto predicate_samevalreftype = [vr, vartype](const FmuVariable& var) {
-        return var.GetValueReference() == vr && var.GetType() == vartype;
-    };
-    return std::find_if(m_scalarVariables.begin(), m_scalarVariables.end(), predicate_samevalreftype);
-}
-
 void FmuComponentBase::executePreStepCallbacks() {
     for (auto& callb : m_preStepCallbacks) {
         callb();
@@ -728,9 +726,17 @@ void FmuComponentBase::executePostStepCallbacks() {
     }
 }
 
+std::set<FmuVariableExport>::iterator FmuComponentBase::findByValrefType(fmi2ValueReference vr,
+                                                                         FmuVariable::Type vartype) {
+    auto predicate_samevalreftype = [vr, vartype](const FmuVariable& var) {
+        return var.GetValueReference() == vr && var.GetType() == vartype;
+    };
+    return std::find_if(m_variables.begin(), m_variables.end(), predicate_samevalreftype);
+}
+
 std::set<FmuVariableExport>::iterator FmuComponentBase::findByName(const std::string& name) {
     auto predicate_samename = [name](const FmuVariable& var) { return !var.GetName().compare(name); };
-    return std::find_if(m_scalarVariables.begin(), m_scalarVariables.end(), predicate_samename);
+    return std::find_if(m_variables.begin(), m_variables.end(), predicate_samename);
 }
 
 // -----------------------------------------------------------------------------

@@ -185,7 +185,7 @@ class FmuComponentBase {
 
     virtual ~FmuComponentBase() {}
 
-    const std::set<FmuVariableExport>& GetScalarVariables() const { return m_scalarVariables; }
+    const std::set<FmuVariableExport>& GetScalarVariables() const { return m_variables; }
 
     /// Enable/disable the logging for a specific log category.
     virtual void SetDebugLogging(std::string cat, bool val);
@@ -203,7 +203,7 @@ class FmuComponentBase {
         for (size_t s = 0; s < nvr; ++s) {
             auto it = this->findByValrefType(vr[s], vartype);
 
-            if (it == this->m_scalarVariables.end()) {
+            if (it == this->m_variables.end()) {
                 // requested a variable that does not exist
                 auto msg = "fmi2GetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
                            " with value reference " + std::to_string(vr[s]) + " does NOT exist.\n";
@@ -222,7 +222,7 @@ class FmuComponentBase {
         for (size_t s = 0; s < nvr; ++s) {
             std::set<FmuVariableExport>::iterator it = this->findByValrefType(vr[s], vartype);
 
-            if (it == this->m_scalarVariables.end()) {
+            if (it == this->m_variables.end()) {
                 // requested a variable that does not exist
                 auto msg = "fmi2SetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
                            " with value reference " + std::to_string(vr[s]) + " does NOT exist.\n";
@@ -434,7 +434,7 @@ class FmuComponentBase {
 
     std::map<FmuVariable::Type, unsigned int> m_valueReferenceCounter;
 
-    std::set<FmuVariableExport> m_scalarVariables;
+    std::set<FmuVariableExport> m_variables;
     std::unordered_map<std::string, UnitDefinition> m_unitDefinitions;
     std::unordered_map<std::string, std::pair<std::string, std::vector<std::string>>> m_derivatives;
     std::unordered_map<std::string, std::vector<std::string>> m_variableDependencies;
