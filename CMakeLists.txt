@@ -20,5 +20,6 @@ message(STATUS "\nDemos for FMI 2.0")
 add_subdirectory(fmi2/demos/cosimulation)
 add_subdirectory(fmi2/demos/model_exchange)
 
-##message(STATUS "\nDemos for FMI 3.0")
-##add_subdirectory(fmi3/demos/cosimulation)
+message(STATUS "\nDemos for FMI 3.0")
+add_subdirectory(fmi3/demos/cosimulation)
+add_subdirectory(fmi3/demos/model_exchange)
