@@ -6,9 +6,11 @@ set(COMPONENT_DLL_DEPENDENCIES "")
 
 #--------------------------------------------------------------
 
-set(FMU_CS ON)
-set(FMU_TESTING OFF CACHE BOOL "Enable testing")
+set(FMU_CS TRUE)
 set(USE_CUSTOM_TYPESPLATFORM OFF CACHE BOOL "Use custom types platform definition.")
+
+# RADU TODO
+set(FMU_TESTING OFF)
 
 #--------------------------------------------------------------
 

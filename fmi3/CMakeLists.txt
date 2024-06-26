@@ -56,8 +56,8 @@ set(TESTING_ENABLED_OS "x86_64-windows" "x86_64-linux")
 # and makes it generate the 'modelDescription.xml' file.
 # This should happen after the main target is built, but before the FMU is zipped.
 #
-# The testing relies on the fmuChecker tool: an additional target is calling it as pre-build step,
-# while during the actual execution of the test, the _output_ of the fmuChecker is parsed to check the FMU compliance.
+# The testing relies on the fmusim tool: an additional target is calling it as pre-build step,
+# while during the actual execution of the test, the _output_ of the fmusim is parsed to check the FMU compliance.
 
 
 # -------------------------------------------------
@@ -258,65 +258,53 @@ add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
 )
 
 # --------------------------------------------------------
-# Target to run fmuCheck on the FMU and test result output 
+# Target to run fmusim on the FMU and test result output 
 # --------------------------------------------------------
 
-if (FMU_TESTING AND (FMU_CS OR FMU_ME))
+if (FMU_TESTING)
     if(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
-        ## Call fmuChecker on the FMU, parse its output
-        set(fmi_testchecker fmi_testchecker_${FMU_MODEL_IDENTIFIER})
-        set(build_fmi_testchecker build_test_parseFmuChecker_${FMU_MODEL_IDENTIFIER})
+        ## Call fmusim on the FMU, parse its output
+        set(fmusim fmusim_${FMU_MODEL_IDENTIFIER})
+        set(build_fmusim build_test_parseFmuChecker_${FMU_MODEL_IDENTIFIER})
 
         message(STATUS "${FMU_MSG_PREFIX}Testing enabled.")
-        message(STATUS "${FMU_MSG_PREFIX}   adding target '${fmi_testchecker}'")
+        message(STATUS "${FMU_MSG_PREFIX}   adding target '${fmusim}'")
 
-        set(FMUCHECKER_LOG "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_log.txt")
-        set(FMUCHECKER_RESULTS "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_results.txt")
+        set(FMUSIM_LOG "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_log.txt")
+        set(FMUSIM_OUT "${CMAKE_BINARY_DIR}/${FMU_MODEL_IDENTIFIER}_results.csv")
 
         set(TESTING_SOURCES
-            ${CMAKE_CURRENT_SOURCE_DIR}/../FmuToolsTestCheckerOutput.cpp)
+            ${CMAKE_CURRENT_SOURCE_DIR}/../FmuToolsTestFmusimOutput.cpp)
         source_group("" FILES ${TESTING_SOURCES})
 
-        add_executable(${fmi_testchecker} ${TESTING_SOURCES})
-        target_compile_definitions(${fmi_testchecker} PRIVATE FMUCHECKER_LOG="${FMUCHECKER_LOG}")
-        add_dependencies(${fmi_testchecker} ${FMU_MODEL_IDENTIFIER})
+        add_executable(${fmusim} ${TESTING_SOURCES})
+        target_compile_definitions(${fmusim} PRIVATE FMUSIM_LOG="${FMUSIM_LOG}")
+        add_dependencies(${fmusim} ${FMU_MODEL_IDENTIFIER})
 
-        ## call the execution of fmuChecker
-        if (FMU_CS)
-        message(STATUS "${FMU_MSG_PREFIX}   enabling testing as CoSimulation FMU")
-        add_custom_command(TARGET ${fmi_testchecker}
+        ## execute fmusim
+        add_custom_command(TARGET ${fmusim}
                         PRE_BUILD
-                        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" -e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k cs -s 1 -h 1e-3 \"${FMU_FILENAME}\"
-                        COMMENT "\nTesting CS FMU with fmuChecker")
-        endif()
-
-        if (FMU_ME)
-        message(STATUS "${FMU_MSG_PREFIX}   enabling testing as ModelExchange FMU")
-        add_custom_command(TARGET ${fmi_testchecker}
-                        PRE_BUILD
-                        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/fmuChecker/fmuCheck.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" -e \"${FMUCHECKER_LOG}\" -o \"${FMUCHECKER_RESULTS}\" -k me -s 1 -h 1e-3 \"${FMU_FILENAME}\"
-                        COMMENT "\nTesting ME FMU with fmuChecker")
-        endif()
+                        COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../fmusim/fmusim.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX}" --log-fmi-calls --fmi-log-file \"${FMUSIM_LOG}\" --output-file \"${FMUSIM_OUT}\" \"${FMU_FILENAME}\"
+                        COMMENT "\nTesting FMU with fmusim")
 
         if(PROJECT_IS_TOP_LEVEL)
             ## enable the testing
             enable_testing()
         endif()
 
-        ## the 'fmuChecker_requirements' fixtures is registered
+        ## the 'fmusim_requirements' fixtures is registered
         ## 'build_fmi_testchecker' is set as a requirement of type SETUP i.e. called before the FIXTURES_REQUIRED target
         ## 'TestFmuComponent_${FMU_MODEL_IDENTIFIER}' is the one requiring the other targets
         add_test(NAME TestFmuComponent_${FMU_MODEL_IDENTIFIER}
-                 COMMAND ${fmi_testchecker})
+                 COMMAND ${fmusim})
 
         add_test(${build_fmi_testchecker}
             "${CMAKE_COMMAND}"
             --build "${CMAKE_BINARY_DIR}"
-            # --target ${fmi_testchecker
         )
 
-        set_tests_properties(${build_fmi_testchecker} PROPERTIES FIXTURES_SETUP fmuChecker_requirements_${FMU_MODEL_IDENTIFIER})
-        set_tests_properties(TestFmuComponent_${FMU_MODEL_IDENTIFIER} PROPERTIES FIXTURES_REQUIRED fmuChecker_requirements_${FMU_MODEL_IDENTIFIER})
+        set_tests_properties(${build_fmi_testchecker} PROPERTIES FIXTURES_SETUP fmusim_requirements_${FMU_MODEL_IDENTIFIER})
+        set_tests_properties(TestFmuComponent_${FMU_MODEL_IDENTIFIER} PROPERTIES FIXTURES_REQUIRED fmusim_requirements_${FMU_MODEL_IDENTIFIER})
     else()
         message(STATUS "${FMU_MSG_PREFIX}Testing not enabled. Available only for: ${TESTING_ENABLED_OS}")
     endif()
