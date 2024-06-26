@@ -254,6 +254,8 @@ fmi3Status myFmuComponent::exitInitializationModeIMPL() {
     resfile.close();
     sendToLog("Loaded additional cart mass " + std::to_string(additional_mass) + " from " + filename + ".\n",
               fmi3Status::fmi3OK, "logAll");
+
+    return fmi3Status::fmi3OK;
 }
 
 fmi3Status myFmuComponent::getContinuousStatesIMPL(fmi3Float64 continuousStates[], size_t nContinuousStates) {

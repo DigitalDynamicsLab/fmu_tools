@@ -340,8 +340,8 @@ class FmuComponentBase {
         return fmi2OK;
     }
 
-    virtual void enterInitializationModeIMPL() {}
-    virtual void exitInitializationModeIMPL() {}
+    virtual fmi2Status enterInitializationModeIMPL() { return fmi2Status::fmi2OK; }
+    virtual fmi2Status exitInitializationModeIMPL() { return fmi2Status::fmi2OK; }
 
   public:
     void SetDefaultExperiment(fmi2Boolean toleranceDefined,
@@ -350,9 +350,9 @@ class FmuComponentBase {
                               fmi2Boolean stopTimeDefined,
                               fmi2Real stopTime);
 
-    void EnterInitializationMode();
+    fmi2Status EnterInitializationMode();
 
-    void ExitInitializationMode();
+    fmi2Status ExitInitializationMode();
 
     // Co-Simulation FMI functions.
     // These functions are used to implement the actual co-simulation functions imposed by the FMI2 standard.

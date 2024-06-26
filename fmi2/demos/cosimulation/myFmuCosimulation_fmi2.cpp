@@ -208,9 +208,11 @@ myFmuComponent::vec4 myFmuComponent::calcRHS(double t, const vec4& q) {
 
 // -----------------------------------------------------------------------------
 
-void myFmuComponent::enterInitializationModeIMPL() {}
+fmi2Status myFmuComponent::enterInitializationModeIMPL() {
+    return fmi2Status::fmi2OK;
+}
 
-void myFmuComponent::exitInitializationModeIMPL() {
+fmi2Status myFmuComponent::exitInitializationModeIMPL() {
     std::string myfile_location = m_resources_location + "/" + filename;
     std::ifstream resfile(myfile_location);
 
@@ -232,6 +234,8 @@ void myFmuComponent::exitInitializationModeIMPL() {
     resfile.close();
     sendToLog("Loaded additional cart mass " + std::to_string(additional_mass) + " from " + filename + ".\n",
               fmi2Status::fmi2OK, "logAll");
+
+    return fmi2Status::fmi2OK;
 }
 
 fmi2Status myFmuComponent::doStepIMPL(fmi2Real currentCommunicationPoint,

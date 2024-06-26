@@ -741,15 +741,17 @@ std::set<FmuVariableExport>::iterator FmuComponentBase::findByName(const std::st
 
 // -----------------------------------------------------------------------------
 
-void FmuComponentBase::EnterInitializationMode() {
+fmi2Status FmuComponentBase::EnterInitializationMode() {
     m_fmuMachineState = FmuMachineState::initializationMode;
-    enterInitializationModeIMPL();
+    fmi2Status status = enterInitializationModeIMPL();
+    return status;
 }
 
-void FmuComponentBase::ExitInitializationMode() {
-    exitInitializationModeIMPL();
+fmi2Status FmuComponentBase::ExitInitializationMode() {
+    fmi2Status status = exitInitializationModeIMPL();
     m_fmuMachineState = FmuMachineState::stepCompleted;  // TODO: introduce additional state when after
                                                          // initialization and before step?
+    return status;
 }
 
 fmi2Status FmuComponentBase::DoStep(fmi2Real currentCommunicationPoint,
@@ -922,13 +924,11 @@ fmi2Status fmi2SetupExperiment(fmi2Component c,
 }
 
 fmi2Status fmi2EnterInitializationMode(fmi2Component c) {
-    reinterpret_cast<FmuComponentBase*>(c)->EnterInitializationMode();
-    return fmi2Status::fmi2OK;
+    return reinterpret_cast<FmuComponentBase*>(c)->EnterInitializationMode();
 }
 
 fmi2Status fmi2ExitInitializationMode(fmi2Component c) {
-    reinterpret_cast<FmuComponentBase*>(c)->ExitInitializationMode();
-    return fmi2Status::fmi2OK;
+    return reinterpret_cast<FmuComponentBase*>(c)->ExitInitializationMode();
 }
 fmi2Status fmi2Terminate(fmi2Component c) {
     return fmi2Status::fmi2OK;

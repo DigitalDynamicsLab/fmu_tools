@@ -35,9 +35,9 @@ class myFmuComponent : public fmi2::FmuComponentBase {
 
     ~myFmuComponent() {}
 
-    virtual void enterInitializationModeIMPL() override;
+    virtual fmi2Status enterInitializationModeIMPL() override;
 
-    virtual void exitInitializationModeIMPL() override;
+    virtual fmi2Status exitInitializationModeIMPL() override;
 
     virtual fmi2Status doStepIMPL(fmi2Real currentCommunicationPoint,
                                   fmi2Real communicationStepSize,
