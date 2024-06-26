@@ -203,7 +203,24 @@ class FmuComponentBase {
                                T values[],
                                size_t nval,
                                FmuVariable::Type vartype) {
-        //// RADU TODO
+        //// RADU TODO  --- what needs to change here for arrays variables?
+        /*
+        //// when multiple variables are requested it might be better to iterate through scalarVariables just once
+        //// and check if they match any of the nvr requested variables
+        for (size_t s = 0; s < nvr; ++s) {
+            auto it = this->findByValref(vrs[s]);
+
+            if (it == this->m_variables.end()) {
+                // requested a variable that does not exist
+                auto msg = "fmi3GetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
+                           " with value reference " + std::to_string(vrs[s]) + " does NOT exist.\n";
+                sendToLog(msg, fmi3Status::fmi3Error, "logStatusError");
+                return fmi3Status::fmi3Error;
+            } else {
+                it->GetValue(&values[s]);
+            }
+        }
+        */
         return fmi3Status::fmi3OK;
     }
 
@@ -213,7 +230,29 @@ class FmuComponentBase {
                                const T values[],
                                size_t nvals,
                                FmuVariable::Type vartype) {
-        //// RADU TODO
+        //// RADU TODO  --- what needs to change here for arrays variables?
+        /*
+        for (size_t s = 0; s < nvr; ++s) {
+            std::set<FmuVariableExport>::iterator it = this->findByValref(vrs[s]);
+
+            if (it == this->m_variables.end()) {
+                // requested a variable that does not exist
+                auto msg = "fmi3SetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
+                           " with value reference " + std::to_string(vrs[s]) + " does NOT exist.\n";
+                sendToLog(msg, fmi3Status::fmi3Error, "logStatusError");
+                return fmi3Status::fmi3Error;
+            } else if (!it->IsSetAllowed(this->m_fmuMachineState)) {
+                // requested variable cannot be set in the current FMU state
+                auto msg = "fmi3SetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
+                           " with value reference " + std::to_string(vrs[s]) +
+                           " NOT ALLOWED to be set in current state.\n";
+                sendToLog(msg, fmi3Status::fmi3Error, "logStatusError");
+                return fmi3Status::fmi3Error;
+            } else {
+                it->SetValue(values[s]);
+            }
+        }
+        */
         return fmi3Status::fmi3OK;
     }
 
