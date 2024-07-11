@@ -25,42 +25,60 @@ namespace fmi3 {
 
 #define FMITYPESPLATFORM_DEFAULT
 
-// Note: variants do not allow repeated types.
-// fmi3Byte == fmi3UInt8
-// fmi3Clock == fmi3Boolean
-using FmuVariableBindType = varns::variant<fmi3Float32*,
-                                           fmi3Float64*,
-                                           fmi3Int8*,
-                                           fmi3UInt8*,
-                                           fmi3Int16*,
-                                           fmi3UInt16*,
-                                           fmi3Int32*,
-                                           fmi3UInt32*,
-                                           fmi3Int64*,
-                                           fmi3UInt64*,
-                                           fmi3Boolean*,
-                                           fmi3Char*,
-                                           fmi3Binary*,
-                                           std::string*,
-                                           std::pair<std::function<fmi3Float64()>, std::function<void(fmi3Float64)>>,
-                                           std::pair<std::function<fmi3Int32()>, std::function<void(fmi3Int32)>>,
-                                           std::pair<std::function<fmi3UInt32()>, std::function<void(fmi3UInt32)>>,
-                                           std::pair<std::function<std::string()>, std::function<void(std::string)>>>;
+/// List of pointers to all (unique) types used to define VariableTypes.
+/// No duplicated entries are allowed.
+/// In general it does not coincide with the list VariableTypes defined in fmi3PlatformTypes since usually more
+/// VariableTypes refer to the same underlying concrete type.
+/// Additionally, the list also includes pair of setter and getter functions in order to allow setting|getting values from objects not
+/// having an actual address in memory.
+/// The types listed here will then be match with any compatible VariableType during the call to FmuComponentBase::AddFmuVariable().
+/// 
+//// TODO: DARIOM double check if it setter function for big objects can pass by (const?) reference instead of value
+using FmuVariableBindType =
+    varns::variant<float*,
+                   double*,
+                   int8_t*,
+                   uint8_t*,
+                   int16_t*,
+                   uint16_t*,
+                   int32_t*,
+                   uint32_t*,
+                   int64_t*,
+                   uint64_t*,
+                   bool*,
+                   char*,
+                   std::string*,
+                   std::vector<uint8_t>*,
+                   std::pair<std::function<float()>, std::function<void(float)>>,
+                   std::pair<std::function<double()>, std::function<void(double)>>,
+                   std::pair<std::function<int8_t()>, std::function<void(int8_t)>>,
+                   std::pair<std::function<uint8_t()>, std::function<void(uint8_t)>>,
+                   std::pair<std::function<int16_t()>, std::function<void(int16_t)>>,
+                   std::pair<std::function<uint16_t()>, std::function<void(uint16_t)>>,
+                   std::pair<std::function<int32_t()>, std::function<void(int32_t)>>,
+                   std::pair<std::function<uint32_t()>, std::function<void(uint32_t)>>,
+                   std::pair<std::function<int64_t()>, std::function<void(int64_t)>>,
+                   std::pair<std::function<uint64_t()>, std::function<void(uint64_t)>>,
+                   std::pair<std::function<bool()>, std::function<void(bool)>>,
+                   std::pair<std::function<char()>, std::function<void(char)>>,
+                   std::pair<std::function<std::string()>, std::function<void(std::string)>>,
+                   std::pair<std::function<std::vector<uint8_t>()>, std::function<void(std::vector<uint8_t>)>>>;
 
-using FmuVariableStartType = varns::variant<fmi3Float32,
-                                            fmi3Float64,
-                                            fmi3Int8,
-                                            fmi3UInt8,
-                                            fmi3Int16,
-                                            fmi3UInt16,
-                                            fmi3Int32,
-                                            fmi3UInt32,
-                                            fmi3Int64,
-                                            fmi3UInt64,
-                                            fmi3Boolean,
-                                            fmi3Char,
-                                            fmi3Binary,
-                                            std::string>;
+/// List of (unique) types required to 
+using FmuVariableStartType = varns::variant<float,
+                                            double,
+                                            int8_t,
+                                            uint8_t,
+                                            int16_t,
+                                            uint16_t,
+                                            int32_t,
+                                            uint32_t,
+                                            int64_t,
+                                            uint64_t,
+                                            bool,
+                                            char,
+                                            std::string,
+                                            std::vector<uint8_t>>;
 
 }  // namespace fmi3
 

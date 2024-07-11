@@ -547,7 +547,6 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         {FmuVariable::Type::UInt64, "UInt64"},    //
         {FmuVariable::Type::Boolean, "Boolean"},  //
         {FmuVariable::Type::String, "String"},    //
-        {FmuVariable::Type::Byte, "Byte"},        //
         {FmuVariable::Type::Binary, "Binary"},    //
         {FmuVariable::Type::Unknown, "Unknown"}   //
     };

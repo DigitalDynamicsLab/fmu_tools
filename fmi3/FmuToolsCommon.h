@@ -54,10 +54,7 @@ struct LoggingUtilities {
         }
     }
 
-    static void logger_default(fmi3InstanceEnvironment c,
-                               fmi3Status status,
-                               fmi3String category,
-                               fmi3String message) {
+    static void logger_default(fmi3InstanceEnvironment c, fmi3Status status, fmi3String category, fmi3String message) {
         if (!category)
             category = "?";
         printf("[%s] %s: %s", fmi3Status_toString(status).c_str(), category, message);
@@ -77,19 +74,17 @@ class FmuVariable {
         Float32 = 0,
         Float64 = 1,
         Int8 = 2,
-        Int16 = 3,
-        Int32 = 4,
-        Int64 = 5,
-        UInt8 = 6,
-        UInt16 = 7,
-        UInt32 = 8,
+        UInt8 = 3,
+        Int16 = 4,
+        UInt16 = 5,
+        Int32 = 6,
+        UInt32 = 7,
+        Int64 = 8,
         UInt64 = 9,
         Boolean = 10,
-        Char = 11,
-        String = 12,
-        Byte = 13,
-        Binary = 14,
-        Unknown = 15
+        String = 11,
+        Binary = 12,
+        Unknown = 13
     };
 
     enum class CausalityType { structuralParameter, parameter, calculatedParameter, input, output, local, independent };
@@ -243,7 +238,6 @@ class FmuVariable {
 
     /// Check if setting this variable is allowed given the current FMU state.
     bool IsSetAllowed(FmuMachineState fmu_machine_state) const {
-
         //// RADU TODO: additional checks for configurationMode state?
 
         if (variability != VariabilityType::constant) {
@@ -303,9 +297,6 @@ class FmuVariable {
                 break;
             case Type::String:
                 return "String";
-                break;
-            case Type::Byte:
-                return "Byte";
                 break;
             case Type::Binary:
                 return "Unknown";

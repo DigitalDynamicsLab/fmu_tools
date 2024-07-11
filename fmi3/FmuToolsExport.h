@@ -204,7 +204,7 @@ class FmuComponentBase {
                                size_t nval,
                                FmuVariable::Type vartype) {
         //// RADU TODO  --- what needs to change here for arrays variables?
-        /*
+
         //// when multiple variables are requested it might be better to iterate through scalarVariables just once
         //// and check if they match any of the nvr requested variables
         for (size_t s = 0; s < nvr; ++s) {
@@ -220,7 +220,6 @@ class FmuComponentBase {
                 it->GetValue(&values[s]);
             }
         }
-        */
         return fmi3Status::fmi3OK;
     }
 
@@ -231,7 +230,7 @@ class FmuComponentBase {
                                size_t nvals,
                                FmuVariable::Type vartype) {
         //// RADU TODO  --- what needs to change here for arrays variables?
-        /*
+
         for (size_t s = 0; s < nvr; ++s) {
             std::set<FmuVariableExport>::iterator it = this->findByValref(vrs[s]);
 
@@ -252,7 +251,7 @@ class FmuComponentBase {
                 it->SetValue(values[s]);
             }
         }
-        */
+
         return fmi3Status::fmi3OK;
     }
 
