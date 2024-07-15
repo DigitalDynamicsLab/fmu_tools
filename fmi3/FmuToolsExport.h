@@ -74,9 +74,18 @@ class FmuVariableExport : public FmuVariable {
     using VarbindType = FmuVariableBindType;
     using StartType = FmuVariableStartType;
 
+    //// TODO: can we remove it and keep only the constructor with dimensions with default argument?
     FmuVariableExport(const VarbindType& varbind,
                       const std::string& _name,
                       FmuVariable::Type _type,
+                      CausalityType _causality = CausalityType::local,
+                      VariabilityType _variability = VariabilityType::continuous,
+                      InitialType _initial = InitialType::none);
+
+    FmuVariableExport(const VarbindType& varbind,
+                      const std::string& _name,
+                      FmuVariable::Type _type,
+                      const DimensionsArrayType& dimensions,
                       CausalityType _causality = CausalityType::local,
                       VariabilityType _variability = VariabilityType::continuous,
                       InitialType _initial = InitialType::none);
@@ -88,27 +97,61 @@ class FmuVariableExport : public FmuVariable {
 
     void Bind(VarbindType newvarbind) { varbind = newvarbind; }
 
+    //// TODO: provide overloading of Set|GetValue for std::vector (assuming m_dimension = {vector.size()})
+
     /// Set the value of this FMU variable (for all cases, except variables of type fmi3String).
+    /// 'values' is expected to have a size of at least 'nValues'.
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi3String>::value>::type>
-    void SetValue(const T& val) const {
-        if (is_pointer_variant(this->varbind))
-            *varns::get<T*>(this->varbind) = val;
-        else
-            varns::get<FunGetSet<T>>(this->varbind).second(val);
+    void SetValue(const T& values, size_t nValues) const {
+        if (is_pointer_variant(this->varbind)) {
+            assert(((m_dimensions.size() == 0 && nValues == 1) || m_dimensions.size() > 0) &&
+                   ("Requested to get the value of " + std::to_string(nValues) +
+                    " coefficients for variable with valueReference: " + std::to_string(valueReference) +
+                    " but it seems that it is a scalar.")
+                       .c_str());
+
+            T* varptr_this = varns::get<T*>(this->varbind);
+            if (m_dimensions.size() == 0)
+                *varptr_this = values;
+            else {
+                for (size_t size = 0; size < nValues; size++) {
+                    varptr_this[size] = (&values)[size];
+                }
+            }
+        } else {
+            // TODO: consider multi-dimensional variables
+            varns::get<FunGetSet<T>>(this->varbind).second(values);
+        }
     }
 
     /// Set the value of this FMU variable of type fmi3String.
-    void SetValue(const fmi3String& val) const;
+    /// Currently only single values are supported.
+    void SetValue(const fmi3String& val, size_t nValues) const;
 
-    /// Get the value of this FMU variable (for all cases, except variables of type fmi3String).
+    /// Get the value and dimensions of this FMU variable (for all cases, except variables of type fmi3String).
+    /// The 'dimensions' argument is optional and will be filled with the sizes along different dimensions.
+    /// When empty, the variable is scalar.
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi3String>::value>::type>
-    void GetValue(T* varptr) const {
-        *varptr = is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind)
-                                                    : varns::get<FunGetSet<T>>(this->varbind).first();
+    void GetValue(T* varptr, size_t nValues) const {
+        if (is_pointer_variant(this->varbind)) {
+            assert(((m_dimensions.size() == 0 && nValues == 1) || m_dimensions.size() > 0) &&
+                   ("Requested to get the value of " + std::to_string(nValues) +
+                    " coefficients for variable with valueReference: " + std::to_string(valueReference) +
+                    " but it seems that it is a scalar.")
+                       .c_str());
+
+            T* varptr_this = varns::get<T*>(this->varbind);
+            for (size_t size = 0; size < nValues; size++) {
+                varptr[size] = varptr_this[size];
+            }
+        } else {
+            // TODO: consider multi-dimensional variables
+            *varptr = varns::get<FunGetSet<T>>(this->varbind).first();
+        }
     }
 
     /// Get the value of this FMU variable of type fmi3String.
-    void GetValue(fmi3String* varptr) const;
+    void GetValue(fmi3String* varptr, size_t nValues) const;
 
     /// Set the start value for this FMU variable (for all cases, except variables of type fmi3String).
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi3String>::value>::type>
@@ -138,6 +181,7 @@ class FmuVariableExport : public FmuVariable {
     template <typename T>
     void setStartFromVar(T* var_ptr);
 
+    /// Converts the start value to a string.
     std::string GetStartVal_toString() const;
 
     friend class FmuComponentBase;
@@ -198,11 +242,7 @@ class FmuComponentBase {
     double GetTime() const { return m_time; }
 
     template <class T>
-    fmi3Status fmi3GetVariable(const fmi3ValueReference vrs[],
-                               size_t nvr,
-                               T values[],
-                               size_t nval,
-                               FmuVariable::Type vartype) {
+    fmi3Status fmi3GetVariable(const fmi3ValueReference vrs[], size_t nvr, T values[], size_t nValues) {
         //// RADU TODO  --- what needs to change here for arrays variables?
 
         //// when multiple variables are requested it might be better to iterate through scalarVariables just once
@@ -212,23 +252,19 @@ class FmuComponentBase {
 
             if (it == this->m_variables.end()) {
                 // requested a variable that does not exist
-                auto msg = "fmi3GetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
-                           " with value reference " + std::to_string(vrs[s]) + " does NOT exist.\n";
+                auto msg =
+                    "fmi3GetVariable: variable with value reference " + std::to_string(vrs[s]) + " does NOT exist.\n";
                 sendToLog(msg, fmi3Status::fmi3Error, "logStatusError");
                 return fmi3Status::fmi3Error;
             } else {
-                it->GetValue(&values[s]);
+                it->GetValue(&values[s], nValues);
             }
         }
         return fmi3Status::fmi3OK;
     }
 
     template <class T>
-    fmi3Status fmi3SetVariable(const fmi3ValueReference vrs[],
-                               size_t nvr,
-                               const T values[],
-                               size_t nvals,
-                               FmuVariable::Type vartype) {
+    fmi3Status fmi3SetVariable(const fmi3ValueReference vrs[], size_t nvr, const T values[], size_t nValues) {
         //// RADU TODO  --- what needs to change here for arrays variables?
 
         for (size_t s = 0; s < nvr; ++s) {
@@ -236,31 +272,46 @@ class FmuComponentBase {
 
             if (it == this->m_variables.end()) {
                 // requested a variable that does not exist
-                auto msg = "fmi3SetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
-                           " with value reference " + std::to_string(vrs[s]) + " does NOT exist.\n";
+                auto msg =
+                    "fmi3SetVariable: variable with value reference " + std::to_string(vrs[s]) + " does NOT exist.\n";
                 sendToLog(msg, fmi3Status::fmi3Error, "logStatusError");
                 return fmi3Status::fmi3Error;
             } else if (!it->IsSetAllowed(this->m_fmuMachineState)) {
                 // requested variable cannot be set in the current FMU state
-                auto msg = "fmi3SetVariable: variable of type " + FmuVariable::Type_toString(vartype) +
-                           " with value reference " + std::to_string(vrs[s]) +
+                auto msg = "fmi3SetVariable: variable with value reference " + std::to_string(vrs[s]) +
                            " NOT ALLOWED to be set in current state.\n";
                 sendToLog(msg, fmi3Status::fmi3Error, "logStatusError");
                 return fmi3Status::fmi3Error;
             } else {
-                it->SetValue(values[s]);
+                it->SetValue(values[s], nValues);
             }
         }
 
         return fmi3Status::fmi3OK;
     }
 
-    /// Adds a variable to the list of variables of the FMU.
+    /// Adds an array variable to the list of variables of the FMU.
     /// The start value is automatically grabbed from the variable itself.
     const FmuVariableExport& AddFmuVariable(
         const FmuVariableExport::VarbindType& varbind,
         std::string name,
         FmuVariable::Type scalartype = FmuVariable::Type::Float64,
+        std::string unitname = "",
+        std::string description = "",
+        FmuVariable::CausalityType causality = FmuVariable::CausalityType::local,
+        FmuVariable::VariabilityType variability = FmuVariable::VariabilityType::continuous,
+        FmuVariable::InitialType initial = FmuVariable::InitialType::none) {
+        return AddFmuVariable(varbind, name, scalartype, FmuVariableExport::DimensionsArrayType(), unitname,
+                              description, causality, variability, initial);
+    }
+
+    /// Adds a scalar variable to the list of variables of the FMU.
+    /// The start value is automatically grabbed from the variable itself.
+    const FmuVariableExport& AddFmuVariable(
+        const FmuVariableExport::VarbindType& varbind,
+        std::string name,
+        FmuVariable::Type scalartype = FmuVariable::Type::Float64,
+        const FmuVariableExport::DimensionsArrayType& dimensions = FmuVariableExport::DimensionsArrayType(),
         std::string unitname = "",
         std::string description = "",
         FmuVariable::CausalityType causality = FmuVariable::CausalityType::local,

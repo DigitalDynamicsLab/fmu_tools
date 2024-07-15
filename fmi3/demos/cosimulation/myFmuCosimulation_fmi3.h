@@ -67,6 +67,8 @@ class myFmuComponent : public fmi3::FmuComponentBase {
     double M = 1.0;
     const double g = 9.81;
 
+    double A[3][2];
+
     fmi3Boolean approximateOn = fmi3False;
     std::string filename;
 

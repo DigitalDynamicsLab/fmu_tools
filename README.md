@@ -1,5 +1,5 @@
 # Fmu Tools
-The `fmu_tools` library offers a set of utilities to import/export any existing model from/into an FMU.
+The `fmu_tools` library offers a set of utilities to import/export any existing model from/into an FMU (version 2.0 or 3.0).
 
 For the FMU export, the library, mainly through its main class `FmuComponentBase`, provides a higher C++ layer that:
 - on the outer side: offers to the final user the standard FMU interface 
@@ -76,7 +76,7 @@ The FMUs gets automatically unzipped.
 - [x] basic import of CoSimulation FMUs
 - [x] basic export of CoSimulation FMUs
 - [ ] basic import of ModelExchange FMUs
-- [ ] basic export of ModelExchange FMUs
+- [x] basic export of ModelExchange FMUs
 
 ### Common Features
 - [x] associate Units to Variables
@@ -96,7 +96,8 @@ The FMUs gets automatically unzipped.
 ### Import Features
 - [x] unzip the FMUs (cross-platform, header-only)
 - [x] GUID checks (optional)
-- [x] additional function to easily retrieve variables through names instead of refvals 
+- [x] additional function to easily retrieve variables through names instead of valueRefs
+- [ ] loading start value from XML
 
 ### Extras and Testing
 - [x] test exported FMUs through the importer

@@ -52,22 +52,19 @@ class FmuVariableImport : public FmuVariable {
 
     FmuVariableImport(const std::string& _name,
                       FmuVariable::Type _type,
+                      const FmuVariable::DimensionsArrayType& _dimensions = FmuVariable::DimensionsArrayType(),
                       CausalityType _causality = CausalityType::local,
                       VariabilityType _variability = VariabilityType::continuous,
-                      InitialType _initial = InitialType::none,
-                      int _index = -1)
-        : FmuVariable(_name, _type, _causality, _variability, _initial),
-          index(_index),
+                      InitialType _initial = InitialType::none)
+        : FmuVariable(_name, _type, _dimensions, _causality, _variability, _initial),
           is_state(false),
           is_deriv(false) {}
 
-    int GetIndex() const { return index; }
     bool IsState() const { return is_state; }
     bool IsDeriv() const { return is_deriv; }
 
   private:
-    int index;      // index of this variable in the mode description XML
-    bool is_state;  // true is this is a state variable
+    bool is_state;  // true if this is a state variable
     bool is_deriv;  // true if this is a state derivative variable
 
     friend class FmuUnit;
@@ -97,12 +94,13 @@ class FmuVariableTreeNode {
 
 // =============================================================================
 
-/// Class for managing an FMU.
+/// Class for managing an FMU3.0.
 /// Provides functions to parse the model description XML file, load the shared library in run-time, set/get variables,
 /// and invoke FMI functions on the FMU.
 class FmuUnit {
   public:
-    typedef std::map<std::string, FmuVariableImport> VarList;
+    //// TODO: since FMI3.0 has unique varRefs we can use them for indexing instead of strings
+    typedef std::map<fmi3ValueReference, FmuVariableImport> VarList;
 
     FmuUnit();
     virtual ~FmuUnit() {}
@@ -137,7 +135,29 @@ class FmuUnit {
     void Instantiate(const std::string& instanceName, bool logging = false, bool visible = false);
 
     /// Get the list of FMU variables.
-    const VarList& GetVariablesList() const { return scalarVariables; }
+    const VarList& GetVariablesList() const { return m_variables; }
+
+    /// Get the value reference of a variable from its name.
+    /// Throws an exception if the variable is not found.
+    fmi3ValueReference GetValueReference(const std::string& varname) {
+        for (auto& var : m_variables) {
+            if (var.second.GetName() == varname)
+                return var.first;
+        }
+        throw std::runtime_error("Variable not found: " + varname);
+    }
+
+    /// Get the value reference of a variable from its name.
+    /// Return true if the variable is found, false otherwise. No throw.
+    bool GetValueReference(const std::string& varname, fmi3ValueReference& valueref) noexcept(true) {
+        for (auto& var : m_variables) {
+            if (var.second.GetName() == varname) {
+                valueref = var.first;
+                return true;
+            }
+        }
+        return false;
+    }
 
     /// Print the tree of variables
     void PrintVariablesTree(int tab) { PrintVariablesTree(&tree_variables, tab); }
@@ -177,23 +197,72 @@ class FmuUnit {
     /// Available only for an FMU that iplements the Model Exchange interface.
     fmi3Status GetContinuousStateDerivatives(fmi3Float64 derivatives[], size_t nx);
 
+    /// Get the current dimensions of a variable.
+    std::vector<size_t> GetVariableDimensions(const FmuVariable& var) const {
+        auto dim = var.GetDimensions();
+
+        // case of scalar variable
+        if (dim.size() == 0)
+            return std::vector<size_t>({1});
+
+        std::vector<size_t> sizes;
+        for (const auto& d : dim) {
+            if (d.second == true)
+                // the size of the current dimension is fixed
+                sizes.push_back(d.first);
+            else {
+                // the size of the current dimension is given by another variable
+                size_t cur_size;
+                GetVariable(static_cast<fmi3ValueReference>(d.first), cur_size);
+                sizes.push_back(cur_size);
+            }
+        }
+
+        return sizes;
+    }
+
+    std::vector<size_t> GetVariableDimensions(fmi3ValueReference valref) const {
+        return GetVariableDimensions(m_variables.at(valref));
+    }
+    /// Get the current total size of a variable.
+    size_t GetVariableSize(const FmuVariable& var) const {
+        if (var.GetDimensions().size() == 0)
+            return 1;
+
+        size_t size = 1;
+        for (const auto& dim : GetVariableDimensions(var)) {
+            size *= dim;
+        }
+        return size;
+    };
+
+    size_t GetVariableSize(fmi3ValueReference valref) const { return GetVariableSize(m_variables.at(valref)); }
+
+    /// Get the value of a variable.
+    /// The variable is expected to be already of the proper size: retrieve dimensions through
+    /// GetVariableDimensions()
     template <class T>
-    fmi3Status GetVariable(fmi3ValueReference vr, T& value, FmuVariable::Type vartype) noexcept(false);
+    fmi3Status GetVariable(fmi3ValueReference vr, T& values) const noexcept(false);
 
+    /// Set the value of a variable.
+    /// Values will be fetched from 'values' assuming its dimensions, memory alignment and allocation are according
+    /// to FMI standard.
     template <class T>
-    fmi3Status SetVariable(fmi3ValueReference vr, const T& value, FmuVariable::Type vartype) noexcept(false);
+    fmi3Status SetVariable(fmi3ValueReference vr, const T& values) noexcept(false);
 
+    /// Get the value of a variable knowing its name.
     template <class T>
-    fmi3Status GetVariable(const std::string& varname, T& value, FmuVariable::Type vartype) noexcept(false);
+    fmi3Status GetVariable(const std::string& varname, T& value) noexcept(false);
 
+    /// Set the value of a variable knowing its name.
     template <class T>
-    fmi3Status SetVariable(const std::string& varname, const T& value, FmuVariable::Type vartype) noexcept(false);
+    fmi3Status SetVariable(const std::string& varname, const T& value) noexcept(false);
 
-    fmi3Status GetVariable(const std::string& varname, std::string& value) noexcept(false);
-    fmi3Status SetVariable(const std::string& varname, const std::string& value) noexcept(false);
+    // fmi3Status GetVariable(const std::string& varname, std::string& value) noexcept(false);
+    // fmi3Status SetVariable(const std::string& varname, const std::string& value) noexcept(false);
 
-    fmi3Status GetVariable(const std::string& varname, bool& value) noexcept(false);
-    fmi3Status SetVariable(const std::string& varname, const bool& value) noexcept(false);
+    // fmi3Status GetVariable(const std::string& varname, bool& value) noexcept(false);
+    // fmi3Status SetVariable(const std::string& varname, const bool& value) noexcept(false);
 
   protected:
     std::string modelName;
@@ -217,7 +286,7 @@ class FmuUnit {
     std::string info_cosim_canGetAndSetFMUstate;
     std::string info_cosim_canSerializeFMUstate;
 
-    bool has_modal_exchange;
+    bool has_model_exchange;
     std::string info_modex_modelIdentifier;
     std::string info_modex_needsExecutionTool;
     std::string info_modex_completedIntegratorStepNotNeeded;
@@ -229,7 +298,7 @@ class FmuUnit {
 
     bool has_scheduled_execution;
 
-    VarList scalarVariables;  ///< FMU variables
+    VarList m_variables;  ///< FMU variables
 
     FmuVariableTreeNode tree_variables;
 
@@ -331,9 +400,6 @@ class FmuUnit {
     /// Print the tree of variables (recursive).
     void PrintVariablesTree(FmuVariableTreeNode* mynode, int tab);
 
-    /// Find a variable by its index.
-    VarList::iterator FindByIndex(int index);
-
     std::string m_directory;
     std::string m_bin_directory;
 
@@ -361,7 +427,7 @@ bool areStringsEqual(const char* str, size_t strSize, const char* fixedString) {
     }
 }
 
-FmuUnit::FmuUnit() : has_cosimulation(false), has_modal_exchange(false), m_nx(0), m_verbose(false) {
+FmuUnit::FmuUnit() : has_cosimulation(false), has_model_exchange(false), m_nx(0), m_verbose(false) {
     // default binaries directory in FMU unzipped directory
     m_bin_directory = "/binaries/" + std::string(FMU_OS_SUFFIX);
 }
@@ -389,8 +455,10 @@ void FmuUnit::LoadUnzipped(FmuType fmuType, const std::string& directory) {
 
     if (fmuType == FmuType::COSIMULATION && !has_cosimulation)
         throw std::runtime_error("Attempting to load Co-Simulation FMU, but not a CS FMU.");
-    if (fmuType == FmuType::MODEL_EXCHANGE && !has_modal_exchange)
+    if (fmuType == FmuType::MODEL_EXCHANGE && !has_model_exchange)
         throw std::runtime_error("Attempting to load as Model Exchange, but not an ME FMU.");
+    if (fmuType == FmuType::SCHEDULED_EXECUTION && !has_scheduled_execution)
+        throw std::runtime_error("Attempting to load as Scheduled Execution, but not an SE FMU.");
 
     LoadSharedLibrary(fmuType);
 
@@ -513,38 +581,35 @@ void FmuUnit::LoadXML() {
         if (auto attr = modelexchange_node->first_attribute("providesDirectionalDerivative")) {
             info_modex_providesDirectionalDerivative = attr->value();
         }
-        has_modal_exchange = true;
+        has_model_exchange = true;
 
         if (m_verbose)
             std::cout << "  Found ME interface" << std::endl;
     }
 
-    if (!has_cosimulation && !has_modal_exchange) {
-        throw std::runtime_error("Not a valid FMU. Missing both <CoSimulation> and <ModelExchange> in XML. \n");
+    if (!has_cosimulation && !has_model_exchange) {
+        throw std::runtime_error(
+            "Not a valid FMU. Missing <CoSimulation>, <ModelExchange> or <ScheduledExecution> in XML. \n");
     }
 
     // Find the variable container node
     auto variables_node = root_node->first_node("ModelVariables");
     if (!variables_node)
-        throw std::runtime_error("Not a valid FMU. Missing <ModelVariables> in XML. \n");
+        throw std::runtime_error("Not a valid FMU. Missing <ModelVariables> in XML.");
 
     // Initialize variable index and lists of state and state derivative variables
-    int var_index = 0;
-    std::vector<int> state_indices;
-    std::vector<int> deriv_indices;
+    std::vector<int> state_valref;
+    std::vector<int> deriv_valref;
 
     // Iterate over the variable nodes and load container of FMU variables
     for (auto var_node = variables_node->first_node(); var_node; var_node = var_node->next_sibling()) {
-        // Index of this variable;
-        var_index++;
-
         // Get variable name
         std::string var_name;
 
         if (auto attr = var_node->first_attribute("name"))
             var_name = attr->value();
         else
-            throw std::runtime_error("Cannot find 'name' property in variable.\n");
+            throw std::runtime_error("Cannot find 'name' property in variable.");
 
         // Get variable attributes
         fmi3ValueReference valref = 0;
@@ -557,7 +622,7 @@ void FmuUnit::LoadXML() {
         if (auto attr = var_node->first_attribute("valueReference"))
             valref = std::stoul(attr->value());
         else
-            throw std::runtime_error("Cannot find 'valueReference' property in variable.\n");
+            throw std::runtime_error("Cannot find 'valueReference' property in variable.");
 
         if (auto attr = var_node->first_attribute("description"))
             description = attr->value();
@@ -618,6 +683,17 @@ void FmuUnit::LoadXML() {
         else
             throw std::runtime_error("variability is badly formatted.");
 
+        FmuVariable::DimensionsArrayType dimensions;
+        for (auto node_dim = var_node->first_node("Dimension"); node_dim;
+             node_dim = node_dim->next_sibling("Dimension")) {
+            if (auto node_dim_givensize = node_dim->first_attribute("start")) {
+                dimensions.push_back(std::make_pair(std::stoul(node_dim_givensize->value()), true));
+            } else if (auto node_dim_givensize = node_dim->first_attribute("valueReference")) {
+                dimensions.push_back(std::make_pair(std::stoul(node_dim_givensize->value()), false));
+            } else
+                throw std::runtime_error("Dimension must have either 'start' or 'valueReference' attribute.");
+        }
+
         // Get variable type
         rapidxml::xml_node<>* type_node = nullptr;
         FmuVariable::Type var_type;
@@ -658,8 +734,8 @@ void FmuUnit::LoadXML() {
         std::string unit = "";
         if (type_node) {
             if (auto attr = type_node->first_attribute("derivative")) {
-                state_indices.push_back(std::stoi(attr->value()));
-                deriv_indices.push_back(var_index);
+                state_valref.push_back(std::stoi(attr->value()));
+                deriv_valref.push_back(valref);
                 is_deriv = true;
             }
             if (auto attr = type_node->first_attribute("unit")) {
@@ -671,32 +747,31 @@ void FmuUnit::LoadXML() {
         }
 
         // Create and cache the new variable (also caching its index)
-        FmuVariableImport var(var_name, var_type, causality_enum, variability_enum, initial_enum, var_index);
+        FmuVariableImport var(var_name, var_type, dimensions, causality_enum, variability_enum, initial_enum);
         var.is_deriv = is_deriv;
         var.SetValueReference(valref);
 
-        scalarVariables[var_name] = var;
+        m_variables[valref] = var;
     }
 
     // Traverse the list of state indices and mark the corresponding FMU variable as a state
-    for (const auto& si : state_indices) {
-        auto it = FindByIndex(si);
-        if (it != scalarVariables.end())
-            it->second.is_state = true;
+    for (const auto& si : state_valref) {
+        auto state_var = m_variables.at(si);
+        state_var.is_state = true;
     }
 
-    m_nx = state_indices.size();
-    if (deriv_indices.size() != m_nx)
+    m_nx = state_valref.size();
+    if (deriv_valref.size() != m_nx)
         throw std::runtime_error("Incompatible number of states and state derivatives in XML file.");
 
     if (m_verbose) {
-        std::cout << "  Found " << scalarVariables.size() << " FMU variables" << std::endl;
+        std::cout << "  Found " << m_variables.size() << " FMU variables" << std::endl;
         if (m_nx > 0) {
             std::cout << "     States      ";
-            std::copy(state_indices.begin(), state_indices.end(), std::ostream_iterator<int>(std::cout, " "));
+            std::copy(state_valref.begin(), state_valref.end(), std::ostream_iterator<int>(std::cout, " "));
             std::cout << std::endl;
             std::cout << "     Derivatives ";
-            std::copy(deriv_indices.begin(), deriv_indices.end(), std::ostream_iterator<int>(std::cout, " "));
+            std::copy(deriv_valref.begin(), deriv_valref.end(), std::ostream_iterator<int>(std::cout, " "));
             std::cout << std::endl;
         }
     }
@@ -794,7 +869,7 @@ void FmuUnit::LoadSharedLibrary(FmuType fmuType) {
         LOAD_FMI_FUNCTION(fmi3GetOutputDerivatives);
         LOAD_FMI_FUNCTION(fmi3DoStep);
     }
-    if (has_modal_exchange) {
+    if (has_model_exchange) {
         LOAD_FMI_FUNCTION(fmi3EnterContinuousTimeMode);
         LOAD_FMI_FUNCTION(fmi3CompletedIntegratorStep);
         LOAD_FMI_FUNCTION(fmi3SetTime);
@@ -819,7 +894,7 @@ void FmuUnit::BuildVariablesTree() {
     if (m_verbose)
         std::cout << "Building variables tree" << std::endl;
 
-    for (auto& iv : this->scalarVariables) {
+    for (auto& iv : this->m_variables) {
         std::string token;
         std::istringstream ss(iv.second.GetName());
 
@@ -862,13 +937,6 @@ void FmuUnit::PrintVariablesTree(FmuVariableTreeNode* mynode, int tab) {
     }
 }
 
-FmuUnit::VarList::iterator FmuUnit::FindByIndex(int index) {
-    auto predicate_same_index = [index](const std::pair<std::string, FmuVariableImport>& var) {
-        return var.second.GetIndex() == index;
-    };
-    return std::find_if(scalarVariables.begin(), scalarVariables.end(), predicate_same_index);
-}
-
 std::string FmuUnit::GetVersion() const {
     return std::string(_fmi3GetVersion());
 }
@@ -886,12 +954,12 @@ void FmuUnit::Instantiate(const std::string& instanceName,
 
     if (m_fmuType == FmuType::MODEL_EXCHANGE) {
         instance = _fmi3InstantiateModelExchange(instanceName.c_str(),            // instanceName
-                                                guid.c_str(),                    // instantiationToken
-                                                resource_dir.c_str(),            // resourcePath
-                                                visible ? fmi3True : fmi3False,  // visible
-                                                logging,                         // loggingOn
-                                                instance_environment,            // instanceEnvironment
-                                                log_message_callback             // logMessage
+                                                 guid.c_str(),                    // instantiationToken
+                                                 resource_dir.c_str(),            // resourcePath
+                                                 visible ? fmi3True : fmi3False,  // visible
+                                                 logging,                         // loggingOn
+                                                 instance_environment,            // instanceEnvironment
+                                                 log_message_callback             // logMessage
         );
     } else if (m_fmuType == FmuType::COSIMULATION) {
         fmi3Boolean eventModeUsed = fmi3False;
@@ -976,7 +1044,7 @@ fmi3Status FmuUnit::DoStep(fmi3Float64 currentCommunicationPoint,
 }
 
 fmi3Status FmuUnit::SetTime(const fmi3Float64 time) {
-    if (!has_modal_exchange)
+    if (!has_model_exchange)
         throw std::runtime_error("SetTime available only for a Model Exchange FMU.\n");
 
     auto status = _fmi3SetTime(this->instance, time);
@@ -985,7 +1053,7 @@ fmi3Status FmuUnit::SetTime(const fmi3Float64 time) {
 }
 
 fmi3Status FmuUnit::GetContinuousStates(fmi3Float64 x[], size_t nx) {
-    if (!has_modal_exchange)
+    if (!has_model_exchange)
         throw std::runtime_error("GetContinuousStates available only for a Model Exchange FMU. \n");
 
     auto status = _fmi3GetContinuousStates(this->instance, x, nx);
@@ -994,7 +1062,7 @@ fmi3Status FmuUnit::GetContinuousStates(fmi3Float64 x[], size_t nx) {
 }
 
 fmi3Status FmuUnit::SetContinuousStates(const fmi3Float64 x[], size_t nx) {
-    if (!has_modal_exchange)
+    if (!has_model_exchange)
         throw std::runtime_error("SetContinuousStates available only for a Model Exchange FMU. \n");
 
     auto status = _fmi3SetContinuousStates(this->instance, x, nx);
@@ -1003,7 +1071,7 @@ fmi3Status FmuUnit::SetContinuousStates(const fmi3Float64 x[], size_t nx) {
 }
 
 fmi3Status FmuUnit::GetContinuousStateDerivatives(fmi3Float64 derivatives[], size_t nx) {
-    if (!has_modal_exchange)
+    if (!has_model_exchange)
         throw std::runtime_error("GetDerivatives available only for a Model Exchange FMU. \n");
 
     auto status = _fmi3GetContinuousStateDerivatives(this->instance, derivatives, nx);
@@ -1012,53 +1080,63 @@ fmi3Status FmuUnit::GetContinuousStateDerivatives(fmi3Float64 derivatives[], siz
 }
 
 template <class T>
-fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, T& value, FmuVariable::Type vartype) noexcept(false) {
+fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, T& value) const noexcept(false) {
     fmi3Status status = fmi3Status::fmi3Error;
 
     // TODO
     size_t valueSizes[1];
     valueSizes[0] = 1;
 
+    const FmuVariableImport& var = m_variables.at(vr);
+
+    size_t nValues = GetVariableSize(var);
+
+    // only one variable will be parsed at a time
+    const size_t nValueReferences = 1;
+
+    auto vartype = var.GetType();
+
     switch (vartype) {
         case FmuVariable::Type::Float32:
-            status = this->_fmi3GetFloat32(this->instance, &vr, 1, (fmi3Float32*)&value, 1);
+            status = this->_fmi3GetFloat32(this->instance, &vr, nValueReferences, (fmi3Float32*)&value, nValues);
             break;
         case FmuVariable::Type::Float64:
-            status = this->_fmi3GetFloat64(this->instance, &vr, 1, (fmi3Float64*)&value, 1);
+            status = this->_fmi3GetFloat64(this->instance, &vr, nValueReferences, (fmi3Float64*)&value, nValues);
             break;
         case FmuVariable::Type::Int8:
-            status = this->_fmi3GetInt8(this->instance, &vr, 1, (fmi3Int8*)&value, 1);
+            status = this->_fmi3GetInt8(this->instance, &vr, nValueReferences, (fmi3Int8*)&value, nValues);
             break;
         case FmuVariable::Type::UInt8:
-            status = this->_fmi3GetUInt8(this->instance, &vr, 1, (fmi3UInt8*)&value, 1);
+            status = this->_fmi3GetUInt8(this->instance, &vr, nValueReferences, (fmi3UInt8*)&value, nValues);
             break;
         case FmuVariable::Type::Int16:
-            status = this->_fmi3GetInt16(this->instance, &vr, 1, (fmi3Int16*)&value, 1);
+            status = this->_fmi3GetInt16(this->instance, &vr, nValueReferences, (fmi3Int16*)&value, nValues);
             break;
         case FmuVariable::Type::UInt16:
-            status = this->_fmi3GetUInt16(this->instance, &vr, 1, (fmi3UInt16*)&value, 1);
+            status = this->_fmi3GetUInt16(this->instance, &vr, nValueReferences, (fmi3UInt16*)&value, nValues);
             break;
         case FmuVariable::Type::Int32:
-            status = this->_fmi3GetInt32(this->instance, &vr, 1, (fmi3Int32*)&value, 1);
+            status = this->_fmi3GetInt32(this->instance, &vr, nValueReferences, (fmi3Int32*)&value, nValues);
             break;
         case FmuVariable::Type::UInt32:
-            status = this->_fmi3GetUInt32(this->instance, &vr, 1, (fmi3UInt32*)&value, 1);
+            status = this->_fmi3GetUInt32(this->instance, &vr, nValueReferences, (fmi3UInt32*)&value, nValues);
             break;
         case FmuVariable::Type::Int64:
-            status = this->_fmi3GetInt64(this->instance, &vr, 1, (fmi3Int64*)&value, 1);
+            status = this->_fmi3GetInt64(this->instance, &vr, nValueReferences, (fmi3Int64*)&value, nValues);
             break;
         case FmuVariable::Type::UInt64:
-            status = this->_fmi3GetUInt64(this->instance, &vr, 1, (fmi3UInt64*)&value, 1);
+            status = this->_fmi3GetUInt64(this->instance, &vr, nValueReferences, (fmi3UInt64*)&value, nValues);
             break;
         case FmuVariable::Type::Boolean:
-            status = this->_fmi3GetBoolean(this->instance, &vr, 1, (fmi3Boolean*)&value, 1);
+            status = this->_fmi3GetBoolean(this->instance, &vr, nValueReferences, (fmi3Boolean*)&value, nValues);
             break;
         case FmuVariable::Type::String:
-            status = this->_fmi3GetString(this->instance, &vr, 1, (fmi3String*)&value, 1);
+            status = this->_fmi3GetString(this->instance, &vr, nValueReferences, (fmi3String*)&value, nValues);
             break;
         case FmuVariable::Type::Binary:
             // TODO: temporarly using only 1 scalar
-            status = this->_fmi3GetBinary(this->instance, &vr, 1, valueSizes, (fmi3Binary*)&value, 1);
+            status =
+                this->_fmi3GetBinary(this->instance, &vr, nValueReferences, valueSizes, (fmi3Binary*)&value, nValues);
             break;
         case FmuVariable::Type::Unknown:
             throw std::runtime_error("Fmu Variable type not initialized.");
@@ -1072,52 +1150,63 @@ fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, T& value, FmuVariable::Ty
 }
 
 template <class T>
-fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const T& value, FmuVariable::Type vartype) noexcept(false) {
+fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const T& value) noexcept(false) {
     fmi3Status status = fmi3Status::fmi3Error;
 
     // TODO
     size_t valueSizes[1];
     valueSizes[0] = 1;
 
+    FmuVariableImport& var = m_variables.at(vr);
+
+    size_t nValues = GetVariableSize(var);
+
+    // only one variable will be parsed at a time
+    const size_t nValueReferences = 1;
+
+    auto vartype = var.GetType();
+
     switch (vartype) {
         case FmuVariable::Type::Float32:
-            status = this->_fmi3SetFloat32(this->instance, &vr, 1, (fmi3Float32*)&value, 1);
+            status = this->_fmi3SetFloat32(this->instance, &vr, nValueReferences, (fmi3Float32*)&value, nValues);
             break;
         case FmuVariable::Type::Float64:
-            status = this->_fmi3SetFloat64(this->instance, &vr, 1, (fmi3Float64*)&value, 1);
+            status = this->_fmi3SetFloat64(this->instance, &vr, nValueReferences, (fmi3Float64*)&value, nValues);
             break;
         case FmuVariable::Type::Int8:
-            status = this->_fmi3SetInt8(this->instance, &vr, 1, (fmi3Int8*)&value, 1);
+            status = this->_fmi3SetInt8(this->instance, &vr, nValueReferences, (fmi3Int8*)&value, nValues);
             break;
         case FmuVariable::Type::UInt8:
-            status = this->_fmi3SetUInt8(this->instance, &vr, 1, (fmi3UInt8*)&value, 1);
+            status = this->_fmi3SetUInt8(this->instance, &vr, nValueReferences, (fmi3UInt8*)&value, nValues);
             break;
         case FmuVariable::Type::Int16:
-            status = this->_fmi3SetInt16(this->instance, &vr, 1, (fmi3Int16*)&value, 1);
+            status = this->_fmi3SetInt16(this->instance, &vr, nValueReferences, (fmi3Int16*)&value, nValues);
             break;
         case FmuVariable::Type::UInt16:
-            status = this->_fmi3SetUInt16(this->instance, &vr, 1, (fmi3UInt16*)&value, 1);
+            status = this->_fmi3SetUInt16(this->instance, &vr, nValueReferences, (fmi3UInt16*)&value, nValues);
             break;
         case FmuVariable::Type::Int32:
-            status = this->_fmi3SetInt32(this->instance, &vr, 1, (fmi3Int32*)&value, 1);
+            status = this->_fmi3SetInt32(this->instance, &vr, nValueReferences, (fmi3Int32*)&value, nValues);
             break;
         case FmuVariable::Type::UInt32:
-            status = this->_fmi3SetUInt32(this->instance, &vr, 1, (fmi3UInt32*)&value, 1);
+            status = this->_fmi3SetUInt32(this->instance, &vr, nValueReferences, (fmi3UInt32*)&value, nValues);
             break;
         case FmuVariable::Type::Int64:
-            status = this->_fmi3SetInt64(this->instance, &vr, 1, (fmi3Int64*)&value, 1);
+            status = this->_fmi3SetInt64(this->instance, &vr, nValueReferences, (fmi3Int64*)&value, nValues);
             break;
         case FmuVariable::Type::UInt64:
-            status = this->_fmi3SetUInt64(this->instance, &vr, 1, (fmi3UInt64*)&value, 1);
+            status = this->_fmi3SetUInt64(this->instance, &vr, nValueReferences, (fmi3UInt64*)&value, nValues);
             break;
         case FmuVariable::Type::Boolean:
-            status = this->_fmi3SetBoolean(this->instance, &vr, 1, (fmi3Boolean*)&value, 1);
+            status = this->_fmi3SetBoolean(this->instance, &vr, nValueReferences, (fmi3Boolean*)&value, nValues);
             break;
         case FmuVariable::Type::String:
-            status = this->_fmi3SetString(this->instance, &vr, 1, (fmi3String*)&value, 1);
+            status = this->_fmi3SetString(this->instance, &vr, nValueReferences, (fmi3String*)&value, nValues);
             break;
         case FmuVariable::Type::Binary:
-            status = this->_fmi3SetBinary(this->instance, &vr, 1, valueSizes, (fmi3Binary*)&value, 1);
+            // TODO: temporarly using only 1 scalar
+            status =
+                this->_fmi3SetBinary(this->instance, &vr, nValueReferences, valueSizes, (fmi3Binary*)&value, nValues);
             break;
 
         case FmuVariable::Type::Unknown:
@@ -1132,35 +1221,13 @@ fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const T& value, FmuVariab
 }
 
 template <class T>
-fmi3Status FmuUnit::GetVariable(const std::string& varname, T& value, FmuVariable::Type vartype) noexcept(false) {
-    return GetVariable(scalarVariables.at(varname).GetValueReference(), value, vartype);
+fmi3Status FmuUnit::GetVariable(const std::string& varname, T& value) noexcept(false) {
+    return GetVariable(GetValueReference(varname), value);
 }
 
 template <class T>
-fmi3Status FmuUnit::SetVariable(const std::string& varname, const T& value, FmuVariable::Type vartype) noexcept(false) {
-    return SetVariable(scalarVariables.at(varname).GetValueReference(), value, vartype);
-}
-
-fmi3Status FmuUnit::GetVariable(const std::string& varname, std::string& value) noexcept(false) {
-    fmi3String tmp;
-    auto status = GetVariable(varname, tmp, FmuVariable::Type::String);
-    value = std::string(tmp);
-    return status;
-}
-
-fmi3Status FmuUnit::SetVariable(const std::string& varname, const std::string& value) noexcept(false) {
-    return SetVariable(varname, value.c_str(), FmuVariable::Type::String);
-}
-
-fmi3Status FmuUnit::GetVariable(const std::string& varname, bool& value) noexcept(false) {
-    fmi3Boolean tmp;
-    auto status = GetVariable(varname, tmp, FmuVariable::Type::Boolean);
-    value = (tmp != 0) ? true : false;
-    return status;
-}
-
-fmi3Status FmuUnit::SetVariable(const std::string& varname, const bool& value) noexcept(false) {
-    return SetVariable(varname, value ? 1 : 0, FmuVariable::Type::Boolean);
+fmi3Status FmuUnit::SetVariable(const std::string& varname, const T& value) noexcept(false) {
+    return SetVariable(GetValueReference(varname), value);
 }
 
 }  // namespace fmi3

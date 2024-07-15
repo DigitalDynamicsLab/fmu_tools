@@ -78,7 +78,8 @@ myFmuComponent::myFmuComponent(FmuType fmiInterfaceType,
            {"logAll", true}},
           {"logStatusWarning", "logStatusDiscard", "logStatusError", "logStatusFatal", "logStatusPending"}),
       x_dd(0),
-      theta_dd(0) {
+      theta_dd(0),
+      A{{0.0, 0.1}, {1.0, 1.1}, {2.0, 2.1}} {
     initializeType(fmiInterfaceType);
 
     // Define new units if needed
@@ -98,10 +99,6 @@ myFmuComponent::myFmuComponent(FmuType fmiInterfaceType,
                                  FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
     auto& fmu_M = AddFmuVariable(&M, "M", FmuVariable::Type::Float64, "kg", "cart mass",
                                  FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
-
-    auto& fmu_approximateOn =
-        AddFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::Boolean, "1", "use approximated model",
-                       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
     AddFmuVariable(&q[0], "x", FmuVariable::Type::Float64, "m", "cart position",                    //
                    FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,    //
@@ -123,6 +120,10 @@ myFmuComponent::myFmuComponent(FmuType fmiInterfaceType,
                    FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
                    FmuVariable::InitialType::calculated);
 
+    AddFmuVariable(*A, "A", FmuVariable::Type::Float64, {{3, true}, {2, true}}, "1", "generic matrix",
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
+                   FmuVariable::InitialType::exact);
+
     /// One can also pass std::functions to get/set the value of the variable if queried
     // AddFmuVariable(std::make_pair(
     //     std::function<fmi3Float64()>([this]() -> fmi3Float64 {
@@ -136,6 +137,10 @@ myFmuComponent::myFmuComponent(FmuType fmiInterfaceType,
                          { return (0.5 * (this->m * this->len * this->len / 3) * (this->theta_dd * this->theta_dd)); },
                          {}),
         "kineticEnergy", FmuVariable::Type::Float64, "J", "kinetic energy");
+
+    auto& fmu_approximateOn =
+        AddFmuVariable(&approximateOn, "approximateOn", FmuVariable::Type::Boolean, "1", "use approximated model",
+                       FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);
 
     // Set name of file expected to be present in the FMU resources directory
     filename = "myData.txt";

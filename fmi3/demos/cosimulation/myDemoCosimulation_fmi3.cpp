@@ -61,10 +61,10 @@ int main(int argc, char* argv[]) {
     {
         fmi3ValueReference valref = 3;
         fmi3Float64 m_in = 1.5;
-        my_fmu.SetVariable(valref, m_in, FmuVariable::Type::Float64);
+        my_fmu.SetVariable(valref, m_in);
 
         fmi3Float64 m_out;
-        my_fmu.GetVariable(valref, m_out, FmuVariable::Type::Float64);
+        my_fmu.GetVariable(valref, m_out);
         std::cout << "m_out: " << m_out << std::endl;
     }
     my_fmu.ExitInitializationMode();
@@ -79,8 +79,8 @@ int main(int argc, char* argv[]) {
 
     while (time < time_end) {
         double x, theta;
-        my_fmu.GetVariable("x", x, FmuVariable::Type::Float64);
-        my_fmu.GetVariable("theta", theta, FmuVariable::Type::Float64);
+        my_fmu.GetVariable("x", x);
+        my_fmu.GetVariable("theta", theta);
         ofile << time << " " << x << " " << theta << std::endl;
 
         // Set next communication time
@@ -93,22 +93,38 @@ int main(int argc, char* argv[]) {
     // Close output file
     ofile.close();
 
-    // Getting FMU variables through valueRef
+    // Getting FMU scalar variables through valueRef
     fmi3Float64 val_real;
-    fmi3ValueReference valrefs_float64[11] = {0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11};
+    fmi3ValueReference valrefs_float64[11] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11};
     for (auto valref : valrefs_float64) {
-        my_fmu.GetVariable(valref, val_real, FmuVariable::Type::Float64);
+        my_fmu.GetVariable(valref, val_real);
         std::cout << "REAL: valref: " << valref << " | val: " << val_real << std::endl;
     }
 
+    // Getting FMU array variables through valueRef
+    std::vector<fmi3Float64> val_real_array;
+    fmi3ValueReference valref_float64_array = 10;
+
+    val_real_array.resize(my_fmu.GetVariableSize(valref_float64_array));
+    my_fmu.GetVariable(valref_float64_array, *val_real_array.data());
+
+    auto dims = my_fmu.GetVariableDimensions(valref_float64_array);
+    std::cout << "REAL: valref: " << valref_float64_array << " | val: \n";
+    for (auto row_sel = 0; row_sel < dims[0]; row_sel++) {
+        for (auto col_sel = 0; col_sel < dims[1]; col_sel++) {
+            std::cout << val_real_array[row_sel * dims[1] + col_sel] << " ";
+        }
+        std::cout << std::endl;
+    }
+
     // Getting FMU variables through custom fmu-tools functions, directly using the variable name
-    auto status = my_fmu.GetVariable("m", val_real, FmuVariable::Type::Float64);
+    auto status = my_fmu.GetVariable("m", val_real);
 
     fmi3Boolean val_bool;
 
-    fmi3ValueReference valrefs_bool[1] = {4};
+    fmi3ValueReference valrefs_bool[1] = {12};
     for (auto valref : valrefs_bool) {
-        my_fmu.GetVariable(valref, val_bool, FmuVariable::Type::Boolean);
+        my_fmu.GetVariable(valref, val_bool);
         std::cout << "BOOLEAN: valref: " << valref << " | val: " << val_bool << std::endl;
     }
 

@@ -12,10 +12,14 @@
 // =============================================================================
 // Classes for exporting FMUs (FMI 3.0)
 // =============================================================================
+// DEVELOPER NOTES:
+// FmuVariableExport:
+// - Set|GetValue have a specific implementation for fmi<N>String in order to handle them internally as std::strings
+// - FmuVariableExport constness does not refer to the value nor the dimension of the pointed variable (that can indeed be changed), but to the 'binding' to that underlying variable
+// =============================================================================
 
 //// RADU TODO
 //// - add support for binary variables
-//// - add support for array variables
 //// - complete FMI function implementations
 
 #include <regex>
@@ -61,7 +65,16 @@ FmuVariableExport::FmuVariableExport(const VarbindType& varbind,
                                      CausalityType _causality,
                                      VariabilityType _variability,
                                      InitialType _initial)
-    : FmuVariable(_name, _type, _causality, _variability, _initial) {
+    : FmuVariableExport(varbind, _name, _type, {}, _causality, _variability, _initial) {}
+
+FmuVariableExport::FmuVariableExport(const VarbindType& varbind,
+                                     const std::string& _name,
+                                     FmuVariable::Type _type,
+                                     const DimensionsArrayType& dimensions,
+                                     CausalityType _causality,
+                                     VariabilityType _variability,
+                                     InitialType _initial)
+    : FmuVariable(_name, _type, dimensions, _causality, _variability, _initial) {
     // From FMI Reference
     // If initial = 'exact' or 'approx', or causality = 'input',       a start value MUST be provided.
     // If initial = 'calculated',        or causality = 'independent', a start value CANNOT be provided.
@@ -100,14 +113,18 @@ FmuVariableExport& FmuVariableExport::operator=(const FmuVariableExport& other) 
     return *this;
 }
 
-void FmuVariableExport::SetValue(const fmi3String& val) const {
+void FmuVariableExport::SetValue(const fmi3String& val,
+                                 size_t nValues) const {
+    if (nValues > 1)
+        throw std::runtime_error("Cannot set multiple values for fmi3Strings yet.");
+
     if (is_pointer_variant(this->varbind))
         *varns::get<std::string*>(this->varbind) = std::string(val);
     else
         varns::get<FunGetSet<std::string>>(this->varbind).second(std::string(val));
 }
 
-void FmuVariableExport::GetValue(fmi3String* varptr) const {
+void FmuVariableExport::GetValue(fmi3String* varptr, size_t nValues) const {
     *varptr = is_pointer_variant(this->varbind) ? varns::get<std::string*>(this->varbind)->c_str()
                                                 : varns::get<FunGetSet<std::string>>(this->varbind).first().c_str();
 }
@@ -200,8 +217,8 @@ FmuComponentBase::FmuComponentBase(FmuType fmiInterfaceType,
     m_unitDefinitions["1"] = UnitDefinition("1");  // guarantee the existence of the default unit
     m_unitDefinitions[""] = UnitDefinition("");    // guarantee the existence of the unassigned unit
 
-    AddFmuVariable(&m_time, "time", FmuVariable::Type::Float64, "s", "time",  //
-                   FmuVariable::CausalityType::independent,                   //
+    AddFmuVariable(&m_time, "time", FmuVariable::Type::Float64, {}, "s", "time",  //
+                   FmuVariable::CausalityType::independent,                       //
                    FmuVariable::VariabilityType::continuous);
 
     // Parse URL according to https://datatracker.ietf.org/doc/html/rfc3986
@@ -275,6 +292,7 @@ void FmuComponentBase::SetDebugLogging(std::string cat, bool value) {
 const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExport::VarbindType& varbind,
                                                           std::string name,
                                                           FmuVariable::Type scalartype,
+                                                          const FmuVariable::DimensionsArrayType& dimensions,
                                                           std::string unitname,
                                                           std::string description,
                                                           FmuVariable::CausalityType causality,
@@ -301,7 +319,7 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
     if (it != m_variables.end())
         throw std::runtime_error("Cannot add two FMU variables with the same name.");
 
-    FmuVariableExport newvar(varbind, name, scalartype, causality, variability, initial);
+    FmuVariableExport newvar(varbind, name, scalartype, dimensions, causality, variability, initial);
     newvar.SetUnitName(unitname);
     newvar.SetValueReference(m_valrefCounter++);
     newvar.SetDescription(description);
@@ -604,6 +622,21 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         if ((it->GetType() == FmuVariable::Type::Float64 || it->GetType() == FmuVariable::Type::Float32) &&
             !it->GetUnitName().empty())
             varNode->append_attribute(doc_ptr->allocate_attribute("unit", it->GetUnitName().c_str()));
+
+        // check if the variable is an array
+        if (it->GetDimensions().size() > 0) {
+            for (auto& dim : it->GetDimensions()) {
+                rapidxml::xml_node<>* dimNode = doc_ptr->allocate_node(rapidxml::node_element, "Dimension");
+                if (dim.second == true) {
+                    stringbuf.push_back(std::to_string(dim.first));
+                    dimNode->append_attribute(doc_ptr->allocate_attribute("start", stringbuf.back().c_str()));
+                } else {
+                    stringbuf.push_back(std::to_string(dim.first));
+                    dimNode->append_attribute(doc_ptr->allocate_attribute("valueReference", stringbuf.back().c_str()));
+                }
+                varNode->append_node(dimNode);
+            }
+        }
 
         if (it->HasStartVal()) {
             if (it->GetType() == FmuVariable::Type::String || it->GetType() == FmuVariable::Type::Binary) {
@@ -1023,7 +1056,7 @@ fmi3Status fmi3GetFloat32(fmi3Instance instance,
                           fmi3Float32 values[],
                           size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Float32);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetFloat64(fmi3Instance instance,
@@ -1032,7 +1065,7 @@ fmi3Status fmi3GetFloat64(fmi3Instance instance,
                           fmi3Float64 values[],
                           size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Float64);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetInt8(fmi3Instance instance,
@@ -1041,7 +1074,7 @@ fmi3Status fmi3GetInt8(fmi3Instance instance,
                        fmi3Int8 values[],
                        size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Int8);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetUInt8(fmi3Instance instance,
@@ -1050,7 +1083,7 @@ fmi3Status fmi3GetUInt8(fmi3Instance instance,
                         fmi3UInt8 values[],
                         size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::UInt8);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetInt16(fmi3Instance instance,
@@ -1059,7 +1092,7 @@ fmi3Status fmi3GetInt16(fmi3Instance instance,
                         fmi3Int16 values[],
                         size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Int16);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetUInt16(fmi3Instance instance,
@@ -1068,7 +1101,7 @@ fmi3Status fmi3GetUInt16(fmi3Instance instance,
                          fmi3UInt16 values[],
                          size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::UInt16);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetInt32(fmi3Instance instance,
@@ -1077,7 +1110,7 @@ fmi3Status fmi3GetInt32(fmi3Instance instance,
                         fmi3Int32 values[],
                         size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Int32);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetUInt32(fmi3Instance instance,
@@ -1086,7 +1119,7 @@ fmi3Status fmi3GetUInt32(fmi3Instance instance,
                          fmi3UInt32 values[],
                          size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::UInt32);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetInt64(fmi3Instance instance,
@@ -1095,7 +1128,7 @@ fmi3Status fmi3GetInt64(fmi3Instance instance,
                         fmi3Int64 values[],
                         size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Int64);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetUInt64(fmi3Instance instance,
@@ -1104,7 +1137,7 @@ fmi3Status fmi3GetUInt64(fmi3Instance instance,
                          fmi3UInt64 values[],
                          size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::UInt64);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetBoolean(fmi3Instance instance,
@@ -1113,7 +1146,7 @@ fmi3Status fmi3GetBoolean(fmi3Instance instance,
                           fmi3Boolean values[],
                           size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Boolean);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetString(fmi3Instance instance,
@@ -1122,7 +1155,7 @@ fmi3Status fmi3GetString(fmi3Instance instance,
                          fmi3String values[],
                          size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::String);
+                                                                          nValues);
 }
 
 fmi3Status fmi3GetBinary(fmi3Instance instance,
@@ -1151,7 +1184,7 @@ fmi3Status fmi3SetFloat32(fmi3Instance instance,
                           const fmi3Float32 values[],
                           size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Float32);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetFloat64(fmi3Instance instance,
@@ -1160,7 +1193,7 @@ fmi3Status fmi3SetFloat64(fmi3Instance instance,
                           const fmi3Float64 values[],
                           size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Float64);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetInt8(fmi3Instance instance,
@@ -1169,7 +1202,7 @@ fmi3Status fmi3SetInt8(fmi3Instance instance,
                        const fmi3Int8 values[],
                        size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Int8);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetUInt8(fmi3Instance instance,
@@ -1178,7 +1211,7 @@ fmi3Status fmi3SetUInt8(fmi3Instance instance,
                         const fmi3UInt8 values[],
                         size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::UInt8);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetInt16(fmi3Instance instance,
@@ -1187,7 +1220,7 @@ fmi3Status fmi3SetInt16(fmi3Instance instance,
                         const fmi3Int16 values[],
                         size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Int16);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetUInt16(fmi3Instance instance,
@@ -1196,7 +1229,7 @@ fmi3Status fmi3SetUInt16(fmi3Instance instance,
                          const fmi3UInt16 values[],
                          size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::UInt16);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetInt32(fmi3Instance instance,
@@ -1205,7 +1238,7 @@ fmi3Status fmi3SetInt32(fmi3Instance instance,
                         const fmi3Int32 values[],
                         size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Int32);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetUInt32(fmi3Instance instance,
@@ -1214,7 +1247,7 @@ fmi3Status fmi3SetUInt32(fmi3Instance instance,
                          const fmi3UInt32 values[],
                          size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::UInt32);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetInt64(fmi3Instance instance,
@@ -1223,7 +1256,7 @@ fmi3Status fmi3SetInt64(fmi3Instance instance,
                         const fmi3Int64 values[],
                         size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Int64);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetUInt64(fmi3Instance instance,
@@ -1232,7 +1265,7 @@ fmi3Status fmi3SetUInt64(fmi3Instance instance,
                          const fmi3UInt64 values[],
                          size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::UInt64);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetBoolean(fmi3Instance instance,
@@ -1241,7 +1274,7 @@ fmi3Status fmi3SetBoolean(fmi3Instance instance,
                           const fmi3Boolean values[],
                           size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::Boolean);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetString(fmi3Instance instance,
@@ -1250,7 +1283,7 @@ fmi3Status fmi3SetString(fmi3Instance instance,
                          const fmi3String values[],
                          size_t nValues) {
     return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, values,
-                                                                          nValues, FmuVariable::Type::String);
+                                                                          nValues);
 }
 
 fmi3Status fmi3SetBinary(fmi3Instance instance,
