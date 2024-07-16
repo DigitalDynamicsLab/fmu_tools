@@ -48,7 +48,6 @@ using FmuVariableBindType =
                    bool*,
                    char*,
                    std::string*,
-                   std::vector<uint8_t>*,
                    std::pair<std::function<float()>, std::function<void(float)>>,
                    std::pair<std::function<double()>, std::function<void(double)>>,
                    std::pair<std::function<int8_t()>, std::function<void(int8_t)>>,
@@ -61,36 +60,35 @@ using FmuVariableBindType =
                    std::pair<std::function<uint64_t()>, std::function<void(uint64_t)>>,
                    std::pair<std::function<bool()>, std::function<void(bool)>>,
                    std::pair<std::function<char()>, std::function<void(char)>>,
-                   std::pair<std::function<std::string()>, std::function<void(std::string)>>,
-                   std::pair<std::function<std::vector<uint8_t>()>, std::function<void(std::vector<uint8_t>)>>>;
+                   std::pair<std::function<std::string()>, std::function<void(std::string)>>>;
 
-/// List of (unique) types required to 
-using FmuVariableStartType = varns::variant<float,
-                                            double,
-                                            int8_t,
-                                            uint8_t,
-                                            int16_t,
-                                            uint16_t,
-                                            int32_t,
-                                            uint32_t,
-                                            int64_t,
-                                            uint64_t,
-                                            bool,
-                                            char,
-                                            std::string,
-                                            std::vector<float>,
-                                            std::vector<double>,
-                                            std::vector<int8_t>,
-                                            std::vector<uint8_t>,
-                                            std::vector<int16_t>,
-                                            std::vector<uint16_t>,
-                                            std::vector<int32_t>,
-                                            std::vector<uint32_t>,
-                                            std::vector<int64_t>,
-                                            std::vector<uint64_t>,
-                                            std::vector<bool>,
-                                            std::vector<char>
->;
+///// List of (unique) types required to 
+//using FmuVariableStartType = varns::variant<float,
+//                                            double,
+//                                            int8_t,
+//                                            uint8_t,
+//                                            int16_t,
+//                                            uint16_t,
+//                                            int32_t,
+//                                            uint32_t,
+//                                            int64_t,
+//                                            uint64_t,
+//                                            bool,
+//                                            char,
+//                                            std::string,
+//                                            std::vector<float>,
+//                                            std::vector<double>,
+//                                            std::vector<int8_t>,
+//                                            std::vector<uint8_t>,
+//                                            std::vector<int16_t>,
+//                                            std::vector<uint16_t>,
+//                                            std::vector<int32_t>,
+//                                            std::vector<uint32_t>,
+//                                            std::vector<int64_t>,
+//                                            std::vector<uint64_t>,
+//                                            std::vector<bool>,
+//                                            std::vector<char>
+//>;
 
 }  // namespace fmi3
 

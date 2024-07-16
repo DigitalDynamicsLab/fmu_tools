@@ -16,7 +16,7 @@
 #ifndef FMUTOOLS_FMI3_EXPORT_H
 #define FMUTOOLS_FMI3_EXPORT_H
 
-#include <algorithm>
+
 #include <cassert>
 #include <vector>
 #include <array>
@@ -28,6 +28,7 @@
 #include <unordered_set>
 #include <functional>
 #include <list>
+#include <sstream>
 
 #include "FmuToolsDefinitions.h"
 #include "FmuToolsUnitDefinitions.h"
@@ -72,7 +73,7 @@ bool is_pointer_variant(const FmuVariableBindType& myVariant);
 class FmuVariableExport : public FmuVariable {
   public:
     using VarbindType = FmuVariableBindType;
-    using StartType = FmuVariableStartType;
+    // using StartType = FmuVariableStartType;
 
     //// TODO: can we remove it and keep only the constructor with dimensions with default argument?
     FmuVariableExport(const VarbindType& varbind,
@@ -169,61 +170,43 @@ class FmuVariableExport : public FmuVariable {
     /// Get the value of this FMU variable of type fmi3String.
     void GetValue(fmi3String* varptr, size_t nValues) const;
 
-    /// Set the start value for this FMU variable (for all cases, except variables of type fmi3String).
-    template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi3String>::value>::type>
-    void SetStartVal(T startval) {
-        if (!allowed_start)
-            return;
-        has_start = true;
-        this->start = startval;
-    }
+    /// Force the exposure of the start value in the modelDescription (if allowed).
+    void ExposeStartValue(bool val) const { expose_start = val; }
 
-    /// Set the start value for this FMU variable of type fmi3String.
-    void SetStartVal(fmi3String startval);
-
-    void ExposeCurrentValueAsStart();
+    bool ExposeStartValue() const { return expose_start || required_start; }
 
   protected:
     bool allowed_start = true;
     bool required_start = false;
+    mutable bool expose_start = false;
 
     VarbindType varbind;  // value of this variable
-    StartType start;      // start value for this variable
-
-    // TODO: in C++17 should be possible to either use constexpr or use lambda with 'overload' keyword
-    template <typename T>
-    void setStartFromVar(FunGetSet<T> funPair);
-
-    template <typename T>
-    void setStartFromVar(T* var_ptr);
 
     /// Converts the start value to a string.
-    std::string GetStartVal_toString() const;
+    std::string GetStartVal_toString(size_t size = 0) const;
 
     friend class FmuComponentBase;
 };
 
-// -----------------------------------------------------------------------------
+// =============================================================================
 
 template <typename T>
-void FmuVariableExport::setStartFromVar(FunGetSet<T> funPair) {
-    if (allowed_start)
-        has_start = true;
-    else
-        return;
-
-    this->start = funPair.first();
+void variant_to_string(const T* varb, size_t size, std::string& ss) {
+    for (size_t s = 0; s < size; ++s) {
+        ss = ss + std::to_string(*varb);
+        if (s + 1 < size)
+            ss = ss + " ";
+    }
 }
 
 template <typename T>
-void FmuVariableExport::setStartFromVar(T* var_ptr) {
-    if (allowed_start)
-        has_start = true;
-    else
-        return;
-
-    this->start = *var_ptr;
+void variant_to_string(const FunGetSet<T> varb, size_t size, std::string& ss) {
+    ss = ss + std::to_string(varb.first());
 }
+
+void variant_to_string(const std::string* varb, size_t size, std::string& ss);
+
+void variant_to_string(const FunGetSet<std::string> varb, size_t size, std::string& ss);
 
 // =============================================================================
 
@@ -567,6 +550,8 @@ class FmuComponentBase {
     FmuMachineState m_fmuMachineState;
 
     std::unordered_map<std::string, bool> m_logCategories_enabled;
+
+    bool expose_variable_start_values_whenever_possible = true;
 };
 
 // -----------------------------------------------------------------------------

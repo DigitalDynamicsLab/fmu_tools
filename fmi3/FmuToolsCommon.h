@@ -111,8 +111,7 @@ class FmuVariable {
           causality(_causality),
           variability(_variability),
           initial(_initial),
-          description(""),
-          has_start(false) {
+          description("") {
         // Readibility replacements
         bool c_structural = (causality == CausalityType::structuralParameter);
         bool c_parameter = (causality == CausalityType::parameter);
@@ -203,7 +202,6 @@ class FmuVariable {
         variability = other.variability;
         initial = other.initial;
         description = other.description;
-        has_start = other.has_start;
         m_dimensions = other.m_dimensions;
     }
 
@@ -222,7 +220,6 @@ class FmuVariable {
         variability = other.variability;
         initial = other.initial;
         description = other.description;
-        has_start = other.has_start;
         m_dimensions = other.m_dimensions;
 
         return *this;
@@ -240,8 +237,6 @@ class FmuVariable {
         return this->name == other.name;
     }
 
-    /// Return true if a start value is specified for this variable.
-    bool HasStartVal() const { return has_start; }
 
     /// Check if setting this variable is allowed given the current FMU state.
     bool IsSetAllowed(FmuMachineState fmu_machine_state) const {
@@ -372,8 +367,6 @@ class FmuVariable {
     /// - if m_dimensions[i].second == false (i.e. labelled as not 'fixed') then 'size' provides an fmi3ValueReference
     /// to another variable that will provides the size of this variable
     mutable DimensionsArrayType m_dimensions;
-
-    bool has_start;  // start value provided
 };
 
 }  // namespace fmi3

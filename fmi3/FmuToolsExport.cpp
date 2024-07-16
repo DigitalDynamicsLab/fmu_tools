@@ -15,12 +15,16 @@
 // DEVELOPER NOTES:
 // FmuVariableExport:
 // - Set|GetValue have a specific implementation for fmi<N>String in order to handle them internally as std::strings
-// - FmuVariableExport constness does not refer to the value nor the dimension of the pointed variable (that can indeed be changed), but to the 'binding' to that underlying variable
+// - FmuVariableExport constness does not refer to the value nor the dimension of the pointed variable (that can indeed
+// be changed), but to the 'binding' to that underlying variable
 // =============================================================================
 
 //// RADU TODO
 //// - add support for binary variables
 //// - complete FMI function implementations
+
+#define NOMINMAX
+#include <algorithm>
 
 #include <regex>
 #include <fstream>
@@ -29,6 +33,7 @@
 #include "FmuToolsRuntimeLinking.h"
 
 #include "rapidxml/rapidxml_ext.hpp"
+
 
 namespace fmi3 {
 
@@ -93,7 +98,6 @@ FmuVariableExport::FmuVariableExport(const VarbindType& varbind,
 
 FmuVariableExport::FmuVariableExport(const FmuVariableExport& other) : FmuVariable(other) {
     varbind = other.varbind;
-    start = other.start;
     allowed_start = other.allowed_start;
     required_start = other.required_start;
 }
@@ -106,7 +110,6 @@ FmuVariableExport& FmuVariableExport::operator=(const FmuVariableExport& other) 
     FmuVariable::operator=(other);
 
     varbind = other.varbind;
-    start = other.start;
     allowed_start = other.allowed_start;
     required_start = other.required_start;
 
@@ -128,68 +131,33 @@ void FmuVariableExport::GetValue(fmi3String* varptr, size_t nValues) const {
                                                 : varns::get<FunGetSet<std::string>>(this->varbind).first().c_str();
 }
 
-void FmuVariableExport::SetStartVal(fmi3String startval) {
-    if (!allowed_start)
-        return;
-    has_start = true;
-    this->start = std::string(startval);
-}
-
-void FmuVariableExport::ExposeCurrentValueAsStart() {
-    if (required_start) {
-        varns::visit([this](auto&& arg) { this->setStartFromVar(arg); }, this->varbind);
-
-        // if (is_pointer_variant(this->varbind)){
-        //     // check if string TODO: check if this check is needed .-)
-        //     if (varns::holds_alternative<fmi3String*>(this->varbind)) {
-        //         // TODO
-        //         varns::visit([this](auto& arg){ return this->start = arg; }, this->varbind);
-        //     }
-        //     else{
-        //         varns::visit([this](auto& arg){ return this->SetStartVal(*arg); }, this->varbind);
-        //     }
-        // }
-        // else{
-
-        //}
+void variant_to_string(const std::string* varb, size_t size, std::string& ss) {
+    for (size_t s = 0; s < size; ++s) {
+        ss = ss + *varb;
+        if (s + 1 < size)
+            ss = ss + " ";
     }
 }
 
-std::string FmuVariableExport::GetStartVal_toString() const {
+void variant_to_string(const FunGetSet<std::string> varb, size_t size, std::string& ss) {
+    ss = ss + varb.first();
+}
+
+std::string FmuVariableExport::GetStartVal_toString(size_t size) const {
     // TODO: C++17 would allow the overload operator in lambda
     // std::string start_string;
     // varns::visit([&start_string](auto&& arg) -> std::string {return start_string = std::to_string(*start_ptr)});
+    if (size == 0) {
+        bool success = GetSize(size);
+        if (!success)
+            throw std::runtime_error("GetStartVal_toString: cannot get size of variable.");
+    }
 
-    if (const fmi3Float32* start_ptr = varns::get_if<fmi3Float32>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3Float64* start_ptr = varns::get_if<fmi3Float64>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3Int8* start_ptr = varns::get_if<fmi3Int8>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3UInt8* start_ptr = varns::get_if<fmi3UInt8>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3Int16* start_ptr = varns::get_if<fmi3Int16>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3UInt16* start_ptr = varns::get_if<fmi3UInt16>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3Int32* start_ptr = varns::get_if<fmi3Int32>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3UInt32* start_ptr = varns::get_if<fmi3UInt32>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3Int64* start_ptr = varns::get_if<fmi3Int64>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3UInt64* start_ptr = varns::get_if<fmi3UInt64>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3Boolean* start_ptr = varns::get_if<fmi3Boolean>(&this->start))
-        return std::to_string(*start_ptr);
-    if (const fmi3Char* start_ptr = varns::get_if<fmi3Char>(&this->start))
-        return std::to_string(*start_ptr);
-    ////if (const fmi3Binary* start_ptr = varns::get_if<fmi3Binary>(&this->start))
-    ////    return std::to_string(*start_ptr);
-    if (const std::string* start_ptr = varns::get_if<std::string>(&this->start))
-        return *start_ptr;
+    std::string start_value;
 
-    return "";
+    varns::visit([&start_value, size](auto&& varb) { variant_to_string(varb, size, start_value); }, this->varbind);
+
+    return start_value;
 }
 
 // =============================================================================
@@ -326,9 +294,7 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
     // check that the attributes of the variable would allow a no-set variable
     ////const FmuMachineState tempFmuState = FmuMachineState::anySettableState;
 
-    newvar.ExposeCurrentValueAsStart();
-    // varns::visit([&newvar](auto var_ptr_expanded) { newvar.SetStartValIfRequired(var_ptr_expanded);},
-    // var_ptr);
+    newvar.ExposeStartValue(expose_variable_start_values_whenever_possible);
 
     std::pair<std::set<FmuVariableExport>::iterator, bool> ret = m_variables.insert(newvar);
     if (!ret.second)
@@ -637,15 +603,15 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
             }
         }
 
-        if (it->HasStartVal()) {
+        if (it->ExposeStartValue()) {
             if (it->GetType() == FmuVariable::Type::String || it->GetType() == FmuVariable::Type::Binary) {
-                // For variables of type 'string' or 'binary', the start values must be provided as a sequence of
-                // <Start> elements with a 'value' attribute (see Table 21 in the FMI 3.0 specification)
-                //// RADU TODO -- this is a temporary hack!
-                rapidxml::xml_node<>* startNode = doc_ptr->allocate_node(rapidxml::node_element, "Start");
-                stringbuf.push_back(it->GetStartVal_toString());
-                startNode->append_attribute(doc_ptr->allocate_attribute("value", stringbuf.back().c_str()));
-                varNode->append_node(startNode);
+                size_t dim_total = std::max(it->GetDimensions().size(), size_t(1));
+                for (auto dim = 0; dim < dim_total; ++ dim) {
+                    rapidxml::xml_node<>* startNode = doc_ptr->allocate_node(rapidxml::node_element, "Start");
+                    stringbuf.push_back(it->GetStartVal_toString());
+                    startNode->append_attribute(doc_ptr->allocate_attribute("value", stringbuf.back().c_str()));
+                    varNode->append_node(startNode);
+                }
             } else {
                 // For all other variables, the start value is given as an attribute of the variable element
                 stringbuf.push_back(it->GetStartVal_toString());
