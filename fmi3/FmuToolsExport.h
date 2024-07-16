@@ -16,7 +16,6 @@
 #ifndef FMUTOOLS_FMI3_EXPORT_H
 #define FMUTOOLS_FMI3_EXPORT_H
 
-
 #include <cassert>
 #include <vector>
 #include <array>
@@ -98,8 +97,6 @@ class FmuVariableExport : public FmuVariable {
 
     void Bind(VarbindType newvarbind) { varbind = newvarbind; }
 
-    //// TODO: provide overloading of Set|GetValue for std::vector (assuming m_dimension = {vector.size()})
-
     /// Set the value of this FMU variable (for all cases, except variables of type fmi3String).
     /// 'values' is expected to have a size of at least 'nValues'.
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi3String>::value>::type>
@@ -173,7 +170,8 @@ class FmuVariableExport : public FmuVariable {
     /// Force the exposure of the start value in the modelDescription (if allowed).
     void ExposeStartValue(bool val) const { expose_start = val; }
 
-    bool ExposeStartValue() const { return expose_start || required_start; }
+    /// Check if the start value should be exposed in the modelDescription.
+    bool IsStartValueExposed() const { return expose_start || required_start; }
 
   protected:
     bool allowed_start = true;
@@ -242,10 +240,9 @@ class FmuComponentBase {
 
     template <class T>
     fmi3Status fmi3GetVariable(const fmi3ValueReference vrs[], size_t nvr, T values[], size_t nValues) {
-        //// RADU TODO  --- what needs to change here for arrays variables?
-
         //// when multiple variables are requested it might be better to iterate through scalarVariables just once
         //// and check if they match any of the nvr requested variables
+        size_t values_idx = 0;
         for (size_t s = 0; s < nvr; ++s) {
             auto it = this->findByValref(vrs[s]);
 
@@ -256,16 +253,19 @@ class FmuComponentBase {
                 sendToLog(msg, fmi3Status::fmi3Error, "logStatusError");
                 return fmi3Status::fmi3Error;
             } else {
-                it->GetValue(&values[s], nValues);
+                size_t var_size = GetVariableSize(*it);
+                it->GetValue(&values[values_idx], var_size);
+                values_idx += var_size;
             }
         }
-        return fmi3Status::fmi3OK;
+
+        fmi3Status status = (values_idx == nValues) ? fmi3Status::fmi3OK : fmi3Status::fmi3Error;
+        return status;
     }
 
     template <class T>
     fmi3Status fmi3SetVariable(const fmi3ValueReference vrs[], size_t nvr, const T values[], size_t nValues) {
-        //// RADU TODO  --- what needs to change here for arrays variables?
-
+        size_t values_idx = 0;
         for (size_t s = 0; s < nvr; ++s) {
             std::set<FmuVariableExport>::iterator it = this->findByValref(vrs[s]);
 
@@ -282,11 +282,14 @@ class FmuComponentBase {
                 sendToLog(msg, fmi3Status::fmi3Error, "logStatusError");
                 return fmi3Status::fmi3Error;
             } else {
-                it->SetValue(values[s], nValues);
+                size_t var_size = GetVariableSize(*it);
+                it->SetValue(values[values_idx], var_size);
+                values_idx += var_size;
             }
         }
 
-        return fmi3Status::fmi3OK;
+        fmi3Status status = (values_idx == nValues) ? fmi3Status::fmi3OK : fmi3Status::fmi3Error;
+        return status;
     }
 
     /// Adds a scalar variable to the list of variables of the FMU.

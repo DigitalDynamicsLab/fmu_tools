@@ -603,7 +603,7 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
             }
         }
 
-        if (it->ExposeStartValue()) {
+        if (it->IsStartValueExposed()) {
             if (it->GetType() == FmuVariable::Type::String || it->GetType() == FmuVariable::Type::Binary) {
                 size_t dim_total = std::max(it->GetDimensions().size(), size_t(1));
                 for (auto dim = 0; dim < dim_total; ++ dim) {
