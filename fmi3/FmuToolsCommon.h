@@ -102,17 +102,17 @@ class FmuVariable {
                 const DimensionsArrayType& _dimensions = DimensionsArrayType(),
                 CausalityType _causality = CausalityType::local,
                 VariabilityType _variability = VariabilityType::continuous,
-        InitialType _initial = InitialType::none)
+                InitialType _initial = InitialType::none)
         : name(_name),
-        valueReference(0),
-        unitname("1"),
-        type(_type),
-        m_dimensions(_dimensions),
-        causality(_causality),
-        variability(_variability),
-        initial(_initial),
-        description(""),
-        has_start(false) {
+          valueReference(0),
+          unitname("1"),
+          type(_type),
+          m_dimensions(_dimensions),
+          causality(_causality),
+          variability(_variability),
+          initial(_initial),
+          description(""),
+          has_start(false) {
         // Readibility replacements
         bool c_structural = (causality == CausalityType::structuralParameter);
         bool c_parameter = (causality == CausalityType::parameter);
@@ -139,7 +139,7 @@ class FmuVariable {
             ((v_constant) && (c_output || c_local)) ||                    //
             ((v_fixed || v_tunable) && (c_structural || c_parameter)) ||  //
             ((v_discrete || v_continuous) && (c_input))                   //
-            ) {
+        ) {
             if (i_none)
                 initial = InitialType::exact;
             else if (!i_exact)
@@ -205,7 +205,6 @@ class FmuVariable {
         description = other.description;
         has_start = other.has_start;
         m_dimensions = other.m_dimensions;
-
     }
 
     // Copy assignment operator
@@ -251,18 +250,18 @@ class FmuVariable {
         if (variability != VariabilityType::constant) {
             if (initial == InitialType::approx)
                 return fmu_machine_state == FmuMachineState::instantiated ||
-                fmu_machine_state == FmuMachineState::anySettableState;
+                       fmu_machine_state == FmuMachineState::anySettableState;
             else if (initial == InitialType::exact)
                 return fmu_machine_state == FmuMachineState::instantiated ||
-                fmu_machine_state == FmuMachineState::initializationMode ||
-                fmu_machine_state == FmuMachineState::anySettableState;
+                       fmu_machine_state == FmuMachineState::initializationMode ||
+                       fmu_machine_state == FmuMachineState::anySettableState;
         }
 
         if (causality == CausalityType::input ||
             (causality == CausalityType::parameter && variability == VariabilityType::tunable))
             return fmu_machine_state == FmuMachineState::initializationMode ||
-            fmu_machine_state == FmuMachineState::stepCompleted ||
-            fmu_machine_state == FmuMachineState::anySettableState;
+                   fmu_machine_state == FmuMachineState::stepCompleted ||
+                   fmu_machine_state == FmuMachineState::anySettableState;
 
         return false;
     }
@@ -271,52 +270,52 @@ class FmuVariable {
     /// Return a string with the name of the specified FMU variable type.
     static std::string Type_toString(Type type) {
         switch (type) {
-        case Type::Float32:
-            return "Float32";
-            break;
-        case Type::Float64:
-            return "Float64";
-            break;
-        case Type::Int8:
-            return "Int8";
-            break;
-        case Type::Int16:
-            return "Int16";
-            break;
-        case Type::Int32:
-            return "Int32";
-            break;
-        case Type::Int64:
-            return "Int64";
-            break;
-        case Type::UInt8:
-            return "UInt8";
-            break;
-        case Type::UInt16:
-            return "UInt16";
-            break;
-        case Type::UInt32:
-            return "UInt32";
-            break;
-        case Type::UInt64:
-            return "UInt64";
-            break;
-        case Type::Boolean:
-            return "Boolean";
-            break;
-        case Type::String:
-            return "String";
-            break;
-        case Type::Binary:
-            return "Unknown";
-            break;
-        case Type::Unknown:
-            return "Unknown";
-            break;
-        default:
-            throw std::runtime_error("Type_toString: received bad type.");
+            case Type::Float32:
+                return "Float32";
+                break;
+            case Type::Float64:
+                return "Float64";
+                break;
+            case Type::Int8:
+                return "Int8";
+                break;
+            case Type::Int16:
+                return "Int16";
+                break;
+            case Type::Int32:
+                return "Int32";
+                break;
+            case Type::Int64:
+                return "Int64";
+                break;
+            case Type::UInt8:
+                return "UInt8";
+                break;
+            case Type::UInt16:
+                return "UInt16";
+                break;
+            case Type::UInt32:
+                return "UInt32";
+                break;
+            case Type::UInt64:
+                return "UInt64";
+                break;
+            case Type::Boolean:
+                return "Boolean";
+                break;
+            case Type::String:
+                return "String";
+                break;
+            case Type::Binary:
+                return "Unknown";
+                break;
+            case Type::Unknown:
+                return "Unknown";
+                break;
+            default:
+                throw std::runtime_error("Type_toString: received bad type.");
 
-            break;
+                break;
         }
         return "";
     }
@@ -334,6 +333,28 @@ class FmuVariable {
     Type GetType() const { return type; }
 
     DimensionsArrayType GetDimensions() const { return m_dimensions; }
+    bool IsScalar() const { return m_dimensions.empty(); }
+
+    /// Try to retrieve the size of the variable.
+    /// Returns true if the size can be retrieved (i.e. the dimensions are fixed and not given by other variables),
+    /// false otherwise.
+    bool GetSize(size_t& size) const {
+        if (m_dimensions.empty()) {
+            size = 1;
+            return true;
+        }
+
+        size = 1;
+        for (const auto& dim : m_dimensions) {
+            if (dim.second) {
+                size *= dim.first;
+            } else {
+                return false;
+            }
+        }
+
+        return size;
+    }
 
   protected:
     Type type = Type::Unknown;          // variable type

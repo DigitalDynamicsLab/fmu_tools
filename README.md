@@ -83,7 +83,8 @@ The FMUs gets automatically unzipped.
 - [x] keep C++14 compliance (_filesystem_ and _variant_ custom C++14 compliant implementation are offered)
 - [x] check compatibility of causality|variability|initial attributes for variables
 - [x] accept setter/getter function instead of the usual pointer to variable
-- [x] allow non-default types through 'fmi2TypesPlatform.h'
+- [x] allow non-default types through 'fmi[2|3]TypesPlatform.h'
+- [ ] setting|getting more valueReferences at once
 
 ### Export Features
 - [x] register local variables as FMU variables

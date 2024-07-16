@@ -102,21 +102,27 @@ class FmuVariableExport : public FmuVariable {
     /// Set the value of this FMU variable (for all cases, except variables of type fmi3String).
     /// 'values' is expected to have a size of at least 'nValues'.
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi3String>::value>::type>
-    void SetValue(const T& values, size_t nValues) const {
+    void SetValue(const T& values, size_t nValues = 0) const {
         if (is_pointer_variant(this->varbind)) {
-            assert(((m_dimensions.size() == 0 && nValues == 1) || m_dimensions.size() > 0) &&
+            assert((nValues == 0 || (IsScalar() && nValues == 1) || m_dimensions.size() > 0) &&
                    ("Requested to get the value of " + std::to_string(nValues) +
                     " coefficients for variable with valueReference: " + std::to_string(valueReference) +
                     " but it seems that it is a scalar.")
                        .c_str());
 
             T* varptr_this = varns::get<T*>(this->varbind);
-            if (m_dimensions.size() == 0)
-                *varptr_this = values;
-            else {
-                for (size_t size = 0; size < nValues; size++) {
-                    varptr_this[size] = (&values)[size];
-                }
+
+            // try to fetch the dimension of the variable
+            if (nValues == 0) {
+                bool success = GetSize(nValues);
+                if (!success)
+                    throw std::runtime_error(
+                        "SetValue has been called with 'nValues==0', but the variable dimensions are given by other "
+                        "variables and cannot be determined automatically.");
+            }
+
+            for (size_t size = 0; size < nValues; size++) {
+                varptr_this[size] = (&values)[size];
             }
         } else {
             // TODO: consider multi-dimensional variables
@@ -126,7 +132,7 @@ class FmuVariableExport : public FmuVariable {
 
     /// Set the value of this FMU variable of type fmi3String.
     /// Currently only single values are supported.
-    void SetValue(const fmi3String& val, size_t nValues) const;
+    void SetValue(const fmi3String& val, size_t nValues = 0) const;
 
     /// Get the value and dimensions of this FMU variable (for all cases, except variables of type fmi3String).
     /// The 'dimensions' argument is optional and will be filled with the sizes along different dimensions.
@@ -134,13 +140,23 @@ class FmuVariableExport : public FmuVariable {
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi3String>::value>::type>
     void GetValue(T* varptr, size_t nValues) const {
         if (is_pointer_variant(this->varbind)) {
-            assert(((m_dimensions.size() == 0 && nValues == 1) || m_dimensions.size() > 0) &&
+            assert(((IsScalar() && nValues == 1) || m_dimensions.size() > 0) &&
                    ("Requested to get the value of " + std::to_string(nValues) +
                     " coefficients for variable with valueReference: " + std::to_string(valueReference) +
                     " but it seems that it is a scalar.")
                        .c_str());
 
             T* varptr_this = varns::get<T*>(this->varbind);
+
+            // try to fetch the dimension of the variable
+            if (nValues == 0) {
+                bool success = GetSize(nValues);
+                if (!success)
+                    throw std::runtime_error(
+                        "GetValue has been called with 'nValues==0', but the variable dimensions are given by other "
+                        "variables and cannot be determined automatically.");
+            }
+
             for (size_t size = 0; size < nValues; size++) {
                 varptr[size] = varptr_this[size];
             }
@@ -290,7 +306,7 @@ class FmuComponentBase {
         return fmi3Status::fmi3OK;
     }
 
-    /// Adds an array variable to the list of variables of the FMU.
+    /// Adds a scalar variable to the list of variables of the FMU.
     /// The start value is automatically grabbed from the variable itself.
     const FmuVariableExport& AddFmuVariable(
         const FmuVariableExport::VarbindType& varbind,
@@ -305,7 +321,7 @@ class FmuComponentBase {
                               description, causality, variability, initial);
     }
 
-    /// Adds a scalar variable to the list of variables of the FMU.
+    /// Adds an array variable to the list of variables of the FMU.
     /// The start value is automatically grabbed from the variable itself.
     const FmuVariableExport& AddFmuVariable(
         const FmuVariableExport::VarbindType& varbind,
@@ -489,7 +505,21 @@ class FmuComponentBase {
     void sendToLog(std::string msg, fmi3Status status, std::string msg_cat);
 
     std::set<FmuVariableExport>::iterator findByValref(fmi3ValueReference vr);
+    std::set<FmuVariableExport>::const_iterator findByValref(fmi3ValueReference vr) const;
     std::set<FmuVariableExport>::iterator findByName(const std::string& name);
+
+    /// Get the current dimensions of a variable.
+    std::vector<size_t> GetVariableDimensions(const FmuVariable& var) const;
+
+    /// Get the current dimensions of a variable given its valueReference.
+    /// If the dimension depends on another variables, these variables needs to be added first.
+    std::vector<size_t> GetVariableDimensions(fmi3ValueReference valref) const;
+
+    /// Get the current total size of a variable.
+    size_t GetVariableSize(const FmuVariable& var) const;
+
+    /// Get the current total size of a variable.
+    size_t GetVariableSize(fmi3ValueReference valref) const { return GetVariableSize(*findByValref(valref)); }
 
     void executePreStepCallbacks();
     void executePostStepCallbacks();

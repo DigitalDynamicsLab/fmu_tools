@@ -113,8 +113,7 @@ FmuVariableExport& FmuVariableExport::operator=(const FmuVariableExport& other) 
     return *this;
 }
 
-void FmuVariableExport::SetValue(const fmi3String& val,
-                                 size_t nValues) const {
+void FmuVariableExport::SetValue(const fmi3String& val, size_t nValues) const {
     if (nValues > 1)
         throw std::runtime_error("Cannot set multiple values for fmi3Strings yet.");
 
@@ -643,9 +642,6 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
                 // For variables of type 'string' or 'binary', the start values must be provided as a sequence of
                 // <Start> elements with a 'value' attribute (see Table 21 in the FMI 3.0 specification)
                 //// RADU TODO -- this is a temporary hack!
-                rapidxml::xml_node<>* dimNode = doc_ptr->allocate_node(rapidxml::node_element, "Dimension");
-                dimNode->append_attribute(doc_ptr->allocate_attribute("start", "1"));
-                varNode->append_node(dimNode);
                 rapidxml::xml_node<>* startNode = doc_ptr->allocate_node(rapidxml::node_element, "Start");
                 stringbuf.push_back(it->GetStartVal_toString());
                 startNode->append_attribute(doc_ptr->allocate_attribute("value", stringbuf.back().c_str()));
@@ -758,6 +754,21 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
 
 // -----------------------------------------------------------------------------
 
+std::vector<size_t> FmuComponentBase::GetVariableDimensions(fmi3ValueReference valref) const {
+    return GetVariableDimensions(*findByValref(valref));
+}
+
+size_t FmuComponentBase::GetVariableSize(const FmuVariable& var) const {
+    if (var.GetDimensions().size() == 0)
+        return 1;
+
+    size_t size = 1;
+    for (const auto& dim : GetVariableDimensions(var)) {
+        size *= dim;
+    }
+    return size;
+}
+
 void FmuComponentBase::executePreStepCallbacks() {
     for (auto& callb : m_preStepCallbacks) {
         callb();
@@ -775,9 +786,38 @@ std::set<FmuVariableExport>::iterator FmuComponentBase::findByValref(fmi3ValueRe
     return std::find_if(m_variables.begin(), m_variables.end(), predicate_samevalref);
 }
 
+std::set<FmuVariableExport>::const_iterator FmuComponentBase::findByValref(fmi3ValueReference vr) const {
+    auto predicate_samevalref = [vr](const FmuVariable& var) { return var.GetValueReference() == vr; };
+    return std::find_if(m_variables.begin(), m_variables.end(), predicate_samevalref);
+}
+
 std::set<FmuVariableExport>::iterator FmuComponentBase::findByName(const std::string& name) {
     auto predicate_samename = [name](const FmuVariable& var) { return !var.GetName().compare(name); };
     return std::find_if(m_variables.begin(), m_variables.end(), predicate_samename);
+}
+
+std::vector<size_t> FmuComponentBase::GetVariableDimensions(const FmuVariable& var) const {
+    auto dim = var.GetDimensions();
+
+    // case of scalar variable
+    if (dim.size() == 0)
+        return std::vector<size_t>({1});
+
+    std::vector<size_t> sizes;
+    for (const auto& d : dim) {
+        if (d.second == true)
+            // the size of the current dimension is fixed
+            sizes.push_back(d.first);
+        else {
+            // the size of the current dimension is given by another variable
+            size_t cur_size;
+            auto it_dim = findByValref(static_cast<fmi3ValueReference>(d.first));
+            it_dim->GetValue(&cur_size, 1);
+            sizes.push_back(cur_size);
+        }
+    }
+
+    return sizes;
 }
 
 // -----------------------------------------------------------------------------
