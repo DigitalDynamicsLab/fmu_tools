@@ -84,9 +84,8 @@ The FMUs gets automatically unzipped.
 - [x] check compatibility of causality|variability|initial attributes for variables
 - [x] accept setter/getter function instead of the usual pointer to variable
 - [x] allow non-default types through 'fmi[2|3]TypesPlatform.h'
-- [ ] setting|getting more valueReferences at once
+- [X] handling fmi3Binary
 - [ ] handling enumerations
-- [ ] handling fmi3Binary
 
 ### Export Features
 - [x] register local variables as FMU variables
@@ -101,6 +100,7 @@ The FMUs gets automatically unzipped.
 - [x] GUID checks (optional)
 - [x] additional function to easily retrieve variables through names instead of valueRefs
 - [ ] loading start value from XML
+- [ ] setting|getting more valueReferences at once
 
 ### Extras and Testing
 - [x] test exported FMUs through the importer

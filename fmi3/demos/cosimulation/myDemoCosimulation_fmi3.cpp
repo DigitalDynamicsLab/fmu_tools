@@ -120,12 +120,23 @@ int main(int argc, char* argv[]) {
     // Getting FMU variables through custom fmu-tools functions, directly using the variable name
     auto status = my_fmu.GetVariable("m", &val_real);
 
+    // Boolean data
     fmi3Boolean val_bool;
     fmi3ValueReference valrefs_bool[1] = {15};
     for (auto valref : valrefs_bool) {
         my_fmu.GetVariable(valref, &val_bool);
         std::cout << "Boolean: valref: " << valref << " | val: " << val_bool << std::endl;
     }
+
+    // String array as std::vector<std::string>
+    std::vector<std::string> val_string_array;
+    fmi3ValueReference valrefs_string_array[1] = {11};
+    my_fmu.GetVariable(valrefs_string_array[0], val_string_array);
+    std::cout << "String array: valref: " << valrefs_string_array[0] << " | val: ";
+    for (auto el = 0; el < val_string_array.size(); ++el) {
+        std::cout << val_string_array[el] << std::endl;
+    }
+    std::cout << std::endl;
 
     // Binary Data with direct access
     const size_t nValueReferences = 2;

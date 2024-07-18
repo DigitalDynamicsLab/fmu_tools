@@ -249,6 +249,9 @@ class FmuUnit {
 
     fmi3Status SetVariable(fmi3ValueReference vr, const std::vector<fmi3Byte>& values) noexcept(false);
 
+    /// Set the value of a scalar fmi3Binary variable.
+    fmi3Status SetVariable(fmi3ValueReference vr, fmi3Binary& value, size_t valueSize) noexcept(false);
+
     fmi3Status SetVariable(fmi3ValueReference vr,
                            const std::vector<fmi3Binary>& values,
                            const std::vector<size_t>& valueSizes) noexcept(false);
@@ -1304,6 +1307,22 @@ fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const std::vector<fmi3Byt
            "Developer Error: SetVariable for std::vector<fmi3Byte> has been called for the wrong FMI variable type");
     const fmi3Binary b = values.data();  // TODO: check why this cannot be embedded in the call
     fmi3Status status = this->_fmi3SetBinary(this->instance, &vr, nValueReferences, valueSizes.data(), &b, nValues);
+
+    return status;
+}
+
+fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, fmi3Binary& value, size_t valueSize) noexcept(false) {
+    FmuVariableImport& var = m_variables.at(vr);
+
+    size_t nValues = GetVariableSize(var);
+    assert(nValues == 1 && "The FMU variable is expected to be a scalar but it is an array.");
+
+    // only one variable will be parsed at a time
+    const size_t nValueReferences = 1;
+
+    assert(var.GetType() == FmuVariable::Type::Binary &&
+           "Developer Error: SetVariable for fmi3Binary& has been called for the wrong FMI variable type");
+    fmi3Status status = this->_fmi3SetBinary(this->instance, &vr, nValueReferences, &valueSize, &value, nValues);
 
     return status;
 }
