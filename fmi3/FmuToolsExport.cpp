@@ -143,6 +143,7 @@ void FmuVariableExport::SetValue(const fmi3Binary* val, size_t nValues, const si
                "declared using {, true}.");
         assert(nValues == var_size && "The user provided nValues that is not matching the size of the variable.");
 
+        // copy values
         for (size_t s = 0; s < nValues; s++) {
             varptr_this[s].resize(valueSize_ptr[s]);
             for (size_t inner_sel = 0; inner_sel < valueSize_ptr[s]; inner_sel++) {
@@ -361,9 +362,32 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
 
     // create new variable
     // check if same-name variable exists
-    std::set<FmuVariableExport>::iterator it = this->findByName(name);
+    std::set<FmuVariableExport>::iterator it = findByName(name);
     if (it != m_variables.end())
         throw std::runtime_error("Cannot add two FMU variables with the same name.");
+
+    // check if dimensions are valid
+    for (auto& dim : dimensions) {
+        if (dim.second == false) {
+            std::set<FmuVariableExport>::iterator it = findByValref(dim.first);
+            if (it == m_variables.end()) {
+                sendToLog("WARNING: the variable with name '" + name +
+                              "' have dimensions that depend on a variable not yet added to the FMU.\n",
+                          fmi3Status::fmi3Warning, "logStatusWarning");
+            } else {
+                if (it->GetType() != FmuVariable::Type::UInt64) {
+                    sendToLog("WARNING: the variable with name '" + name +
+                                  "' have dimensions that depend on a variable that is not of type UInt64.\n",
+                              fmi3Status::fmi3Warning, "logStatusWarning");
+                }
+                if (it->GetVariability() != FmuVariable::VariabilityType::constant && it->GetCausality() != FmuVariable::CausalityType::structuralParameter) {
+                    sendToLog("WARNING: the variable with name '" + name +
+                                  "' have dimensions that depend on a variable that is not constant nor a structural parameter.\n",
+                              fmi3Status::fmi3Warning, "logStatusWarning");
+                }
+            }
+        }
+    }
 
     FmuVariableExport newvar(varbind, name, scalartype, dimensions, causality, variability, initial);
     newvar.SetUnitName(unitname);
