@@ -327,7 +327,12 @@ class FmuVariable {
     void SetUnitName(const std::string& _unitname) { unitname = _unitname; }
     Type GetType() const { return type; }
 
+    /// [INTERNAL] Return the dimensions array.
+    /// WARNING: the dimension array might be empty in case of scalar arrays.
+    /// This method is intended for internal use only.
+    /// In order to retrieve a more user-friendly representation of the dimensions, use FmuComponentBase::GetVariableDimensions().
     DimensionsArrayType GetDimensions() const { return m_dimensions; }
+
     bool IsScalar() const { return m_dimensions.empty(); }
 
     /// Try to retrieve the size of the variable.

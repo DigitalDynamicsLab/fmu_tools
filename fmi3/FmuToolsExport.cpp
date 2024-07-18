@@ -34,7 +34,6 @@
 
 #include "rapidxml/rapidxml_ext.hpp"
 
-
 namespace fmi3 {
 
 // =============================================================================
@@ -116,48 +115,128 @@ FmuVariableExport& FmuVariableExport::operator=(const FmuVariableExport& other) 
     return *this;
 }
 
-void FmuVariableExport::SetValue(const fmi3String& val, size_t nValues) const {
+void FmuVariableExport::SetValue(const fmi3String* val, size_t nValues) const {
     if (nValues > 1)
         throw std::runtime_error("Cannot set multiple values for fmi3Strings yet.");
 
     if (is_pointer_variant(this->varbind))
-        *varns::get<std::string*>(this->varbind) = std::string(val);
+        *varns::get<std::string*>(this->varbind) = std::string(*val);
     else
-        varns::get<FunGetSet<std::string>>(this->varbind).second(std::string(val));
+        varns::get<FunGetSet<std::string>>(this->varbind).second(std::string(*val));
 }
 
-void FmuVariableExport::GetValue(fmi3String* varptr, size_t nValues) const {
-    *varptr = is_pointer_variant(this->varbind) ? varns::get<std::string*>(this->varbind)->c_str()
-                                                : varns::get<FunGetSet<std::string>>(this->varbind).first().c_str();
-}
+void FmuVariableExport::SetValue(const fmi3Binary* val, size_t nValues, const size_t* valueSize_ptr) const {
+    if (is_pointer_variant(this->varbind)) {
+        assert((nValues == 0 || (IsScalar() && nValues == 1) || m_dimensions.size() > 0) &&
+               ("Requested to get the value of " + std::to_string(nValues) +
+                " coefficients for variable with valueReference: " + std::to_string(valueReference) +
+                " but it seems that it is a scalar.")
+                   .c_str());
 
-void variant_to_string(const std::string* varb, size_t size, std::string& ss) {
-    for (size_t s = 0; s < size; ++s) {
-        ss = ss + *varb;
-        if (s + 1 < size)
-            ss = ss + " ";
+        std::vector<fmi3Byte>* varptr_this = varns::get<std::vector<fmi3Byte>*>(this->varbind);
+
+        // try to fetch the dimension of the variable
+        size_t var_size;
+        bool success = GetSize(var_size);
+        assert(success &&
+               "Developer Error: the size of a fmi3Binary variable could not be determined. Please ensure it has been "
+               "declared using {, true}.");
+        assert(nValues == var_size && "The user provided nValues that is not matching the size of the variable.");
+
+        for (size_t s = 0; s < nValues; s++) {
+            varptr_this[s].resize(valueSize_ptr[s]);
+            for (size_t inner_sel = 0; inner_sel < valueSize_ptr[s]; inner_sel++) {
+                varptr_this[s][inner_sel] = val[s][inner_sel];
+            }
+        }
+    } else {
+        // TODO: consider multi-dimensional variables
+        throw std::runtime_error(
+            "Developer Error: SetValue has been called for a fmi3Binary variable, but the "
+            "variable is not of type fmi3Binary.");
     }
 }
 
-void variant_to_string(const FunGetSet<std::string> varb, size_t size, std::string& ss) {
-    ss = ss + varb.first();
+void FmuVariableExport::GetValue(fmi3String* varptr_ext, size_t nValues) const {
+    if (is_pointer_variant(this->varbind)) {
+        // the fmi3Binary is implemented by default as an std::vector<fmi3Byte>
+        std::string* varptr_this = varns::get<std::string*>(this->varbind);
+        size_t var_size;
+        bool success = GetSize(var_size);
+        assert(success &&
+               "Developer Error: the size of a fmi3Binary variable could not be determined. Please ensure it has been "
+               "declared using {, true}.");
+        assert(nValues == var_size && "The user provided nValues that is not matching the size of the variable.");
+        for (size_t size = 0; size < var_size; size++) {
+            varptr_ext[size] = varptr_this[size].data();  // TODO: check if c_str or data is needed
+        }
+
+    } else {
+        // returns the address of the underlying string, does not copy any value
+        *varptr_ext =
+            varns::get<FunGetSet<std::string>>(this->varbind).first().data();  // TODO: check if c_str or data is needed
+    }
 }
 
-std::string FmuVariableExport::GetStartVal_toString(size_t size) const {
+void FmuVariableExport::GetValue(fmi3Binary* varptr_ext, size_t nValues, size_t* valueSize_ptr) const {
+    if (is_pointer_variant(this->varbind)) {
+        // the fmi3Binary is implemented by default as an std::vector<fmi3Byte>
+        std::vector<fmi3Byte>* varptr_this = varns::get<std::vector<fmi3Byte>*>(this->varbind);
+        size_t var_size;
+        bool success = GetSize(var_size);
+        assert(success &&
+               "Developer Error: the size of a fmi3Binary variable could not be determined. Please ensure it has been "
+               "declared using {, true}.");
+        assert(nValues == var_size && "The user provided nValues that is not matching the size of the variable.");
+        for (size_t size = 0; size < var_size; size++) {
+            varptr_ext[size] = varptr_this[size].data();
+            valueSize_ptr[size] = varptr_this[size].size();
+        }
+
+    } else {
+        throw std::runtime_error("FunSetGet not implemented for fmi3Binary type.");
+    }
+}
+
+void variant_to_string(const std::string* varb, size_t id, std::stringstream& ss) {
+    ss << varb[id];
+}
+
+void variant_to_string(const std::vector<fmi3Byte>* varb, size_t id, std::stringstream& ss) {
+    // TODO: can be done like ss << varb[id]?
+    size_t size = varb[id].size();
+    ss << std::hex;
+    for (size_t s = 0; s < size; ++s) {
+        ss << static_cast<unsigned int>(varb[id][s]);
+    }
+    ss << std::dec;
+}
+
+void variant_to_string(const FunGetSet<std::string> varb, size_t size, std::stringstream& ss) {
+    ss << varb.first();
+}
+
+std::string FmuVariableExport::GetStartValAsString(size_t size_id) const {
     // TODO: C++17 would allow the overload operator in lambda
     // std::string start_string;
     // varns::visit([&start_string](auto&& arg) -> std::string {return start_string = std::to_string(*start_ptr)});
-    if (size == 0) {
-        bool success = GetSize(size);
-        if (!success)
-            throw std::runtime_error("GetStartVal_toString: cannot get size of variable.");
+
+    std::stringstream start_value;
+
+    if (type == Type::String || type == Type::Binary) {
+        size_t id = size_id;  // alias, just to make the code more readable
+        varns::visit([&start_value, id](auto&& varb) { variant_to_string(varb, id, start_value); }, this->varbind);
+    } else {
+        size_t size = size_id;  // alias, just to make the code more readable
+        if (size == 0) {
+            bool success = GetSize(size);
+            if (!success)
+                throw std::runtime_error("GetStartValAsString: cannot get size of variable.");
+        }
+        varns::visit([&start_value, size](auto&& varb) { variant_to_string(varb, size, start_value); }, this->varbind);
     }
-
-    std::string start_value;
-
-    varns::visit([&start_value, size](auto&& varb) { variant_to_string(varb, size, start_value); }, this->varbind);
-
-    return start_value;
+    std::string s = start_value.str();
+    return start_value.str();
 }
 
 // =============================================================================
@@ -588,7 +667,7 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
             !it->GetUnitName().empty())
             varNode->append_attribute(doc_ptr->allocate_attribute("unit", it->GetUnitName().c_str()));
 
-        // check if the variable is an array
+        // Expose Dimension node (if array)
         if (it->GetDimensions().size() > 0) {
             for (auto& dim : it->GetDimensions()) {
                 rapidxml::xml_node<>* dimNode = doc_ptr->allocate_node(rapidxml::node_element, "Dimension");
@@ -603,18 +682,18 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
             }
         }
 
+        // Expose start values
         if (it->IsStartValueExposed()) {
             if (it->GetType() == FmuVariable::Type::String || it->GetType() == FmuVariable::Type::Binary) {
-                size_t dim_total = std::max(it->GetDimensions().size(), size_t(1));
-                for (auto dim = 0; dim < dim_total; ++ dim) {
+                for (auto el_sel = 0; el_sel < GetVariableSize(*it); ++el_sel) {
                     rapidxml::xml_node<>* startNode = doc_ptr->allocate_node(rapidxml::node_element, "Start");
-                    stringbuf.push_back(it->GetStartVal_toString());
+                    stringbuf.push_back(it->GetStartValAsString(el_sel));
                     startNode->append_attribute(doc_ptr->allocate_attribute("value", stringbuf.back().c_str()));
                     varNode->append_node(startNode);
                 }
             } else {
                 // For all other variables, the start value is given as an attribute of the variable element
-                stringbuf.push_back(it->GetStartVal_toString());
+                stringbuf.push_back(it->GetStartValAsString(GetVariableSize(*it)));
                 varNode->append_attribute(doc_ptr->allocate_attribute("start", stringbuf.back().c_str()));
             }
         }
@@ -1170,8 +1249,8 @@ fmi3Status fmi3GetBinary(fmi3Instance instance,
                          size_t valueSizes[],
                          fmi3Binary values[],
                          size_t nValues) {
-    //// RADU TODO
-    return fmi3Status::fmi3Error;
+    return reinterpret_cast<FmuComponentBase*>(instance)->fmi3GetVariable(valueReferences, nValueReferences, valueSizes,
+                                                                          values, nValues);
 }
 
 fmi3Status fmi3GetClock(fmi3Instance instance,
@@ -1298,8 +1377,8 @@ fmi3Status fmi3SetBinary(fmi3Instance instance,
                          const size_t valueSizes[],
                          const fmi3Binary values[],
                          size_t nValues) {
-    //// RADU TODO
-    return fmi3Status::fmi3Error;
+    return reinterpret_cast<FmuComponentBase*>(instance)->fmi3SetVariable(valueReferences, nValueReferences, valueSizes,
+                                                                          values, nValues);
 }
 
 fmi3Status fmi3SetClock(fmi3Instance instance,

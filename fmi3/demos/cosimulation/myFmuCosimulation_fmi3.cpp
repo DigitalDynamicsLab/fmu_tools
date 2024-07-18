@@ -79,7 +79,10 @@ myFmuComponent::myFmuComponent(FmuType fmiInterfaceType,
           {"logStatusWarning", "logStatusDiscard", "logStatusError", "logStatusFatal", "logStatusPending"}),
       x_dd(0),
       theta_dd(0),
-      A{{0.0, 0.1}, {1.0, 1.1}, {2.0, 2.1}} {
+      A{{0.0, 0.1}, {1.0, 1.1}, {2.0, 2.1}},
+      binvar{0xF, 0xE, 0xD, 0xC, 0xB, 0xA},
+      binvararray{{0x1, 0x1, 0x1, 0xF}, {0x1, 0x1, 0xF, 0x1}, {0x1, 0xF, 0x1, 0x1}},
+      stringarray{"hello", "ciao", "bonjour"} {
     initializeType(fmiInterfaceType);
 
     // Define new units if needed
@@ -124,6 +127,18 @@ myFmuComponent::myFmuComponent(FmuType fmiInterfaceType,
                    FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
                    FmuVariable::InitialType::exact);
 
+    AddFmuVariable(&stringarray[0], "stringarray", FmuVariable::Type::String, {{3, true}}, "1", "string array",
+                   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed,
+                   FmuVariable::InitialType::exact);
+
+    AddFmuVariable(&binvar, "binvar", FmuVariable::Type::Binary, "1", "generic binary",
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
+                   FmuVariable::InitialType::exact);
+
+    AddFmuVariable(binvararray.data(), "binvararray", FmuVariable::Type::Binary, {{3, true}}, "1", "generic binary array",
+                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
+                   FmuVariable::InitialType::exact);
+
     /// One can also pass std::functions to get/set the value of the variable if queried
     // AddFmuVariable(std::make_pair(
     //     std::function<fmi3Float64()>([this]() -> fmi3Float64 {
@@ -144,8 +159,8 @@ myFmuComponent::myFmuComponent(FmuType fmiInterfaceType,
 
     // Set name of file expected to be present in the FMU resources directory
     filename = "myData.txt";
-    AddFmuVariable(&filename, "filename", FmuVariable::Type::String, "kg", "additional mass on cart",  //
-                   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);        //
+    AddFmuVariable(&filename, "filename", FmuVariable::Type::String, "1", "additional mass on cart",  //
+                   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed);       //
 
     // Variable dependencies must be specified for:
     // - variables with causality 'output' for which 'initial' is 'approx' or 'calculated'

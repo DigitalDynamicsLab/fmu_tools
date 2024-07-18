@@ -85,6 +85,8 @@ The FMUs gets automatically unzipped.
 - [x] accept setter/getter function instead of the usual pointer to variable
 - [x] allow non-default types through 'fmi[2|3]TypesPlatform.h'
 - [ ] setting|getting more valueReferences at once
+- [ ] handling enumerations
+- [ ] handling fmi3Binary
 
 ### Export Features
 - [x] register local variables as FMU variables

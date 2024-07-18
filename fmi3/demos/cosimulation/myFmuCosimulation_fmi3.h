@@ -67,7 +67,10 @@ class myFmuComponent : public fmi3::FmuComponentBase {
     double M = 1.0;
     const double g = 9.81;
 
-    double A[3][2];
+    double A[3][2]; 
+    std::vector<fmi3Byte> binvar;
+    std::vector<std::vector<fmi3Byte>> binvararray;
+    std::vector<std::string> stringarray;
 
     fmi3Boolean approximateOn = fmi3False;
     std::string filename;

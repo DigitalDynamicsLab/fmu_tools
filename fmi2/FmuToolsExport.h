@@ -137,7 +137,7 @@ class FmuVariableExport : public FmuVariable {
     template <typename T>
     void setStartFromVar(T* var_ptr);
 
-    std::string GetStartVal_toString() const;
+    std::string GetStartValAsString() const;
 
     friend class FmuComponentBase;
 };

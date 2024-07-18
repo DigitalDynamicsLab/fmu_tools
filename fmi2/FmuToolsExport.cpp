@@ -142,7 +142,7 @@ void FmuVariableExport::ExposeCurrentValueAsStart() {
     }
 }
 
-std::string FmuVariableExport::GetStartVal_toString() const {
+std::string FmuVariableExport::GetStartValAsString() const {
     // TODO: C++17 would allow the overload operator in lambda
     // std::string start_string;
     // varns::visit([&start_string](auto&& arg) -> std::string {return start_string = std::to_string(*start_ptr)});
@@ -604,7 +604,7 @@ void FmuComponentBase::ExportModelDescription(std::string path) {
         if (it->GetType() == FmuVariable::Type::Real && !it->GetUnitName().empty())
             unitNode->append_attribute(doc_ptr->allocate_attribute("unit", it->GetUnitName().c_str()));
         if (it->HasStartVal()) {
-            stringbuf.push_back(it->GetStartVal_toString());
+            stringbuf.push_back(it->GetStartValAsString());
             unitNode->append_attribute(doc_ptr->allocate_attribute("start", stringbuf.back().c_str()));
         }
         auto state_name = isDerivative(it->GetName());
