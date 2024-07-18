@@ -265,6 +265,7 @@ class FmuUnit {
     /// value can also be passed as 'nValues' so to avoid a second recomputation.
     /// In order to simplify the process, an alternative overload of this function is provided that accepts
     /// std::vector<T> as input that is automatically resized.
+    ///
     /// A special treatment is dedicated to fmi3Binary variables (i.e. const fmi3Byte*). These variables in their scalar
     /// form (i.e. without any Dimension XML node) have indeed a nValues = 1. However, since they are storing a pointer,
     /// this latter turns out to point to an array of bytes whose size is not exposed explicitely in the
@@ -287,6 +288,10 @@ class FmuUnit {
     /// std::vector<std::vector<fmi3Byte>>&, size_t)
     /// - [C++|C  ] std::vector<fmi3Binary> treated by GetVariable(fmi3ValueReference, std::vector<T>&, size_t)
     /// The case of std::vector<fmi3Byte>[] is a very special case that is not supported by this function.
+    ///
+    /// A second special case is the one of fmi3String. As for fmi3Binary, the fmi3String returned from this function is
+    /// just the pointer to the head of the fmi3String array, but no copy happened. The size is inferred by the
+    /// null-termination of the string.
     template <class T>
     fmi3Status GetVariable(fmi3ValueReference vr, T* values, size_t nValues = 0) const noexcept(false);
 
@@ -1426,10 +1431,11 @@ fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<T>& values_ve
     size_t nValues = GetVariableSize(var);
     auto vartype = var.GetType();
     values_vect.resize(nValues);
-    std::vector<size_t> valueSizes;
 
     // only one variable will be parsed at a time
     const size_t nValueReferences = 1;
+
+    std::vector<fmi3String> values_ptr(nValues);
 
     switch (vartype) {
         case FmuVariable::Type::Float32:
@@ -1478,10 +1484,9 @@ fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<T>& values_ve
             break;
         case FmuVariable::Type::String:
             status =
-                this->_fmi3GetString(this->instance, &vr, nValueReferences, (fmi3String*)(values_vect.data()), nValues);
-            // TODO: check if the copy is correct!
+                this->_fmi3GetString(this->instance, &vr, nValueReferences, (fmi3String*)(values_ptr.data()), nValues);
             for (auto sel = 0; sel < nValues; ++sel) {
-                values_vect[sel] = std::string(values_vect[sel]);
+                values_vect[sel] = std::string(values_ptr[sel]);
             }
             break;
         case FmuVariable::Type::Binary:
