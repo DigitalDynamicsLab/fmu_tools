@@ -23,7 +23,7 @@
 #include <unordered_map>
 #include <cassert>
 
-#include "FmuToolsDefinitions.h"
+#include "fmi2/FmuToolsDefinitions.h"
 
 #include "fmi2/fmi2_headers/fmi2FunctionTypes.h"
 #include "fmi2/fmi2_headers/fmi2Functions.h"
@@ -98,7 +98,7 @@ class FmuVariable {
                 FmuVariable::Type _type,
                 CausalityType _causality = CausalityType::local,
                 VariabilityType _variability = VariabilityType::continuous,
-                InitialType _initial = InitialType::none)
+                InitialType _initial = InitialType::automatic)
         : name(_name),
           valueReference(0),
           unitname("1"),

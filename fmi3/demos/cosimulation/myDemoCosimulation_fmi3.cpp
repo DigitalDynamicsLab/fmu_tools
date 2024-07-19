@@ -34,11 +34,16 @@ int main(int argc, char* argv[]) {
         ////my_fmu.Load(fmi3Type::fmi3CoSimulation, FMU_FILENAME);                 // unpack in  /tmp
         ////my_fmu.LoadUnzipped(fmi3Type::fmi3CoSimulation, unzipped_fmu_folder);  // already unpacked
     } catch (std::exception& my_exception) {
-        std::cout << "ERROR loading FMU: " << my_exception.what() << "\n";
+        std::cout << "ERROR loading FMU: " << my_exception.what() << std::endl;
+        exit(1);
     }
-
-    my_fmu.Instantiate("FmuComponent");  // use default resources dir
-    ////my_fmu.Instantiate("FmuComponent", my_fmu.GetUnzippedFolder() + "resources");  // specify resources dir
+    try {
+        my_fmu.Instantiate("FmuComponent");  // use default resources dir
+        ////my_fmu.Instantiate("FmuComponent", my_fmu.GetUnzippedFolder() + "resources");  // specify resources dir
+    } catch (std::exception& my_exception) {
+        std::cout << "ERROR instantiating FMU: " << my_exception.what() << std::endl;
+        exit(1);
+    }
 
     std::vector<std::string> categoriesVector = {"logAll"};
     my_fmu.SetDebugLogging(fmi3True, categoriesVector);
@@ -95,7 +100,7 @@ int main(int argc, char* argv[]) {
 
     // Getting FMU scalar variables through valueRef
     fmi3Float64 val_real;
-    fmi3ValueReference valrefs_float64[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    fmi3ValueReference valrefs_float64[11] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15};
     for (auto valref : valrefs_float64) {
         my_fmu.GetVariable(valref, &val_real);
         std::cout << "Float64: valref: " << valref << " | val: " << val_real << std::endl;
@@ -151,7 +156,7 @@ int main(int argc, char* argv[]) {
                               nValues);
         std::vector<std::vector<fmi3Byte>> binary_values;
         binary_values.resize(nValues);
-        std::cout << "Binary (multiple valueRefs): valref: " << valrefs_bin[0] << "+" << valrefs_bin[1]
+        std::cout << std::dec << "Binary (multiple valueRefs): valref: " << valrefs_bin[0] << "+" << valrefs_bin[1]
                   << " | val: " << std::endl;
 
         for (size_t i = 0; i < nValues; i++) {
@@ -169,7 +174,7 @@ int main(int argc, char* argv[]) {
     {
         std::vector<fmi3Byte> fmi3Binary_scalar_vectfmi3Byte;
         my_fmu.GetVariable(valrefs_bin[0], fmi3Binary_scalar_vectfmi3Byte);
-        std::cout << "Binary scalar as std::vector<fmi3Byte>: valref: " << valrefs_bin[0] << " | val: ";
+        std::cout << std::dec << "Binary scalar as std::vector<fmi3Byte>: valref: " << valrefs_bin[0] << " | val: ";
         for (auto byte : fmi3Binary_scalar_vectfmi3Byte) {
             std::cout << std::hex << (int)byte;
         }
@@ -181,7 +186,7 @@ int main(int argc, char* argv[]) {
         fmi3Binary fmi3Binary_scalar_fmi3Binary;
         size_t valueSize;
         my_fmu.GetVariable(valrefs_bin[0], fmi3Binary_scalar_fmi3Binary, valueSize);
-        std::cout << "Binary scalar as fmi3Binary: valref: " << valrefs_bin[0] << " | val: ";
+        std::cout << std::dec << "Binary scalar as fmi3Binary: valref: " << valrefs_bin[0] << " | val: ";
         for (auto el = 0; el < valueSize; ++el) {
             std::cout << std::hex << (int)fmi3Binary_scalar_fmi3Binary[el];
         }
@@ -192,7 +197,7 @@ int main(int argc, char* argv[]) {
     {
         std::vector<std::vector<fmi3Byte>> vector_vector_fmi3Byte;
         my_fmu.GetVariable(valrefs_bin[1], vector_vector_fmi3Byte);
-        std::cout << "Binary array as std::vector<std::vector<fmi3Byte>>: valref: " << valrefs_bin[1]
+        std::cout << std::dec << "Binary array as std::vector<std::vector<fmi3Byte>>: valref: " << valrefs_bin[1]
                   << " | val: " << std::endl;
         for (auto el = 0; el < vector_vector_fmi3Byte.size(); ++el) {
             for (auto byte : vector_vector_fmi3Byte[el]) {
@@ -208,7 +213,8 @@ int main(int argc, char* argv[]) {
         std::vector<fmi3Binary> vector_fmi3Binary;
         std::vector<size_t> valueSizes;
         my_fmu.GetVariable(valrefs_bin[1], vector_fmi3Binary, valueSizes);
-        std::cout << "Binary array as std::vector<fmi3Binary>: valref: " << valrefs_bin[1] << " | val: " << std::endl;
+        std::cout << std::dec << "Binary array as std::vector<fmi3Binary>: valref: " << valrefs_bin[1]
+                  << " | val: " << std::endl;
         for (auto el = 0; el < vector_fmi3Binary.size(); ++el) {
             for (auto s = 0; s < valueSizes[el]; ++s) {
                 std::cout << std::hex << (int)vector_fmi3Binary[el][s];

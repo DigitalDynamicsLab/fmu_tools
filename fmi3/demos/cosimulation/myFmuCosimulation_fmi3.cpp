@@ -82,7 +82,8 @@ myFmuComponent::myFmuComponent(FmuType fmiInterfaceType,
       A{{0.0, 0.1}, {1.0, 1.1}, {2.0, 2.1}},
       binvar{0xF, 0xE, 0xD, 0xC, 0xB, 0xA},
       binvararray{{0x1, 0x1, 0x1, 0xF}, {0x1, 0x1, 0xF, 0x1}, {0x1, 0xF, 0x1, 0x1}},
-      stringarray{"hello", "ciao", "bonjour"} {
+      stringvar("hello"),
+      stringarrayinput{"arrivederci", "au_revoir"} {
     initializeType(fmiInterfaceType);
 
     // Define new units if needed
@@ -127,16 +128,20 @@ myFmuComponent::myFmuComponent(FmuType fmiInterfaceType,
                    FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
                    FmuVariable::InitialType::exact);
 
-    AddFmuVariable(&stringarray[0], "stringarray", FmuVariable::Type::String, {{3, true}}, "1", "string array",
+    AddFmuVariable(&stringvar, "stringvar", FmuVariable::Type::String, "1", "string variable",
                    FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed,
+                   FmuVariable::InitialType::exact);
+
+    AddFmuVariable(&stringarrayinput[0], "stringarrayinput", FmuVariable::Type::String, {{stringarrayinput.size(), true}}, "1",
+                   "string array input", FmuVariable::CausalityType::input, FmuVariable::VariabilityType::continuous,
                    FmuVariable::InitialType::exact);
 
     AddFmuVariable(&binvar, "binvar", FmuVariable::Type::Binary, "1", "generic binary",
                    FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
                    FmuVariable::InitialType::exact);
 
-    AddFmuVariable(binvararray.data(), "binvararray", FmuVariable::Type::Binary, {{3, true}}, "1", "generic binary array",
-                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
+    AddFmuVariable(binvararray.data(), "binvararray", FmuVariable::Type::Binary, {{binvararray.size(), true}}, "1",
+                   "generic binary array", FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
                    FmuVariable::InitialType::exact);
 
     /// One can also pass std::functions to get/set the value of the variable if queried

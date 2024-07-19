@@ -23,7 +23,8 @@
 #include <unordered_map>
 #include <cassert>
 
-#include "FmuToolsDefinitions.h"
+#include "fmi3/FmuToolsDefinitions.h"
+#include "FmuToolsCommonDefinitions.h"
 
 #include "fmi3/fmi3_headers/fmi3FunctionTypes.h"
 #include "fmi3/fmi3_headers/fmi3Functions.h"
@@ -93,7 +94,7 @@ class FmuVariable {
 
     enum class VariabilityType { constant, fixed, tunable, discrete, continuous };
 
-    enum class InitialType { none, exact, approx, calculated };
+    enum class InitialType { automatic, none, exact, approx, calculated };
 
     FmuVariable() : FmuVariable("", FmuVariable::Type::Float64) {}
 
@@ -102,7 +103,7 @@ class FmuVariable {
                 const DimensionsArrayType& _dimensions = DimensionsArrayType(),
                 CausalityType _causality = CausalityType::local,
                 VariabilityType _variability = VariabilityType::continuous,
-                InitialType _initial = InitialType::none)
+                InitialType _initial = InitialType::automatic)
         : name(_name),
           valueReference(0),
           unitname("1"),
@@ -127,69 +128,67 @@ class FmuVariable {
         bool v_discrete = (variability == VariabilityType::discrete);
         bool v_continuous = (variability == VariabilityType::continuous);
 
-        bool i_none = (initial == InitialType::none);
-        bool i_exact = (initial == InitialType::exact);
-        bool i_approx = (initial == InitialType::approx);
-        bool i_calculated = (initial == InitialType::calculated);
-
-        // Set "initial" property if empty (see Table 22 in FMI3.0 specification)
+        // Check on 'initial' attribute (see Table 22 in FMI3.0 specification)
+        // - if initital == InitialType::automatic: automatically sets the "initial" property to its default value
+        // - if initital != InitialType::automatic: checks if the "initial" property is feasible for the current
+        // variable
+        //
         // (A)
         if (                                                              //
             ((v_constant) && (c_output || c_local)) ||                    //
             ((v_fixed || v_tunable) && (c_structural || c_parameter)) ||  //
             ((v_discrete || v_continuous) && (c_input))                   //
         ) {
-            if (i_none)
+            if (initial == InitialType::automatic)
                 initial = InitialType::exact;
-            else if (!i_exact)
-                throw std::runtime_error("initial not set properly.");
+            else if (initial != InitialType::exact)
+                throw std::runtime_error("'initial' attribute for variable '" + _name + "' not set properly.");
         }
         // (B)
         else if ((v_fixed || v_tunable) && (c_calculated || c_local)) {
-            if (i_none)
+            if (initial == InitialType::automatic)
                 initial = InitialType::calculated;
-            else if (!i_approx && !i_calculated)
-                throw std::runtime_error("initial not set properly.");
+            else if (initial != InitialType::approx && initial != InitialType::calculated)
+                throw std::runtime_error("'initial' attribute for variable '" + _name + "' not set properly.");
         }
         // (C)
         else if ((v_discrete || v_continuous) && (c_output || c_local)) {
-            if (i_none)
+            if (initial == InitialType::automatic)
                 initial = InitialType::calculated;
+            else if (initial != InitialType::approx && initial != InitialType::calculated &&
+                     initial != InitialType::exact)
+                throw std::runtime_error("'initial' attribute for variable '" + _name + "' not set properly.");
+        } else if (initial == InitialType::automatic)
+            initial = InitialType::none;
+        else if (initial != InitialType::none) {
+            throw std::runtime_error("'initial' attribute for variable '" + _name +
+                                     "' can be set to 'automatic' or 'none' only.");
         }
 
-        // From FMI Reference
-        // (1) If causality = "independent", it is neither allowed to define a value for initial nor a value for start.
-        // (2) If causality = "input", it is not allowed to define a value for initial and a value for start must be
-        // defined.
-        // (3) [not relevant] If (C) and initial = "exact", then the variable is explicitly defined by its start value
-        // in Initialization Mode
-        if (c_independent && !i_none)
-            throw std::runtime_error(
-                "If causality = 'independent', it is neither allowed to define a value for initial nor a value for "
-                "start.");
-
-        if (c_input && !i_none)
-            throw std::runtime_error(
-                "If causality = 'input', it is not allowed to define a value for initial and a value for start must be "
-                "defined.");
+        assert(initial != InitialType::automatic);
 
         // Incompatible variability/causality settings (see Tables 18 and 19 of the FMI3.0 specification)
         // (a)
         if (v_constant && (c_structural || c_parameter || c_calculated || c_input))
-            throw std::runtime_error(
-                "constants always have their value already set, thus their causality can be only 'output' or 'local'.");
+            throw std::runtime_error("Variable '" + _name +
+                                     "': constants always have their value already set, thus their causality can be "
+                                     "only 'output' or 'local'.");
         // (b)
         if ((v_discrete || v_continuous) && (c_structural || c_parameter || c_calculated))
-            throw std::runtime_error(
-                "strcturalParameters, parameters and calculatedParameters cannot be discrete nor continuous, as they "
-                "do not change over time.");
+            throw std::runtime_error("Variable '" + _name +
+                                     "': structuralParameters, parameters and calculatedParameters cannot be discrete "
+                                     "nor continuous, as they "
+                                     "do not change over time.");
         // (c)
         if (c_independent && !v_continuous)
-            throw std::runtime_error("For an 'independent' variable only variability = 'continuous' makes sense.");
+            throw std::runtime_error("Variable '" + _name +
+                                     "': for an 'independent' variable only variability = 'continuous' makes sense.");
         // (d) + (e)
         if (c_input && (v_fixed || v_tunable))
             throw std::runtime_error(
-                "A fixed or tunable 'input'|'output' have exactly the same properties as a fixed or tunable parameter. "
+                "Variable '" + _name +
+                "': a fixed or tunable 'input'|'output' have exactly the same properties as a fixed or tunable "
+                "parameter. "
                 "For simplicity, only fixed and tunable parameters|calculatedParameters shall be defined.");
     }
 
@@ -237,26 +236,68 @@ class FmuVariable {
         return this->name == other.name;
     }
 
-
     /// Check if setting this variable is allowed given the current FMU state.
     bool IsSetAllowed(FmuMachineState fmu_machine_state) const {
         //// RADU TODO: additional checks for configurationMode state?
 
-        if (variability != VariabilityType::constant) {
-            if (initial == InitialType::approx)
-                return fmu_machine_state == FmuMachineState::instantiated ||
-                       fmu_machine_state == FmuMachineState::anySettableState;
-            else if (initial == InitialType::exact)
-                return fmu_machine_state == FmuMachineState::instantiated ||
-                       fmu_machine_state == FmuMachineState::initializationMode ||
-                       fmu_machine_state == FmuMachineState::anySettableState;
+        bool is_groupA = variability != FmuVariable::VariabilityType::constant &&
+                         (initial == FmuVariable::InitialType::exact || initial == FmuVariable::InitialType::approx);
+        bool is_groupB =
+            variability != FmuVariable::VariabilityType::constant && initial == FmuVariable::InitialType::exact;
+        bool is_groupC =
+            causality == FmuVariable::CausalityType::input || (causality == FmuVariable::CausalityType::parameter &&
+                                                               variability == FmuVariable::VariabilityType::tunable);
+        bool is_groupD = causality == FmuVariable::CausalityType::structuralParameter &&
+                         (variability == FmuVariable::VariabilityType::fixed ||
+                          variability == FmuVariable::VariabilityType::tunable);
+        bool is_groupE = causality == FmuVariable::CausalityType::structuralParameter &&
+                         variability == FmuVariable::VariabilityType::tunable;
+        bool is_groupF =
+            causality == FmuVariable::CausalityType::input && variability == FmuVariable::VariabilityType::continuous;
+        bool is_groupG =
+            causality == FmuVariable::CausalityType::input && variability != FmuVariable::VariabilityType::discrete &&
+            m_intermediateUpdate == true;  // the variable must be contained in requiredIntermediateVariables
+
+        switch (fmu_machine_state) {
+            case fmi3::FmuMachineState::instantiated:
+                return is_groupA;
+                break;
+            case fmi3::FmuMachineState::initializationMode:
+                return is_groupB;
+                break;
+            case fmi3::FmuMachineState::eventMode:
+                return is_groupC;
+                break;
+            case fmi3::FmuMachineState::terminated:
+                return false;
+                break;
+            case fmi3::FmuMachineState::stepMode:
+                return is_groupC;
+                break;
+            case fmi3::FmuMachineState::intermediateUpdateMode:
+                return is_groupG;
+                break;
+            case fmi3::FmuMachineState::continuousTimeMode:
+                return is_groupF;
+                break;
+            case fmi3::FmuMachineState::configurationMode:
+                return is_groupD;
+                break;
+            case fmi3::FmuMachineState::reconfigurationMode:
+                return is_groupE;
+                break;
+            case fmi3::FmuMachineState::clockActivationMode:
+                return false;
+                break;
+            case fmi3::FmuMachineState::clockUpdateMode:
+                return false;
+                break;
+            default:
+                throw std::runtime_error("IsSetAllowed: received bad state.");
+                break;
         }
 
-        if (causality == CausalityType::input ||
-            (causality == CausalityType::parameter && variability == VariabilityType::tunable))
-            return fmu_machine_state == FmuMachineState::initializationMode ||
-                   fmu_machine_state == FmuMachineState::stepCompleted ||
-                   fmu_machine_state == FmuMachineState::anySettableState;
+        throw std::runtime_error("IsSetAllowed: case not catched.");
 
         return false;
     }
@@ -330,7 +371,8 @@ class FmuVariable {
     /// [INTERNAL] Return the dimensions array.
     /// WARNING: the dimension array might be empty in case of scalar arrays.
     /// This method is intended for internal use only.
-    /// In order to retrieve a more user-friendly representation of the dimensions, use FmuComponentBase::GetVariableDimensions().
+    /// In order to retrieve a more user-friendly representation of the dimensions, use
+    /// FmuComponentBase::GetVariableDimensions().
     DimensionsArrayType GetDimensions() const { return m_dimensions; }
 
     bool IsScalar() const { return m_dimensions.empty(); }
@@ -365,6 +407,7 @@ class FmuVariable {
     VariabilityType variability;        // variable variability
     InitialType initial;                // type of initial value
     std::string description;            // description of this variable
+    bool m_intermediateUpdate = false;  // TODO: if true, this variable is updated at intermediate steps
 
     /// list of pairs (size, fixed) for each dimension;
     /// - if m_dimensions[i].second == true (i.e. labelled as 'fixed') then 'size' provides the actual size for that

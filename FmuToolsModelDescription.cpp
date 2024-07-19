@@ -17,7 +17,7 @@
 #include <iostream>
 
 #include "FmuToolsRuntimeLinking.h"
-#include "FmuToolsDefinitions.h"
+#include "FmuToolsCommonDefinitions.h"
 
 int main(int argc, char* argv[]) {
     std::string dynlib_fullpath;
@@ -80,20 +80,27 @@ int main(int argc, char* argv[]) {
     bool has_CoSimulation = true;
     bool has_ModelExchange = true;
 
+    std::exception exc_CoSimulation;
+    std::exception exc_ModelExchange;
+
     try {
         createModelDescriptionPtr(output_path, FmuType::COSIMULATION);
-    } catch (std::exception&) {
+    } catch (std::exception& exc) {
+        exc_CoSimulation = exc;
         has_CoSimulation = false;
     }
 
     try {
         createModelDescriptionPtr(output_path, FmuType::MODEL_EXCHANGE);
-    } catch (std::exception&) {
+    } catch (std::exception& exc) {
+        exc_ModelExchange = exc;
         has_ModelExchange = false;
     }
 
     if (!has_CoSimulation && !has_ModelExchange) {
         std::cerr << "ERROR: FMU is not set as CoSimulation nor as ModelExchange." << std::endl;
+        std::cerr << "ERROR: CoSimulation exception: " << exc_CoSimulation.what() << std::endl;
+        std::cerr << "ERROR: ModelExchange exception: " << exc_ModelExchange.what() << std::endl;
         return 2;
     }
 

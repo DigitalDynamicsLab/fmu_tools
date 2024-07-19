@@ -380,9 +380,11 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
                                   "' have dimensions that depend on a variable that is not of type UInt64.\n",
                               fmi3Status::fmi3Warning, "logStatusWarning");
                 }
-                if (it->GetVariability() != FmuVariable::VariabilityType::constant && it->GetCausality() != FmuVariable::CausalityType::structuralParameter) {
+                if (it->GetVariability() != FmuVariable::VariabilityType::constant &&
+                    it->GetCausality() != FmuVariable::CausalityType::structuralParameter) {
                     sendToLog("WARNING: the variable with name '" + name +
-                                  "' have dimensions that depend on a variable that is not constant nor a structural parameter.\n",
+                                  "' have dimensions that depend on a variable that is not constant nor a structural "
+                                  "parameter.\n",
                               fmi3Status::fmi3Warning, "logStatusWarning");
                 }
             }
@@ -906,7 +908,9 @@ fmi3Status FmuComponentBase::EnterInitializationMode(fmi3Boolean toleranceDefine
 
     fmi3Status status = enterInitializationModeIMPL();
 
-    //// RADU TODO - change machine state on failure?
+    if (status == fmi3Status::fmi3Fatal) {
+        m_fmuMachineState = FmuMachineState::terminated;
+    }
 
     return status;
 }
@@ -914,10 +918,21 @@ fmi3Status FmuComponentBase::EnterInitializationMode(fmi3Boolean toleranceDefine
 fmi3Status FmuComponentBase::ExitInitializationMode() {
     fmi3Status status = exitInitializationModeIMPL();
 
-    //// RADU TODO - change machine state on failure?
+    switch (m_fmuType) {
+        case FmuType::MODEL_EXCHANGE:
+            m_fmuMachineState = FmuMachineState::continuousTimeMode;
+            break;
+        case FmuType::COSIMULATION:
+            m_fmuMachineState = m_eventModeUsed ? FmuMachineState::eventMode : FmuMachineState::stepMode;
+            break;
+        case FmuType::SCHEDULED_EXECUTION:
+            m_fmuMachineState = FmuMachineState::clockActivationMode;
+            break;
+    }
 
-    m_fmuMachineState = FmuMachineState::stepCompleted;  // TODO: introduce additional state when after
-                                                         // initialization and before step?
+    if (status == fmi3Status::fmi3Fatal) {
+        m_fmuMachineState = FmuMachineState::terminated;
+    }
 
     return status;
 }
@@ -932,8 +947,9 @@ fmi3Status FmuComponentBase::UpdateDiscreteStates(fmi3Boolean* discreteStatesNee
         updateDiscreteStatesIMPL(discreteStatesNeedUpdate, terminateSimulation, nominalsOfContinuousStatesChanged,
                                  valuesOfContinuousStatesChanged, nextEventTimeDefined, nextEventTime);
 
-    //// TODO - anything else here?
-
+    if (status == fmi3Status::fmi3Fatal) {
+        m_fmuMachineState = FmuMachineState::terminated;
+    }
     return status;
 }
 
@@ -953,27 +969,6 @@ fmi3Status FmuComponentBase::DoStep(fmi3Float64 currentCommunicationPoint,
     // invoke any post step callbacks (e.g., to update auxiliary variables)
     executePostStepCallbacks();
 
-    switch (status) {
-        case fmi3OK:
-            m_fmuMachineState = FmuMachineState::stepCompleted;
-            break;
-        case fmi3Warning:
-            m_fmuMachineState = FmuMachineState::stepCompleted;
-            break;
-        case fmi3Discard:
-            m_fmuMachineState = FmuMachineState::stepFailed;
-            break;
-        case fmi3Error:
-            m_fmuMachineState = FmuMachineState::error;
-            break;
-        case fmi3Fatal:
-            m_fmuMachineState = FmuMachineState::fatal;
-            break;
-        default:
-            throw std::runtime_error("Developer error: unexpected status from doStepIMPL");
-            break;
-    }
-
     return status;
 }
 
@@ -982,8 +977,6 @@ fmi3Status FmuComponentBase::CompletedIntegratorStep(fmi3Boolean noSetFMUStatePr
                                                      fmi3Boolean* terminateSimulation) {
     fmi3Status status =
         completedIntegratorStepIMPL(noSetFMUStatePriorToCurrentPoint, enterEventMode, terminateSimulation);
-
-    //// TODO - anything else here?
 
     return status;
 }

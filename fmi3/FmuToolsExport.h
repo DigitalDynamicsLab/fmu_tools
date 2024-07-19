@@ -29,9 +29,10 @@
 #include <list>
 #include <sstream>
 
-#include "FmuToolsDefinitions.h"
+#include "FmuToolsCommonDefinitions.h"
 #include "FmuToolsUnitDefinitions.h"
 #include "fmi3/FmuToolsCommon.h"
+#include "fmi3/FmuToolsDefinitions.h"
 #include "fmi3/fmi3_headers/fmi3Functions.h"
 
 //// RADU TODO - do we want/need custom type variants?
@@ -80,7 +81,7 @@ class FmuVariableExport : public FmuVariable {
                       FmuVariable::Type _type,
                       CausalityType _causality = CausalityType::local,
                       VariabilityType _variability = VariabilityType::continuous,
-                      InitialType _initial = InitialType::none);
+                      InitialType _initial = InitialType::automatic);
 
     FmuVariableExport(const VarbindType& varbind,
                       const std::string& _name,
@@ -88,7 +89,7 @@ class FmuVariableExport : public FmuVariable {
                       const DimensionsArrayType& dimensions,
                       CausalityType _causality = CausalityType::local,
                       VariabilityType _variability = VariabilityType::continuous,
-                      InitialType _initial = InitialType::none);
+                      InitialType _initial = InitialType::automatic);
 
     FmuVariableExport(const FmuVariableExport& other);
 
@@ -387,7 +388,7 @@ class FmuComponentBase {
         std::string description = "",
         FmuVariable::CausalityType causality = FmuVariable::CausalityType::local,
         FmuVariable::VariabilityType variability = FmuVariable::VariabilityType::continuous,
-        FmuVariable::InitialType initial = FmuVariable::InitialType::none) {
+        FmuVariable::InitialType initial = FmuVariable::InitialType::automatic) {
         return AddFmuVariable(varbind, name, scalartype, FmuVariableExport::DimensionsArrayType(), unitname,
                               description, causality, variability, initial);
     }
@@ -403,7 +404,7 @@ class FmuComponentBase {
         std::string description = "",
         FmuVariable::CausalityType causality = FmuVariable::CausalityType::local,
         FmuVariable::VariabilityType variability = FmuVariable::VariabilityType::continuous,
-        FmuVariable::InitialType initial = FmuVariable::InitialType::none);
+        FmuVariable::InitialType initial = FmuVariable::InitialType::automatic);
 
     /// Declare a state derivative variables, specifying the corresponding state and dependencies on other variables.
     /// Calls to this function must be made *after* all FMU variables were defined.
@@ -568,6 +569,20 @@ class FmuComponentBase {
 
     void clearUnitDefinitions() { m_unitDefinitions.clear(); }
 
+    bool IsInitialized() const {
+        return m_fmuMachineState == FmuMachineState::eventMode ||
+               m_fmuMachineState == FmuMachineState::continuousTimeMode ||
+               m_fmuMachineState == FmuMachineState::stepMode ||
+               m_fmuMachineState == FmuMachineState::clockActivationMode;
+    }
+
+    bool IsFMUStateSettable() const {
+        return !(m_fmuMachineState == FmuMachineState::configurationMode ||
+                 m_fmuMachineState == FmuMachineState::reconfigurationMode ||
+                 m_fmuMachineState == FmuMachineState::intermediateUpdateMode ||
+                 m_fmuMachineState == FmuMachineState::clockUpdateMode);
+    }
+
     /// Send message to the logger function.
     /// The message will be sent if at least one of the following applies:
     /// - a msg_cat was enabled by `SetDebugLogging(msg_cat, true)`
@@ -598,6 +613,8 @@ class FmuComponentBase {
     std::string m_instanceName;
     std::string m_instantiationToken;
     std::string m_resources_location;
+
+    bool m_eventModeUsed = false;  // TODO: enable this feature
 
     bool m_visible;
 

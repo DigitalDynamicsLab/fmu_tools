@@ -17,13 +17,7 @@
 #define FMUTOOLS_DEFINITIONS_H
 
 //// TODO: split between FMI2 and FMI3
-
-/// Enumeration of supported FMU types (interfaces).
-enum class FmuType {
-  MODEL_EXCHANGE,  ///< FMU for model exchange
-  COSIMULATION,     ///< FMU for co-simulation
-  SCHEDULED_EXECUTION     ///< FMU for co-simulation (only FMI3)
-};
+namespace fmi2 {
 
 /// Enumeration of FMI machine states.
 enum class FmuMachineState {
@@ -42,5 +36,7 @@ enum class FmuMachineState {
     configurationMode,   // only FMI3
     reconfigurationMode  // only FMI3
 };
+
+}  // namespace fmi2
 
 #endif

@@ -55,7 +55,7 @@ class FmuVariableImport : public FmuVariable {
                       const FmuVariable::DimensionsArrayType& _dimensions = FmuVariable::DimensionsArrayType(),
                       CausalityType _causality = CausalityType::local,
                       VariabilityType _variability = VariabilityType::continuous,
-                      InitialType _initial = InitialType::none)
+                      InitialType _initial = InitialType::automatic)
         : FmuVariable(_name, _type, _dimensions, _causality, _variability, _initial),
           is_state(false),
           is_deriv(false) {}
