@@ -132,16 +132,16 @@ myFmuComponent::myFmuComponent(FmuType fmiInterfaceType,
                    FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed,
                    FmuVariable::InitialType::exact);
 
-    AddFmuVariable(&stringarrayinput[0], "stringarrayinput", FmuVariable::Type::String, {{stringarrayinput.size(), true}}, "1",
-                   "string array input", FmuVariable::CausalityType::input, FmuVariable::VariabilityType::continuous,
-                   FmuVariable::InitialType::exact);
+    AddFmuVariable(&stringarrayinput[0], "stringarrayinput", FmuVariable::Type::String,
+                   {{stringarrayinput.size(), true}}, "1", "string array input", FmuVariable::CausalityType::parameter,
+                   FmuVariable::VariabilityType::fixed, FmuVariable::InitialType::exact);
 
     AddFmuVariable(&binvar, "binvar", FmuVariable::Type::Binary, "1", "generic binary",
-                   FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
+                   FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed,
                    FmuVariable::InitialType::exact);
 
     AddFmuVariable(binvararray.data(), "binvararray", FmuVariable::Type::Binary, {{binvararray.size(), true}}, "1",
-                   "generic binary array", FmuVariable::CausalityType::output, FmuVariable::VariabilityType::continuous,
+                   "generic binary array", FmuVariable::CausalityType::parameter, FmuVariable::VariabilityType::fixed,
                    FmuVariable::InitialType::exact);
 
     /// One can also pass std::functions to get/set the value of the variable if queried

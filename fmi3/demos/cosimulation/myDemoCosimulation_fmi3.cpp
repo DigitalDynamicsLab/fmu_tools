@@ -71,6 +71,10 @@ int main(int argc, char* argv[]) {
         fmi3Float64 m_out;
         my_fmu.GetVariable(valref, &m_out);
         std::cout << "m_out: " << m_out << std::endl;
+
+        // String array as std::vector<std::string>
+        std::vector<std::string> val_string_array_input = {"sayonara", "zdravo"};
+        my_fmu.SetVariable("stringarrayinput", val_string_array_input);
     }
     my_fmu.ExitInitializationMode();
 
@@ -142,10 +146,6 @@ int main(int argc, char* argv[]) {
         std::cout << val_string[el] << std::endl;
     }
     std::cout << std::endl;
-
-    // String array as std::vector<std::string>
-    std::vector<std::string> val_string_array_input = {"sayonara", "zdravo"};
-    my_fmu.SetVariable("stringarrayinput", val_string_array_input);
 
     std::vector<std::string> val_string_array_input_asoutput;
     fmi3ValueReference valrefs_string_array[1] = {12};
