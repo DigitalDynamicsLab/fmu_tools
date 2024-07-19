@@ -140,7 +140,6 @@ void FmuVariableExport::SetValue(const fmi3String* val, size_t nValues) const {
             varptr_this[s] = std::string(val[s]);
         }
     } else {
-
         varns::get<FunGetSet<std::string>>(this->varbind).second(std::string(*val));
     }
 }
@@ -277,6 +276,7 @@ FmuComponentBase::FmuComponentBase(FmuType fmiInterfaceType,
       m_instantiationToken(FMU_GUID),
       m_visible(visible == fmi3True ? true : false),
       m_debug_logging_enabled(loggingOn == fmi3True ? true : false),
+      m_instanceEnvironment(instanceEnvironment),
       m_modelIdentifier(FMU_MODEL_IDENTIFIER),
       m_fmuMachineState(FmuMachineState::instantiated),
       m_logCategories_enabled(logCategories_init),
