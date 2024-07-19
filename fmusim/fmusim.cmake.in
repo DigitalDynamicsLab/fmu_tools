@@ -1,0 +1,12 @@
+message(STATUS "Runing fmusim on @FMU_FILENAME@")
+
+execute_process(COMMAND @FMUSIM_EXEC@ --log-fmi-calls --fmi-log-file "@FMUSIM_LOG@" --output-file "@FMUSIM_OUT@" "@FMU_FILENAME@"
+                COMMAND_ECHO STDOUT
+                COMMAND_ERROR_IS_FATAL ANY
+                RESULT_VARIABLE res_var)
+
+if(NOT "${res_var}" STREQUAL "0")
+  message(FATAL_ERROR "fmusim failed res_var='${res_var}'")
+else()
+  message(STATUS "fmusim succeeded")
+endif()
