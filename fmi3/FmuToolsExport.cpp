@@ -116,13 +116,33 @@ FmuVariableExport& FmuVariableExport::operator=(const FmuVariableExport& other) 
 }
 
 void FmuVariableExport::SetValue(const fmi3String* val, size_t nValues) const {
-    if (nValues > 1)
-        throw std::runtime_error("Cannot set multiple values for fmi3Strings yet.");
+    if (is_pointer_variant(this->varbind)) {
+        assert((nValues == 0 || (IsScalar() && nValues == 1) || m_dimensions.size() > 0) &&
+               ("Requested to get the value of " + std::to_string(nValues) +
+                " coefficients for variable with valueReference: " + std::to_string(valueReference) +
+                " but it seems that it is a scalar.")
+                   .c_str());
 
-    if (is_pointer_variant(this->varbind))
-        *varns::get<std::string*>(this->varbind) = std::string(*val);
-    else
+        std::string* varptr_this = varns::get<std::string*>(this->varbind);
+
+        //*varns::get<std::string*>(this->varbind) = std::string(*val);
+
+        // try to fetch the dimension of the variable
+        size_t var_size;
+        bool success = GetSize(var_size);
+        assert(success &&
+               "Developer Error: the size of a fmi3String variable could not be determined. Please ensure it has been "
+               "declared using {, true}.");
+        assert(nValues == var_size && "The user provided nValues that is not matching the size of the variable.");
+
+        // copy values
+        for (size_t s = 0; s < nValues; s++) {
+            varptr_this[s] = std::string(val[s]);
+        }
+    } else {
+
         varns::get<FunGetSet<std::string>>(this->varbind).second(std::string(*val));
+    }
 }
 
 void FmuVariableExport::SetValue(const fmi3Binary* val, size_t nValues, const size_t* valueSize_ptr) const {

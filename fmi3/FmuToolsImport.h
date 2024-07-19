@@ -245,7 +245,7 @@ class FmuUnit {
     fmi3Status SetVariable(fmi3ValueReference vr, const T* values, size_t nValues = 0) noexcept(false);
 
     template <class T>
-    fmi3Status SetVariable(fmi3ValueReference vr, const std::vector<T>& values) noexcept(false);
+    fmi3Status SetVariable(fmi3ValueReference vr, const std::vector<T>& values_vect) noexcept(false);
 
     fmi3Status SetVariable(fmi3ValueReference vr, const std::vector<fmi3Byte>& values) noexcept(false);
 
@@ -253,14 +253,15 @@ class FmuUnit {
     fmi3Status SetVariable(fmi3ValueReference vr, fmi3Binary& value, size_t valueSize) noexcept(false);
 
     fmi3Status SetVariable(fmi3ValueReference vr,
-                           const std::vector<fmi3Binary>& values,
+                           const std::vector<fmi3Binary>& values_vect,
                            const std::vector<size_t>& valueSizes) noexcept(false);
 
-    fmi3Status SetVariable(fmi3ValueReference vr, const std::vector<std::vector<fmi3Byte>>& values) noexcept(false);
+    fmi3Status SetVariable(fmi3ValueReference vr,
+                           const std::vector<std::vector<fmi3Byte>>& values_vect) noexcept(false);
 
-    /// Set the value of a variable knowing its name.
-    template <class T>
-    fmi3Status SetVariable(const std::string& varname, const T* value, size_t nValues = 0) noexcept(false);
+    fmi3Status SetVariable(fmi3ValueReference vr, const std::vector<fmi3String>& values_vect) noexcept(false);
+
+    fmi3Status SetVariable(fmi3ValueReference vr, const std::vector<std::string>& values_vect) noexcept(false);
 
     /// Get the value of a variable.
     /// The 'values' pointer could either point to single scalar variable or to an array of variables.
@@ -300,7 +301,7 @@ class FmuUnit {
 
     /// Get the value of the array of variables.
     template <class T>
-    fmi3Status GetVariable(fmi3ValueReference vr, std::vector<T>& values) noexcept(false);
+    fmi3Status GetVariable(fmi3ValueReference vr, std::vector<T>& values_vect) noexcept(false);
 
     /// Get the value from a scalar fmi3Binary variable in the shape of a std::vector<fmi3Byte>.
     /// The vector will be automatically resized according to variable size.
@@ -319,21 +320,34 @@ class FmuUnit {
     /// with the size of each element of the array. The user must then allocate appropriate space for each of the
     /// elements (valueSizes[i] contains the size of the i-th element) and copy the data from the FMU.
     fmi3Status GetVariable(fmi3ValueReference vr,
-                           std::vector<fmi3Binary>& values,
+                           std::vector<fmi3Binary>& values_vect,
                            std::vector<size_t>& valueSizes) noexcept(false);
 
     /// Get the value from an array of fmi3Binary variable in the shape of a std::vector<std::vector<fmi3Byte>>.
-    fmi3Status GetVariable(fmi3ValueReference vr, std::vector<std::vector<fmi3Byte>>& values) noexcept(false);
+    fmi3Status GetVariable(fmi3ValueReference vr, std::vector<std::vector<fmi3Byte>>& values_vect) noexcept(false);
 
-    /// Get the value of a variable knowing its name.
-    template <class T>
-    fmi3Status GetVariable(const std::string& varname, T* value, size_t nValues = 0) noexcept(false);
+    /// Get the location of an array of fmi3String variables in the shape of a std::vector<fmi3String>.
+    /// The function will return in 'values_vect' the pointer to the fmi3String arrays. The user must then allocate
+    /// appropriate space for each of the elements and retrieve the value from the pointer. This can be done manually by
+    /// querying the length of the string with std::strlen or by using the std::string constructor to automatically get
+    /// an std::string of the proper size. Please mind that, for the latter case, is more convenient to use
+    /// GetVariable(fmi3ValueReference, std::vector<std::string>&) directly.
+    fmi3Status GetVariable(fmi3ValueReference vr, std::vector<fmi3String>& values_vect) noexcept(false);
 
-    // fmi3Status GetVariable(const std::string& varname, std::string& value) noexcept(false);
-    // fmi3Status SetVariable(const std::string& varname, const std::string& value) noexcept(false);
+    /// Get the value from an array of fmi3String variable in the shape of an std::vector<std::string>.
+    fmi3Status GetVariable(fmi3ValueReference vr, std::vector<std::string>& values_vect) noexcept(false);
 
-    // fmi3Status GetVariable(const std::string& varname, bool& value) noexcept(false);
-    // fmi3Status SetVariable(const std::string& varname, const bool& value) noexcept(false);
+    template <typename... Args>
+    fmi3Status SetVariable(const std::string& str, Args&&... args) {
+        fmi3ValueReference vr = GetValueReference(str);
+        return SetVariable(vr, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    fmi3Status GetVariable(const std::string& str, Args&&... args) {
+        fmi3ValueReference vr = GetValueReference(str);
+        return GetVariable(vr, std::forward<Args>(args)...);
+    }
 
   protected:
     std::string modelName;
@@ -1223,58 +1237,68 @@ fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const T* value, size_t nV
 }
 
 template <class T>
-fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const std::vector<T>& value) noexcept(false) {
+fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const std::vector<T>& values_vect) noexcept(false) {
     fmi3Status status = fmi3Status::fmi3Error;
 
     FmuVariableImport& var = m_variables.at(vr);
 
     size_t nValues = GetVariableSize(var);
     auto vartype = var.GetType();
-    assert(nValues == value.size() && "value size should match the one of the requested variable.");
-    std::vector<size_t> valueSizes;
+    assert(nValues == values_vect.size() && "value size should match the one of the requested variable.");
 
     // only one variable will be parsed at a time
     const size_t nValueReferences = 1;
 
     switch (vartype) {
         case FmuVariable::Type::Float32:
-            status =
-                this->_fmi3SetFloat32(this->instance, &vr, nValueReferences, (fmi3Float32*)(value.data()), nValues);
+            status = this->_fmi3SetFloat32(this->instance, &vr, nValueReferences, (fmi3Float32*)(values_vect.data()),
+                                           nValues);
             break;
         case FmuVariable::Type::Float64:
-            status =
-                this->_fmi3SetFloat64(this->instance, &vr, nValueReferences, (fmi3Float64*)(value.data()), nValues);
+            status = this->_fmi3SetFloat64(this->instance, &vr, nValueReferences, (fmi3Float64*)(values_vect.data()),
+                                           nValues);
             break;
         case FmuVariable::Type::Int8:
-            status = this->_fmi3SetInt8(this->instance, &vr, nValueReferences, (fmi3Int8*)(value.data()), nValues);
+            status =
+                this->_fmi3SetInt8(this->instance, &vr, nValueReferences, (fmi3Int8*)(values_vect.data()), nValues);
             break;
         case FmuVariable::Type::UInt8:
-            status = this->_fmi3SetUInt8(this->instance, &vr, nValueReferences, (fmi3UInt8*)(value.data()), nValues);
+            status =
+                this->_fmi3SetUInt8(this->instance, &vr, nValueReferences, (fmi3UInt8*)(values_vect.data()), nValues);
             break;
         case FmuVariable::Type::Int16:
-            status = this->_fmi3SetInt16(this->instance, &vr, nValueReferences, (fmi3Int16*)(value.data()), nValues);
+            status =
+                this->_fmi3SetInt16(this->instance, &vr, nValueReferences, (fmi3Int16*)(values_vect.data()), nValues);
             break;
         case FmuVariable::Type::UInt16:
-            status = this->_fmi3SetUInt16(this->instance, &vr, nValueReferences, (fmi3UInt16*)(value.data()), nValues);
+            status =
+                this->_fmi3SetUInt16(this->instance, &vr, nValueReferences, (fmi3UInt16*)(values_vect.data()), nValues);
             break;
         case FmuVariable::Type::Int32:
-            status = this->_fmi3SetInt32(this->instance, &vr, nValueReferences, (fmi3Int32*)(value.data()), nValues);
+            status =
+                this->_fmi3SetInt32(this->instance, &vr, nValueReferences, (fmi3Int32*)(values_vect.data()), nValues);
             break;
         case FmuVariable::Type::UInt32:
-            status = this->_fmi3SetUInt32(this->instance, &vr, nValueReferences, (fmi3UInt32*)(value.data()), nValues);
+            status =
+                this->_fmi3SetUInt32(this->instance, &vr, nValueReferences, (fmi3UInt32*)(values_vect.data()), nValues);
             break;
         case FmuVariable::Type::Int64:
-            status = this->_fmi3SetInt64(this->instance, &vr, nValueReferences, (fmi3Int64*)(value.data()), nValues);
+            status =
+                this->_fmi3SetInt64(this->instance, &vr, nValueReferences, (fmi3Int64*)(values_vect.data()), nValues);
             break;
         case FmuVariable::Type::UInt64:
-            status = this->_fmi3SetUInt64(this->instance, &vr, nValueReferences, (fmi3UInt64*)(value.data()), nValues);
+            status =
+                this->_fmi3SetUInt64(this->instance, &vr, nValueReferences, (fmi3UInt64*)(values_vect.data()), nValues);
             break;
         case FmuVariable::Type::Boolean:
-            status =
-                this->_fmi3SetBoolean(this->instance, &vr, nValueReferences, (fmi3Boolean*)(value.data()), nValues);
+            status = this->_fmi3SetBoolean(this->instance, &vr, nValueReferences, (fmi3Boolean*)(values_vect.data()),
+                                           nValues);
             break;
         case FmuVariable::Type::String:
-            status = this->_fmi3SetString(this->instance, &vr, nValueReferences, (fmi3String*)(value.data()), nValues);
+            // status = this->_fmi3SetString(this->instance, &vr, nValueReferences, (fmi3String*)(values_vect.data()),
+            // nValues);
+            throw std::runtime_error(
+                "Developer Error: this case should not be hit. Other dedicated methods should take care of this case.");
             break;
         case FmuVariable::Type::Binary:
             throw std::runtime_error(
@@ -1305,8 +1329,9 @@ fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const std::vector<fmi3Byt
 
     assert(var.GetType() == FmuVariable::Type::Binary &&
            "Developer Error: SetVariable for std::vector<fmi3Byte> has been called for the wrong FMI variable type");
-    const fmi3Binary b = values.data();  // TODO: check why this cannot be embedded in the call
-    fmi3Status status = this->_fmi3SetBinary(this->instance, &vr, nValueReferences, valueSizes.data(), &b, nValues);
+    // TODO: why the casting is needed?
+    fmi3Status status = this->_fmi3SetBinary(this->instance, &vr, nValueReferences, valueSizes.data(),
+                                             (fmi3Binary*)values.data(), nValues);
 
     return status;
 }
@@ -1348,24 +1373,45 @@ fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr,
 }
 
 fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr,
-                                const std::vector<std::vector<fmi3Byte>>& value_vect) noexcept(false) {
-    FmuVariableImport& var = m_variables.at(vr);
-
-    size_t nValues = GetVariableSize(var);
-    assert(nValues == value_vect.size() && "value size should match the one of the requested variable.");
+                                const std::vector<std::vector<fmi3Byte>>& values_vect) noexcept(false) {
+    size_t nValues = values_vect.size();
+    std::vector<fmi3Binary> values_vect_temp(values_vect.size());
+    for (auto s = 0; s < nValues; ++s) {
+        values_vect_temp[s] = values_vect[s].data();
+    }
 
     std::vector<size_t> valueSizes(nValues);
     for (size_t i = 0; i < nValues; ++i) {
-        valueSizes[i] = value_vect[i].size();
+        valueSizes[i] = values_vect[i].size();
     }
+
+    fmi3Status status = SetVariable(vr, values_vect_temp, valueSizes);
+
+    return status;
+}
+
+fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const std::vector<fmi3String>& values_vect) noexcept(false) {
+    FmuVariableImport& var = m_variables.at(vr);
+
+    size_t nValues = GetVariableSize(var);
+    assert(nValues == values_vect.size() && "Developer error: the variable has a size that differs from values_vect.");
 
     // only one variable will be parsed at a time
     const size_t nValueReferences = 1;
 
-    assert(var.GetType() == FmuVariable::Type::Binary &&
-           "SetVariable for std::vector<std::vector<fmi3Byte>> has been called for the wrong FMI variable type");
-    const fmi3Binary b = value_vect.data()->data();
-    fmi3Status status = this->_fmi3SetBinary(this->instance, &vr, nValueReferences, valueSizes.data(), &b, nValues);
+    assert(var.GetType() == FmuVariable::Type::String &&
+           "Developer Error: SetVariable for std::vector<fmi3String>& has been called for the wrong FMI variable type");
+    fmi3Status status = this->_fmi3SetString(this->instance, &vr, nValueReferences, values_vect.data(), nValues);
+
+    return status;
+}
+
+fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const std::vector<std::string>& values_vect) noexcept(false) {
+    std::vector<fmi3String> values_vect_temp(values_vect.size());
+    for (size_t i = 0; i < values_vect.size(); ++i) {
+        values_vect_temp[i] = values_vect[i].data();
+    }
+    fmi3Status status = SetVariable(vr, values_vect_temp);
 
     return status;
 }
@@ -1502,11 +1548,8 @@ fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<T>& values_ve
                                            nValues);
             break;
         case FmuVariable::Type::String:
-            status =
-                this->_fmi3GetString(this->instance, &vr, nValueReferences, (fmi3String*)(values_ptr.data()), nValues);
-            for (auto sel = 0; sel < nValues; ++sel) {
-                values_vect[sel] = std::string(values_ptr[sel]);
-            }
+            throw std::runtime_error(
+                "Developer Error: this case should not be hit. Other dedicated methods should take care of this case.");
             break;
         case FmuVariable::Type::Binary:
             throw std::runtime_error(
@@ -1577,15 +1620,14 @@ fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr,
     return status;
 }
 
-fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<std::vector<fmi3Byte>>& value_vect) noexcept(false) {
+fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr,
+                                std::vector<std::vector<fmi3Byte>>& values_vect) noexcept(false) {
     FmuVariableImport& var = m_variables.at(vr);
 
     size_t nValues = GetVariableSize(var);
-    value_vect.resize(nValues);
-
+    values_vect.resize(nValues);
     std::vector<size_t> valueSizes(nValues);
 
-    // only one variable will be parsed at a time
     const size_t nValueReferences = 1;
 
     assert(var.GetType() == FmuVariable::Type::Binary &&
@@ -1596,23 +1638,39 @@ fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<std::vector<f
 
     // copy the values from the FMU
     for (auto val = 0; val < nValues; ++val) {
-        value_vect[val].resize(valueSizes[val]);
+        values_vect[val].resize(valueSizes[val]);
         for (auto sel = 0; sel < valueSizes[val]; ++sel) {
-            value_vect[val][sel] = values_ptr[val][sel];
+            values_vect[val][sel] = values_ptr[val][sel];
         }
     }
 
     return status;
 }
 
-template <class T>
-fmi3Status FmuUnit::GetVariable(const std::string& varname, T* value, size_t nValues) noexcept(false) {
-    return GetVariable(GetValueReference(varname), value, nValues);
+fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<fmi3String>& values_vect) noexcept(false) {
+    FmuVariableImport& var = m_variables.at(vr);
+    assert(var.GetType() == FmuVariable::Type::String &&
+           "Developer Error: GetVariable for std::vector<fmi3String> has been called for the wrong FMI variable type");
+
+    size_t nValues = GetVariableSize(var);
+    values_vect.resize(nValues);
+    const size_t nValueReferences = 1;
+
+    fmi3Status status = this->_fmi3GetString(this->instance, &vr, nValueReferences, values_vect.data(), nValues);
+
+    return status;
 }
 
-template <class T>
-fmi3Status FmuUnit::SetVariable(const std::string& varname, const T* value, size_t nValues) noexcept(false) {
-    return SetVariable(GetValueReference(varname), value, nValues);
+fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<std::string>& values_vect) noexcept(false) {
+    std::vector<fmi3String> values_vect_temp;  // will be resized later
+
+    fmi3Status status = GetVariable(vr, values_vect_temp);
+    values_vect.resize(values_vect_temp.size());
+    for (size_t i = 0; i < values_vect_temp.size(); ++i) {
+        values_vect[i] = std::string(values_vect_temp[i]);
+    }
+
+    return status;
 }
 
 }  // namespace fmi3

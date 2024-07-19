@@ -127,25 +127,38 @@ int main(int argc, char* argv[]) {
 
     // Boolean data
     fmi3Boolean val_bool;
-    fmi3ValueReference valrefs_bool[1] = {15};
+    fmi3ValueReference valrefs_bool[1] = {16};
     for (auto valref : valrefs_bool) {
         my_fmu.GetVariable(valref, &val_bool);
         std::cout << "Boolean: valref: " << valref << " | val: " << val_bool << std::endl;
     }
 
+    // String scalar
+    std::vector<std::string> val_string;
+    fmi3ValueReference valrefs_string[1] = {11};
+    my_fmu.GetVariable(valrefs_string[0], val_string);
+    std::cout << "String scalar: valref: " << valrefs_string[0] << " | val: ";
+    for (auto el = 0; el < val_string.size(); ++el) {
+        std::cout << val_string[el] << std::endl;
+    }
+    std::cout << std::endl;
+
     // String array as std::vector<std::string>
-    std::vector<std::string> val_string_array;
-    fmi3ValueReference valrefs_string_array[1] = {11};
-    my_fmu.GetVariable(valrefs_string_array[0], val_string_array);
-    std::cout << "String array: valref: " << valrefs_string_array[0] << " | val: ";
-    for (auto el = 0; el < val_string_array.size(); ++el) {
-        std::cout << val_string_array[el] << std::endl;
+    std::vector<std::string> val_string_array_input = {"sayonara", "zdravo"};
+    my_fmu.SetVariable("stringarrayinput", val_string_array_input);
+
+    std::vector<std::string> val_string_array_input_asoutput;
+    fmi3ValueReference valrefs_string_array[1] = {12};
+    my_fmu.GetVariable(valrefs_string_array[0], val_string_array_input_asoutput);
+    std::cout << "String array: valref: " << valrefs_string_array[0] << " | val: " << std::endl;
+    for (auto el = 0; el < val_string_array_input_asoutput.size(); ++el) {
+        std::cout << val_string_array_input_asoutput[el] << std::endl;
     }
     std::cout << std::endl;
 
     // Binary Data with direct access
     const size_t nValueReferences = 2;
-    fmi3ValueReference valrefs_bin[nValueReferences] = {12, 13};
+    fmi3ValueReference valrefs_bin[nValueReferences] = {13, 14};
 
     // FMI native interface
     {
