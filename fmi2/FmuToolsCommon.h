@@ -98,7 +98,7 @@ class FmuVariable {
                 FmuVariable::Type _type,
                 CausalityType _causality = CausalityType::local,
                 VariabilityType _variability = VariabilityType::continuous,
-                InitialType _initial = InitialType::automatic)
+                InitialType _initial = InitialType::none)
         : name(_name),
           valueReference(0),
           unitname("1"),
