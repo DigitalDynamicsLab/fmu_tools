@@ -259,37 +259,37 @@ class FmuVariable {
             m_intermediateUpdate == true;  // the variable must be contained in requiredIntermediateVariables
 
         switch (fmu_machine_state) {
-            case fmi3::FmuMachineState::instantiated:
+            case FmuMachineState::instantiated:
                 return is_groupA;
                 break;
-            case fmi3::FmuMachineState::initializationMode:
+            case FmuMachineState::initializationMode:
                 return is_groupB;
                 break;
-            case fmi3::FmuMachineState::eventMode:
+            case FmuMachineState::eventMode:
                 return is_groupC;
                 break;
-            case fmi3::FmuMachineState::terminated:
+            case FmuMachineState::terminated:
                 return false;
                 break;
-            case fmi3::FmuMachineState::stepMode:
+            case FmuMachineState::stepMode:
                 return is_groupC;
                 break;
-            case fmi3::FmuMachineState::intermediateUpdateMode:
+            case FmuMachineState::intermediateUpdateMode:
                 return is_groupG;
                 break;
-            case fmi3::FmuMachineState::continuousTimeMode:
+            case FmuMachineState::continuousTimeMode:
                 return is_groupF;
                 break;
-            case fmi3::FmuMachineState::configurationMode:
+            case FmuMachineState::configurationMode:
                 return is_groupD;
                 break;
-            case fmi3::FmuMachineState::reconfigurationMode:
+            case FmuMachineState::reconfigurationMode:
                 return is_groupE;
                 break;
-            case fmi3::FmuMachineState::clockActivationMode:
+            case FmuMachineState::clockActivationMode:
                 return false;
                 break;
-            case fmi3::FmuMachineState::clockUpdateMode:
+            case FmuMachineState::clockUpdateMode:
                 return false;
                 break;
             default:
