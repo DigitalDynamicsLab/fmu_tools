@@ -35,10 +35,16 @@ int main(int argc, char* argv[]) {
         ////my_fmu.LoadUnzipped(fmi2Type::fmi2ModelExchange, unzipped_fmu_folder);  // already unpacked
     } catch (std::exception& my_exception) {
         std::cout << "ERROR loading FMU: " << my_exception.what() << "\n";
+        return 1;
     }
 
-    my_fmu.Instantiate("FmuComponent");  // use default resources dir
-    ////my_fmu.Instantiate("FmuComponent", my_fmu.GetUnzippedFolder() + "resources");  // specify resources dir
+    try {
+        my_fmu.Instantiate("FmuComponent");  // use default resources dir
+        ////my_fmu.Instantiate("FmuComponent", my_fmu.GetUnzippedFolder() + "resources");  // specify resources dir
+    } catch (std::exception& my_exception) {
+        std::cout << "ERROR instantiating FMU: " << my_exception.what() << std::endl;
+        return 1;
+    }
 
     std::vector<std::string> categoriesVector = {"logAll"};
     my_fmu.SetDebugLogging(fmi2True, categoriesVector);

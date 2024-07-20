@@ -316,21 +316,33 @@ void FmuUnit::Load(fmi2Type fmuType, const std::string& filepath, const std::str
     miniz_cpp::zip_file fmufile(filepath);
     fmufile.extractall(unzipdir);
 
-    LoadUnzipped(fmuType, unzipdir);
+    try {
+        LoadUnzipped(fmuType, unzipdir);
+    } catch (std::exception&) {
+        throw;
+    }
 }
 
 void FmuUnit::LoadUnzipped(fmi2Type fmuType, const std::string& directory) {
     m_fmuType = fmuType;
     m_directory = directory;
 
-    LoadXML();
+    try {
+        LoadXML();
+    } catch (std::exception&) {
+        throw;
+    }
 
     if (fmuType == fmi2Type::fmi2CoSimulation && !cosim)
         throw std::runtime_error("Attempting to load Co-Simulation FMU, but not a CS FMU.");
     if (fmuType == fmi2Type::fmi2ModelExchange && !modex)
         throw std::runtime_error("Attempting to load as Model Exchange, but not an ME FMU.");
 
-    LoadSharedLibrary(fmuType);
+    try {
+        LoadSharedLibrary(fmuType);
+    } catch (std::exception&) {
+        throw;
+    }
 
     BuildVariablesTree();
 }
@@ -383,6 +395,9 @@ void FmuUnit::LoadXML() {
     if (auto attr = root_node->first_attribute("numberOfEventIndicators")) {
         numberOfEventIndicators = attr->value();
     }
+
+    if (fmiVersion.compare("2.0") != 0)
+        throw std::runtime_error("Not an FMI 2.0 FMU");
 
     // Find the cosimulation node
     auto cosimulation_node = root_node->first_node("CoSimulation");
@@ -772,7 +787,11 @@ void FmuUnit::Instantiate(const std::string& instanceName,
 }
 
 void FmuUnit::Instantiate(const std::string& instanceName, bool logging, bool visible) {
-    Instantiate(instanceName, "file:///" + m_directory + "/resources", logging, visible);
+    try {
+        Instantiate(instanceName, "file:///" + m_directory + "/resources", logging, visible);
+    } catch (std::exception&) {
+        throw;
+    }
 }
 
 fmi2Status FmuUnit::SetDebugLogging(fmi2Boolean loggingOn, const std::vector<std::string>& logCategories) {
