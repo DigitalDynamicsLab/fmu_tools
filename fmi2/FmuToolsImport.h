@@ -296,7 +296,7 @@ class FmuUnit {
 
 FmuUnit::FmuUnit() : cosim(false), modex(false), m_nx(0), m_verbose(false) {
     // default binaries directory in FMU unzipped directory
-    m_bin_directory = "/binaries/" + std::string(FMU_OS_SUFFIX);
+    m_bin_directory = "/binaries/" + std::string(FMI2_PLATFORM);
 }
 
 void FmuUnit::Load(fmi2Type fmuType, const std::string& filepath, const std::string& unzipdir) {

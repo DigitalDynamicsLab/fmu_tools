@@ -509,7 +509,7 @@ bool areStringsEqual(const char* str, size_t strSize, const char* fixedString) {
 
 FmuUnit::FmuUnit() : has_cosimulation(false), has_model_exchange(false), m_nx(0), m_verbose(false) {
     // default binaries directory in FMU unzipped directory
-    m_bin_directory = "/binaries/" + std::string(FMU_OS_SUFFIX);
+    m_bin_directory = "/binaries/" + std::string(FMI3_PLATFORM);
 }
 
 void FmuUnit::Load(FmuType fmuType, const std::string& filepath, const std::string& unzipdir) {

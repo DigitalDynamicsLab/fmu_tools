@@ -14,7 +14,7 @@
 #   FMU_MSG_PREFIX (optional, default "")
 #
 # On return, this script makes the following variables available to the fetcher project:
-#   FMI_PLATFORM
+#   FMI3_PLATFORM
 #   FMU_DIRECTORY
 #   FMU_FILENAME
 #   FMU_RUNTIME_OUTPUT_DIRECTORY
@@ -64,34 +64,33 @@ set(TESTING_ENABLED_OS "x86_64-windows" "x86_64-linux")
 
 set(UNKNOWN_TARGET_SYSTEM FALSE)
 if(WIN32)
-    set(FMI_SYS "windows")
+    set(FMI3_SYS "windows")
 elseif(APPLE)
-    set(FMI_SYS "darwin")
+    set(FMI3_SYS "darwin")
 elseif(UNIX)
-    set(FMI_SYS "linux")
+    set(FMI3_SYS "linux")
 else()
     set(UNKNOWN_TARGET_SYSTEM TRUE)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(FMI_ARCH "x86_64")
+    set(FMI3_ARCH "x86_64")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(FMI_ARCH "x86")
+    set(FMI3_ARCH "x86")
 else()
     set(UNKNOWN_TARGET_SYSTEM TRUE)
 endif()
 
 if(UNKNOWN_TARGET_SYSTEM)
-    message(WARNING "Cannot retrieve target operating system or architecture. Please specify it manually through TARGET_SYSTEM variable (e.g. win64)")
-    set(TARGET_SYSTEM "win64" CACHE STRING "Target operating system and architecture (e.g. win64, linux32, ...)")
-    mark_as_advanced(CLEAR TARGET_SYSTEM)
+    message(WARNING "Cannot retrieve target operating system or architecture. Please manually specify the FMI2_PLATFORM (e.g. win64) and the FMI3_PLATFORM (e.g. x86_64-windows)")
+    set(FMI3_PLATFORM "x86_64-windows" CACHE STRING "Target operating system and architecture for FMI 3.0 (e.g. x86_64-windows, x86-linux, ...)")
+    mark_as_advanced(CLEAR FMI3_PLATFORM)
 else()
-    set(FMI_PLATFORM ${FMI_ARCH}-${FMI_SYS})
-    message(STATUS "${FMU_MSG_PREFIX}Architecture: ${FMI_PLATFORM}")
-    mark_as_advanced(FORCE TARGET_SYSTEM)
+    set(FMI3_PLATFORM ${FMI3_ARCH}-${FMI3_SYS})
+    mark_as_advanced(FORCE FMI3_PLATFORM)
 endif()
 
-set(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_DIRECTORY}/binaries/${FMI_PLATFORM}/$<0:>")
+set(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_DIRECTORY}/binaries/${FMI3_PLATFORM}/$<0:>")
 
 # -------------------------------------------------
 # Generated GUID
@@ -256,8 +255,8 @@ add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
 )
 
 if (FMU_TESTING)
-    if(${FMI_PLATFORM} IN_LIST TESTING_ENABLED_OS)
-        set(FMUSIM_EXEC ${CMAKE_CURRENT_SOURCE_DIR}/../fmusim/fmusim.${FMI_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX})
+    if(${FMI3_PLATFORM} IN_LIST TESTING_ENABLED_OS)
+        set(FMUSIM_EXEC ${CMAKE_CURRENT_SOURCE_DIR}/../fmusim/fmusim.${FMI3_PLATFORM}${CMAKE_EXECUTABLE_SUFFIX})
 
         message(STATUS "${FMU_MSG_PREFIX}Testing enabled")
 
@@ -285,7 +284,7 @@ endif()
 # Make variables set in this script available to the fetcher projects
 # -------------------------------------------------
 
-set(FMI_PLATFORM ${FMI_PLATFORM} PARENT_SCOPE)
+set(FMI3_PLATFORM ${FMI3_PLATFORM} PARENT_SCOPE)
 set(FMU_DIRECTORY ${FMU_DIRECTORY} PARENT_SCOPE)
 set(FMU_FILENAME ${FMU_FILENAME} PARENT_SCOPE)
 set(FMU_RUNTIME_OUTPUT_DIRECTORY "${FMU_RUNTIME_OUTPUT_DIRECTORY}" PARENT_SCOPE)
