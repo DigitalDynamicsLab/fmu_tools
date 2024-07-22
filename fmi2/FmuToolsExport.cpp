@@ -33,27 +33,53 @@ bool is_pointer_variant(const FmuVariableBindType& myVariant) {
     return varns::visit([](auto&& arg) -> bool { return std::is_pointer_v<std::decay_t<decltype(arg)>>; }, myVariant);
 }
 
-void createModelDescription(const std::string& path, FmuType fmu_type) {
-    fmi2Type fmi2_type = fmi2Type::fmi2CoSimulation;
-    switch (fmu_type) {
-        case FmuType::COSIMULATION:
-            fmi2_type = fmi2Type::fmi2CoSimulation;
-            break;
-        case FmuType::MODEL_EXCHANGE:
-            fmi2_type = fmi2Type::fmi2ModelExchange;
-            break;
+bool createModelDescription(const std::string& path, std::string& err_msg) {
+    bool has_cosim = true;
+    bool has_modex = true;
+
+    std::exception e_cosim;
+    std::exception e_modex;
+
+    FmuComponentBase* fmu = nullptr;
+    fmi2CallbackFunctions callfun = {LoggingUtilities::logger_default, calloc, free, nullptr, nullptr};
+
+    try {
+        fmu = fmi2InstantiateIMPL("",                                                                //
+                                  fmi2Type::fmi2CoSimulation,                                        //
+                                  FMU_GUID,                                                          //
+                                  ("file:///" + GetLibraryLocation() + "/../../resources").c_str(),  //
+                                  &callfun,                                                          //
+                                  fmi2False, fmi2False                                               //
+        );
+    } catch (std::exception& e) {
+        has_cosim = false;
+        e_cosim = e;
+    }
+    try {
+        fmu = fmi2InstantiateIMPL("",                                                                //
+                                  fmi2Type::fmi2ModelExchange,                                       //
+                                  FMU_GUID,                                                          //
+                                  ("file:///" + GetLibraryLocation() + "/../../resources").c_str(),  //
+                                  &callfun,                                                          //
+                                  fmi2False, fmi2False                                               //
+        );
+    } catch (std::exception& e) {
+        has_modex = false;
+        e_modex = e;
     }
 
-    fmi2CallbackFunctions callfun = {LoggingUtilities::logger_default, calloc, free, nullptr, nullptr};
-    FmuComponentBase* fmu = fmi2InstantiateIMPL("",                                                                //
-                                                fmi2_type,                                                         //
-                                                FMU_GUID,                                                          //
-                                                ("file:///" + GetLibraryLocation() + "/../../resources").c_str(),  //
-                                                &callfun,                                                          //
-                                                fmi2False, fmi2False                                               //
-    );
-    fmu->ExportModelDescription(path);
+    bool ok = has_cosim || has_modex;
+
+    if (ok) {
+        fmu->ExportModelDescription(path);
+    } else {
+        err_msg = "FMU is not set as either CoSimulation nor ModelExchange.\nCosim exception : " +
+                  std::string(e_cosim.what()) + "\nModex exception: " + std::string(e_modex.what());
+    }
+
     delete fmu;
+
+    return ok;
 }
 
 // =============================================================================

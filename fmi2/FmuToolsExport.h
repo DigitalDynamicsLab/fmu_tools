@@ -29,7 +29,6 @@
 #include <functional>
 #include <list>
 
-#include "FmuToolsCommonDefinitions.h"
 #include "FmuToolsUnitDefinitions.h"
 #include "fmi2/FmuToolsVariable.h"
 #include "fmi2/fmi2_headers/fmi2Functions.h"
@@ -48,7 +47,7 @@ namespace fmi2 {
 extern "C" {
 #endif
 
-void FMI2_Export createModelDescription(const std::string& path, FmuType fmu_type);
+bool FMI2_Export createModelDescription(const std::string& path, std::string& err_msg);
 
 #ifdef __cplusplus
 }

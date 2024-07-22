@@ -29,7 +29,6 @@
 #include <list>
 #include <sstream>
 
-#include "FmuToolsCommonDefinitions.h"
 #include "FmuToolsUnitDefinitions.h"
 #include "fmi3/FmuToolsVariable.h"
 #include "fmi3/fmi3_headers/fmi3Functions.h"
@@ -49,7 +48,7 @@ namespace fmi3 {
 extern "C" {
 #endif
 
-void FMI3_Export createModelDescription(const std::string& path, FmuType fmu_type);
+bool FMI3_Export createModelDescription(const std::string& path, std::string& err_msg);
 
 #ifdef __cplusplus
 }

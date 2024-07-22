@@ -25,7 +25,7 @@
 
 class myFmuComponent : public fmi3::FmuComponentBase {
   public:
-    myFmuComponent(FmuType fmiInterfaceType,
+    myFmuComponent(fmi3::FmuType fmiInterfaceType,
                    fmi3String instanceName,
                    fmi3String instantiationToken,
                    fmi3String resourcePath,

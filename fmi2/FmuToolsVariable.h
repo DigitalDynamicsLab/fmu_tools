@@ -26,7 +26,17 @@
 #include "fmi2/fmi2_headers/fmi2FunctionTypes.h"
 #include "fmi2/fmi2_headers/fmi2Functions.h"
 
+// =============================================================================
+
 namespace fmi2 {
+
+/// Enumeration of supported FMU types (interfaces).
+enum class FmuType {
+    MODEL_EXCHANGE,  ///< FMU for model exchange
+    COSIMULATION     ///< FMU for co-simulation
+};
+
+// =============================================================================
 
 /// Enumeration of FMI machine states.
 enum class FmuMachineState {

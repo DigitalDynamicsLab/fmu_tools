@@ -23,12 +23,21 @@
 #include <unordered_map>
 #include <cassert>
 
-#include "FmuToolsCommonDefinitions.h"
-
 #include "fmi3/fmi3_headers/fmi3FunctionTypes.h"
 #include "fmi3/fmi3_headers/fmi3Functions.h"
 
 namespace fmi3 {
+
+// =============================================================================
+
+/// Enumeration of supported FMU types (interfaces).
+enum class FmuType {
+    MODEL_EXCHANGE,      ///< FMU for model exchange
+    COSIMULATION,        ///< FMU for co-simulation
+    SCHEDULED_EXECUTION  ///< FMU for co-simulation
+};
+
+// =============================================================================
 
 /// Enumeration of FMI machine states.
 enum class FmuMachineState {

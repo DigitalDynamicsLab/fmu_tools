@@ -93,7 +93,7 @@ class FmuVariableTreeNode {
 /// and invoke FMI functions on the FMU.
 class FmuUnit {
   public:
-    //// TODO: since FMI3.0 has unique varRefs we can use them for indexing instead of strings
+    // since FMI3.0 has unique varRefs we can use them for indexing instead of strings
     typedef std::map<fmi3ValueReference, FmuVariableImport> VarList;
 
     FmuUnit();
@@ -687,7 +687,7 @@ void FmuUnit::LoadXML() {
     if (!variables_node)
         throw std::runtime_error("Not a valid FMU. Missing <ModelVariables> in XML.");
 
-    // Initialize variable index and lists of state and state derivative variables
+    // Initialize variable value references and lists of state and state derivative variables
     std::vector<int> state_valref;
     std::vector<int> deriv_valref;
 
@@ -836,7 +836,7 @@ void FmuUnit::LoadXML() {
             }
         }
 
-        // Create and cache the new variable (also caching its index)
+        // Create and cache the new variable (also caching its value reference)
         FmuVariableImport var(var_name, var_type, dimensions, causality_enum, variability_enum, initial_enum);
         var.is_deriv = is_deriv;
         var.SetValueReference(valref);
@@ -844,10 +844,9 @@ void FmuUnit::LoadXML() {
         m_variables[valref] = var;
     }
 
-    // Traverse the list of state indices and mark the corresponding FMU variable as a state
+    // Traverse the list of state value references and mark the corresponding FMU variable as a state
     for (const auto& si : state_valref) {
-        auto state_var = m_variables.at(si);
-        state_var.is_state = true;
+        m_variables.at(si).is_state = true;
     }
 
     m_nx = state_valref.size();

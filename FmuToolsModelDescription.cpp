@@ -17,7 +17,6 @@
 #include <iostream>
 
 #include "FmuToolsRuntimeLinking.h"
-#include "FmuToolsCommonDefinitions.h"
 
 int main(int argc, char* argv[]) {
     std::string dynlib_fullpath;
@@ -73,34 +72,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    typedef void (*createModelDescriptionPtrType)(const std::string& path, FmuType fmu_type);
+    typedef bool (*createModelDescriptionPtrType)(const std::string& path, std::string& err_msg);
     createModelDescriptionPtrType createModelDescriptionPtr =
         (createModelDescriptionPtrType)get_function_ptr(dynlib_handle, "createModelDescription");
 
-    bool has_CoSimulation = true;
-    bool has_ModelExchange = true;
-
-    std::exception exc_CoSimulation;
-    std::exception exc_ModelExchange;
-
-    try {
-        createModelDescriptionPtr(output_path, FmuType::COSIMULATION);
-    } catch (std::exception& exc) {
-        exc_CoSimulation = exc;
-        has_CoSimulation = false;
-    }
-
-    try {
-        createModelDescriptionPtr(output_path, FmuType::MODEL_EXCHANGE);
-    } catch (std::exception& exc) {
-        exc_ModelExchange = exc;
-        has_ModelExchange = false;
-    }
-
-    if (!has_CoSimulation && !has_ModelExchange) {
-        std::cerr << "ERROR: FMU is not set as CoSimulation nor as ModelExchange." << std::endl;
-        std::cerr << "ERROR: CoSimulation exception: " << exc_CoSimulation.what() << std::endl;
-        std::cerr << "ERROR: ModelExchange exception: " << exc_ModelExchange.what() << std::endl;
+    std::string err_msg;
+    if (!createModelDescriptionPtr(output_path, err_msg)) {
+        std::cerr << "ERROR: " << err_msg << std::endl;
         return 2;
     }
 
