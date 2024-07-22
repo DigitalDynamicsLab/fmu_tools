@@ -68,8 +68,8 @@ source_group("" FILES ${COMPONENT_SOURCES})
 
 message(STATUS "...add instantiation demo for ${COMPONENT_NAME}")
 
-set(DEMO myDemoModelExchange_fmi2)
-set(DEMO_SOURCES myDemoModelExchange_fmi2.cpp)
+set(DEMO demo_ModelExchange_fmi2)
+set(DEMO_SOURCES demo_ModelExchange_fmi2.cpp)
 source_group("" FILES ${DEMO_SOURCES})
 
 add_executable(${DEMO} ${DEMO_SOURCES})
