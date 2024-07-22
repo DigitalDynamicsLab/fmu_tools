@@ -42,6 +42,7 @@
 
 // =============================================================================
 
+namespace fmu_tools {
 namespace fmi3 {
 
 #ifdef __cplusplus
@@ -673,5 +674,6 @@ FmuComponentBase* fmi3InstantiateIMPL(FmuType fmiInterfaceType,
                                       fmi3LogMessageCallback logMessage);
 
 }  // namespace fmi3
+}  // namespace fmu_tools
 
 #endif

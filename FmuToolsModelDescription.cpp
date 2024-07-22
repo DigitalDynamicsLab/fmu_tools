@@ -18,6 +18,8 @@
 
 #include "FmuToolsRuntimeLinking.h"
 
+using namespace fmu_tools;
+
 int main(int argc, char* argv[]) {
     std::string dynlib_fullpath;
     std::string dynlib_dir;

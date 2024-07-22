@@ -21,6 +21,7 @@
 
 #include "rapidxml/rapidxml_ext.hpp"
 
+namespace fmu_tools {
 namespace fmi2 {
 
 const std::unordered_set<UnitDefinition, UnitDefinition::Hash> common_unitdefinitions = {
@@ -895,12 +896,13 @@ void FmuComponentBase::sendToLog(std::string msg, fmi2Status status, std::string
 }
 
 }  // namespace fmi2
+}  // namespace fmu_tools
 
 // =============================================================================
 // FMU FUNCTIONS
 // =============================================================================
 
-using namespace fmi2;
+using namespace fmu_tools::fmi2;
 
 fmi2Component fmi2Instantiate(fmi2String instanceName,
                               fmi2Type fmuType,

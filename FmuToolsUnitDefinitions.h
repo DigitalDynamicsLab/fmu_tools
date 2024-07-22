@@ -18,6 +18,8 @@
 
 #include <string>
 
+namespace fmu_tools {
+
 /// Definition of an FMI unit.
 /// A unit definition consists of the exponents of the seven SI base units kg, m, s, A, K, mol, cd, and the exponent of
 /// the SI derived unit rad.
@@ -69,5 +71,7 @@ static const UnitDefinition UD_rad_s2("rad/s2", 0, 0, -2, 0, 0, 0, 0, 1);
 static const UnitDefinition UD_N("N", 1, 1, -2, 0, 0, 0, 0, 0);
 static const UnitDefinition UD_Nm("Nm", 1, 2, -2, 0, 0, 0, 0, 0);
 static const UnitDefinition UD_N_m2("N/m2", 1, -1, -2, 0, 0, 0, 0, 0);
+
+}  // namespace fmu_tools
 
 #endif

@@ -26,7 +26,8 @@
 // #define FMI3_FUNCTION_PREFIX MyModel_
 #include "myFmuCosimulation_fmi3.h"
 
-using namespace fmi3;
+using namespace fmu_tools;
+using namespace fmu_tools::fmi3;
 
 // -----------------------------------------------------------------------------
 

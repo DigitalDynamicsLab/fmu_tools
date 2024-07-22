@@ -21,6 +21,7 @@
 #include "variant/variant_guard.hpp"
 #include "fmi3/fmi3_headers/fmi3PlatformTypes.h"
 
+namespace fmu_tools {
 namespace fmi3 {
 
 #define FMITYPESPLATFORM_DEFAULT
@@ -67,5 +68,6 @@ using FmuVariableBindType = varns::variant<float*,                  // fmi3Float
                                            std::pair<std::function<std::string()>, std::function<void(std::string)>>>;
 
 }  // namespace fmi3
+}  // namespace fmu_tools
 
 #endif

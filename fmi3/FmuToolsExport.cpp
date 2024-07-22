@@ -34,6 +34,7 @@
 
 #include "rapidxml/rapidxml_ext.hpp"
 
+namespace fmu_tools {
 namespace fmi3 {
 
 // =============================================================================
@@ -1097,12 +1098,13 @@ void FmuComponentBase::sendToLog(std::string msg, fmi3Status status, std::string
 }
 
 }  // namespace fmi3
+}
 
 // =============================================================================
 // FMU FUNCTIONS
 // =============================================================================
 
-using namespace fmi3;
+using namespace fmu_tools::fmi3;
 
 // ------ Inquire version numbers and set debug logging
 

@@ -26,6 +26,7 @@
 #include "fmi3/fmi3_headers/fmi3FunctionTypes.h"
 #include "fmi3/fmi3_headers/fmi3Functions.h"
 
+namespace fmu_tools {
 namespace fmi3 {
 
 // =============================================================================
@@ -443,5 +444,6 @@ class FmuVariable {
 };
 
 }  // namespace fmi3
+}  // namespace fmu_tools
 
 #endif

@@ -41,6 +41,7 @@
 
 // =============================================================================
 
+namespace fmu_tools {
 namespace fmi2 {
 
 #ifdef __cplusplus
@@ -460,5 +461,6 @@ FmuComponentBase* fmi2InstantiateIMPL(fmi2String instanceName,
                                       fmi2Boolean loggingOn);
 
 }  // namespace fmi2
+}  // namespace fmu_tools
 
 #endif

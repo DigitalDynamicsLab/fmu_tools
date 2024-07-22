@@ -23,6 +23,8 @@
 #include "miniz-cpp/zip_file.hpp"
 #include "filesystem.hpp"
 
+namespace fmu_tools {
+
 /// Enumeration of supported FMI standard versions.
 enum class FmuVersion { FMI2, FMI3 };
 
@@ -69,5 +71,7 @@ FmuVersion GetFmuVersion(const std::string& fmufilename) {
     else
         throw std::runtime_error("Unsupported FMI version. \n");
 }
+
+}  // namespace fmu_tools
 
 #endif

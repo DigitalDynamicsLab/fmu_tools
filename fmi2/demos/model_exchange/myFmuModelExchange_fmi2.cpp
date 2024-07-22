@@ -26,7 +26,8 @@
 // #define FMI2_FUNCTION_PREFIX MyModel_
 #include "myFmuModelExchange_fmi2.h"
 
-using namespace fmi2;
+using namespace fmu_tools;
+using namespace fmu_tools::fmi2;
 
 // -----------------------------------------------------------------------------
 

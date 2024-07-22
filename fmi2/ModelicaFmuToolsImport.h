@@ -17,6 +17,7 @@
 
 #include "fmi2/FmuToolsImport.h"
 
+namespace fmu_tools {
 namespace fmi2 {
 
 /// Class holding a set of scalar variables for the coordinate system of a visualizer in the FMU.
@@ -160,3 +161,4 @@ void FmuModelicaUnit::BuildVisualizersList(FmuVariableTreeNode* mynode) {
 }
 
 }  // namespace fmi2
+}  // namespace fmu_tools

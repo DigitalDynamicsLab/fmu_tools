@@ -30,6 +30,7 @@
 #include "FmuToolsImportCommon.h"
 #include "fmi2/FmuToolsVariable.h"
 
+namespace fmu_tools {
 namespace fmi2 {
 
 #define LOAD_FMI_FUNCTION(funcName)                                                                    \
@@ -948,3 +949,4 @@ fmi2Status FmuUnit::SetVariable(const std::string& varname, const bool& value) n
 }
 
 }  // namespace fmi2
+}  // namespace fmu_tools

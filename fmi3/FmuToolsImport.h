@@ -30,6 +30,7 @@
 #include "FmuToolsImportCommon.h"
 #include "fmi3/FmuToolsVariable.h"
 
+namespace fmu_tools {
 namespace fmi3 {
 
 #define LOAD_FMI_FUNCTION(funcName)                                                                    \
@@ -1682,3 +1683,4 @@ fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<std::string>&
 }
 
 }  // namespace fmi3
+}  // namespace fmu_tools

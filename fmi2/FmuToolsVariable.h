@@ -28,6 +28,7 @@
 
 // =============================================================================
 
+namespace fmu_tools {
 namespace fmi2 {
 
 /// Enumeration of supported FMU types (interfaces).
@@ -329,5 +330,6 @@ class FmuVariable {
 };
 
 }  // namespace fmi2
+}  // namespace fmu_tools
 
 #endif

@@ -23,9 +23,9 @@
 // #define FMI3_FUNCTION_PREFIX MyModel_
 #include "fmi3/FmuToolsExport.h"
 
-class myFmuComponent : public fmi3::FmuComponentBase {
+class myFmuComponent : public fmu_tools::fmi3::FmuComponentBase {
   public:
-    myFmuComponent(fmi3::FmuType fmiInterfaceType,
+    myFmuComponent(fmu_tools::fmi3::FmuType fmiInterfaceType,
                    fmi3String instanceName,
                    fmi3String instantiationToken,
                    fmi3String resourcePath,
