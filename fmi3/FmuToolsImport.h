@@ -786,7 +786,6 @@ void FmuUnit::LoadXML() {
         }
 
         // Get variable type
-        rapidxml::xml_node<>* type_node = nullptr;
         FmuVariable::Type var_type;
 
         if (areStringsEqual(var_node->name(), var_node->name_size(), "Float32")) {
@@ -823,18 +822,17 @@ void FmuUnit::LoadXML() {
         // Check if variable is a derivative, check for unit and start value
         bool is_deriv = false;
         std::string unit = "";
-        if (type_node) {
-            if (auto attr = type_node->first_attribute("derivative")) {
-                state_valref.push_back(std::stoi(attr->value()));
-                deriv_valref.push_back(valref);
-                is_deriv = true;
-            }
-            if (auto attr = type_node->first_attribute("unit")) {
-                unit = attr->value();
-            }
-            if (auto attr = type_node->first_attribute("start")) {
-                //// TODO
-            }
+
+        if (auto attr = var_node->first_attribute("derivative")) {
+            state_valref.push_back(std::stoul(attr->value()));
+            deriv_valref.push_back(valref);
+            is_deriv = true;
+        }
+        if (auto attr = var_node->first_attribute("unit")) {
+            unit = attr->value();
+        }
+        if (auto attr = var_node->first_attribute("start")) {
+          //// TODO
         }
 
         // Create and cache the new variable (also caching its value reference)
@@ -1166,7 +1164,7 @@ fmi3Status FmuUnit::SetContinuousStates(const fmi3Float64 x[], size_t nx) {
 
 fmi3Status FmuUnit::GetContinuousStateDerivatives(fmi3Float64 derivatives[], size_t nx) {
     if (!has_model_exchange)
-        throw std::runtime_error("GetDerivatives available only for a Model Exchange FMU. \n");
+        throw std::runtime_error("GetContinuousStateDerivatives available only for a Model Exchange FMU. \n");
 
     auto status = _fmi3GetContinuousStateDerivatives(this->instance, derivatives, nx);
 
