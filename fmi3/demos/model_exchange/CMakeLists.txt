@@ -68,26 +68,26 @@ source_group("" FILES ${COMPONENT_SOURCES})
 
 #==============================================================
 
-#message(STATUS "...add instantiation demo for ${COMPONENT_NAME}")
-#
-#set(DEMO demo_ModelExchange_fmi3)
-#set(DEMO_SOURCES demo_ModelExchange_fmi3.cpp)
-#source_group("" FILES ${DEMO_SOURCES})
-#
-#add_executable(${DEMO} ${DEMO_SOURCES})
-#
-#target_include_directories(${DEMO} PRIVATE "${CMAKE_SOURCES_DIR}")
-#target_compile_definitions(${DEMO} PUBLIC FMU_UNPACK_DIRECTORY="${FMU_DIRECTORY}/tmp_unpack")
-#target_compile_definitions(${DEMO} PUBLIC FMU_DIRECTORY="${FMU_DIRECTORY}")
-#target_compile_definitions(${DEMO} PUBLIC FMU_FILENAME="${FMU_FILENAME}")
-#
-#target_compile_definitions(${DEMO} PUBLIC FMI3_PLATFORM="${FMI3_PLATFORM}")
-#target_compile_definitions(${DEMO} PUBLIC SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}")
-#
-#if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "6.0")
-#    target_link_options(${DEMO} PRIVATE "LINKER:-as-needed")
-#    target_link_libraries(${DEMO} PRIVATE stdc++fs)
-#    target_link_libraries(${DEMO} PRIVATE ${CMAKE_DL_LIBS})
-#endif()
-#
-#add_dependencies(${DEMO} ${COMPONENT_NAME})
+message(STATUS "...add instantiation demo for ${COMPONENT_NAME}")
+
+set(DEMO demo_ModelExchange_fmi3)
+set(DEMO_SOURCES demo_ModelExchange_fmi3.cpp)
+source_group("" FILES ${DEMO_SOURCES})
+
+add_executable(${DEMO} ${DEMO_SOURCES})
+
+target_include_directories(${DEMO} PRIVATE "${CMAKE_SOURCES_DIR}")
+target_compile_definitions(${DEMO} PUBLIC FMU_UNPACK_DIRECTORY="${FMU_DIRECTORY}/tmp_unpack")
+target_compile_definitions(${DEMO} PUBLIC FMU_DIRECTORY="${FMU_DIRECTORY}")
+target_compile_definitions(${DEMO} PUBLIC FMU_FILENAME="${FMU_FILENAME}")
+
+target_compile_definitions(${DEMO} PUBLIC FMI3_PLATFORM="${FMI3_PLATFORM}")
+target_compile_definitions(${DEMO} PUBLIC SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}")
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER "6.0")
+    target_link_options(${DEMO} PRIVATE "LINKER:-as-needed")
+    target_link_libraries(${DEMO} PRIVATE stdc++fs)
+    target_link_libraries(${DEMO} PRIVATE ${CMAKE_DL_LIBS})
+endif()
+
+add_dependencies(${DEMO} ${COMPONENT_NAME})

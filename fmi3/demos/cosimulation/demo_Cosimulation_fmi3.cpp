@@ -23,7 +23,6 @@
 using namespace fmu_tools::fmi3;
 
 std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
-////std::string unzipped_fmu_folder = FMU_MAIN_DIRECTORY;
 
 int main(int argc, char* argv[]) {
     FmuUnit my_fmu;

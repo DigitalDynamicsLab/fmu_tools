@@ -10,7 +10,7 @@
 // in the LICENSE file at the top level of the distribution.
 //
 // =============================================================================
-// Example FMU instantiation for model exchange (FMI 2.0 standard)
+// Example FMU instantiation for model exchange (FMI 3.0 standard)
 // Illustrates the FMU importing capabilities in fmu_tools (FmuToolsImport.h)
 // =============================================================================
 
@@ -18,9 +18,9 @@
 #include <fstream>
 #include <cstddef>
 
-#include "fmi2/FmuToolsImport.h"
+#include "fmi3/FmuToolsImport.h"
 
-using namespace fmi2;
+using namespace fmu_tools::fmi3;
 
 std::string unzipped_fmu_folder = FMU_UNPACK_DIRECTORY;
 
@@ -30,38 +30,41 @@ int main(int argc, char* argv[]) {
     my_fmu.SetVerbose(true);
 
     try {
-        my_fmu.Load(fmi2Type::fmi2ModelExchange, FMU_FILENAME, FMU_UNPACK_DIRECTORY);
-        ////my_fmu.Load(fmi2Type::fmi2ModelExchange, FMU_FILENAME);                 // unpack in /tmp
-        ////my_fmu.LoadUnzipped(fmi2Type::fmi2ModelExchange, unzipped_fmu_folder);  // already unpacked
+        my_fmu.Load(FmuType::MODEL_EXCHANGE, FMU_FILENAME, FMU_UNPACK_DIRECTORY);
+        ////my_fmu.Load(FmuType::MODEL_EXCHANGE, FMU_FILENAME);                 // unpack in  /tmp
+        ////my_fmu.LoadUnzipped(FmuType::MODEL_EXCHANGE, unzipped_fmu_folder);  // already unpacked
     } catch (std::exception& my_exception) {
-        std::cout << "ERROR loading FMU: " << my_exception.what() << "\n";
+        std::cout << "ERROR loading FMU: " << my_exception.what() << std::endl;
+        return 1;
     }
 
-    my_fmu.Instantiate("FmuComponent");  // use default resources dir
-    ////my_fmu.Instantiate("FmuComponent", my_fmu.GetUnzippedFolder() + "resources");  // specify resources dir
+    try {
+        my_fmu.Instantiate("FmuComponent");  // use default resources dir
+        ////my_fmu.Instantiate("FmuComponent", my_fmu.GetUnzippedFolder() + "resources");  // specify resources dir
+    } catch (std::exception& my_exception) {
+        std::cout << "ERROR instantiating FMU: " << my_exception.what() << std::endl;
+        return 1;
+    }
 
     std::vector<std::string> categoriesVector = {"logAll"};
-    my_fmu.SetDebugLogging(fmi2True, categoriesVector);
+    my_fmu.SetDebugLogging(fmi3True, categoriesVector);
 
     // Get number of states from the ModelExchange FMU
     int num_states = my_fmu.GetNumStates();
-
-    // Set up experiment
-    my_fmu.SetupExperiment(fmi2False,  // no tolerance defined
-                           0.0,        // tolerance (dummy)
-                           0.0,        // start time
-                           fmi2False,  // do not use stop time
-                           1.0         // stop time (dummy)
-    );
+    std::cout << "Num states: " << num_states << std::endl;
 
     // Initialize FMU
-    my_fmu.EnterInitializationMode();
-    // ...set/get FMU variables
+    my_fmu.EnterInitializationMode(fmi3False,  // no tolerance defined
+                                   0.0,        // tolerance (dummy)
+                                   0.0,        // start time
+                                   fmi3False,  // do not use stop time
+                                   1.0         // stop time (dummy)
+    );
     my_fmu.ExitInitializationMode();
 
     // States and derivatives
-    std::vector<fmi2Real> states(num_states);
-    std::vector<fmi2Real> derivs(num_states);
+    std::vector<fmi3Float64> states(num_states);
+    std::vector<fmi3Float64> derivs(num_states);
 
     // Get initial conditions (states)
     my_fmu.GetContinuousStates(states.data(), num_states);
@@ -76,12 +79,12 @@ int main(int argc, char* argv[]) {
 
     while (time < time_end) {
         double x, theta;
-        my_fmu.GetVariable("x", x, FmuVariable::Type::Real);
-        my_fmu.GetVariable("theta", theta, FmuVariable::Type::Real);
+        my_fmu.GetVariable("x", &x);
+        my_fmu.GetVariable("theta", &theta);
         ofile << time << " " << x << " " << theta << std::endl;
 
         // Compute derivatives (RHS)
-        my_fmu.GetDerivatives(derivs.data(), num_states);
+        my_fmu.GetContinuousStateDerivatives(derivs.data(), num_states);
 
         // Advance time
         time += dt;
