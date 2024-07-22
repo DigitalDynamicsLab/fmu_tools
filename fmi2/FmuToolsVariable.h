@@ -10,11 +10,11 @@
 // in the LICENSE file at the top level of the distribution.
 //
 // =============================================================================
-// Definition of the FMU variable base class and common utilities (FMI 2.0)
+// Definition of the FMU variable base class and logging utilities (FMI 2.0)
 // =============================================================================
 
-#ifndef FMUTOOLS_FMI2_COMMON_H
-#define FMUTOOLS_FMI2_COMMON_H
+#ifndef FMUTOOLS_FMI2_VARIABLE_H
+#define FMUTOOLS_FMI2_VARIABLE_H
 
 #include <stdexcept>
 #include <string>
@@ -23,12 +23,28 @@
 #include <unordered_map>
 #include <cassert>
 
-#include "fmi2/FmuToolsDefinitions.h"
-
 #include "fmi2/fmi2_headers/fmi2FunctionTypes.h"
 #include "fmi2/fmi2_headers/fmi2Functions.h"
 
 namespace fmi2 {
+
+/// Enumeration of FMI machine states.
+enum class FmuMachineState {
+    anySettableState,    // custom element, used to do checks
+    instantiated,        //
+    initializationMode,  //
+    stepCompleted,       // only CoSimulation
+    stepInProgress,      // only CoSimulation
+    stepFailed,          // only CoSimulation
+    stepCanceled,        // only CoSimulation
+    terminated,          //
+    error,               //
+    fatal,               //
+    eventMode,           // only ModelExchange
+    continuousTimeMode   // only ModelExchange
+};
+
+// =============================================================================
 
 struct LoggingUtilities {
     static std::string fmi2Status_toString(fmi2Status status) {

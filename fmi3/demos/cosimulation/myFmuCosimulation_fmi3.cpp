@@ -10,7 +10,7 @@
 // in the LICENSE file at the top level of the distribution.
 //
 // =============================================================================
-// Example FMU for co-simulation (FMI 2.0 standard)
+// Example FMU for co-simulation (FMI 3.0 standard)
 // Illustrates the FMU exporting capabilities in fmu_tools (FmuToolsExport.h)
 // =============================================================================
 

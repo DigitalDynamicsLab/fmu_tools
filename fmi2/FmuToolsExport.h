@@ -31,10 +31,8 @@
 
 #include "FmuToolsCommonDefinitions.h"
 #include "FmuToolsUnitDefinitions.h"
-#include "fmi2/FmuToolsCommon.h"
+#include "fmi2/FmuToolsVariable.h"
 #include "fmi2/fmi2_headers/fmi2Functions.h"
-#include "fmi2/FmuToolsDefinitions.h"
-
 
 #ifndef FMITYPESPLATFORM_CUSTOM
     #include "fmi2/TypesVariantsDefault.h"

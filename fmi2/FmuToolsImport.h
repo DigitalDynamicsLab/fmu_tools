@@ -26,15 +26,9 @@
 #include <algorithm>
 #include <iterator>
 
-#include "FmuToolsCommon.h"
 #include "FmuToolsRuntimeLinking.h"
-
-// ATTENTION: order of included headers is IMPORTANT!
-//            rapidxml.hpp must be included first here.
-
-#include "rapidxml/rapidxml.hpp"
-#include "miniz-cpp/zip_file.hpp"
-#include "filesystem.hpp"
+#include "FmuToolsImportCommon.h"
+#include "fmi2/FmuToolsVariable.h"
 
 namespace fmi2 {
 
@@ -310,11 +304,7 @@ void FmuUnit::Load(fmi2Type fmuType, const std::string& filepath, const std::str
         std::cout << "           in: " << unzipdir << std::endl;
     }
 
-    std::error_code ec;
-    fs::remove_all(unzipdir, ec);
-    fs::create_directories(unzipdir);
-    miniz_cpp::zip_file fmufile(filepath);
-    fmufile.extractall(unzipdir);
+    UnzipFmu(filepath, unzipdir);
 
     try {
         LoadUnzipped(fmuType, unzipdir);

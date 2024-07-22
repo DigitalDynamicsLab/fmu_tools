@@ -10,11 +10,11 @@
 // in the LICENSE file at the top level of the distribution.
 //
 // =============================================================================
-// Definition of the FMU variable base class and common utilities (FMI 3.0)
+// Definition of the FMU variable base class and logging utilities (FMI 3.0)
 // =============================================================================
 
-#ifndef FMUTOOLS_FMI3_COMMON_H
-#define FMUTOOLS_FMI3_COMMON_H
+#ifndef FMUTOOLS_FMI3_VARIABLE_H
+#define FMUTOOLS_FMI3_VARIABLE_H
 
 #include <stdexcept>
 #include <string>
@@ -23,13 +23,29 @@
 #include <unordered_map>
 #include <cassert>
 
-#include "fmi3/FmuToolsDefinitions.h"
 #include "FmuToolsCommonDefinitions.h"
 
 #include "fmi3/fmi3_headers/fmi3FunctionTypes.h"
 #include "fmi3/fmi3_headers/fmi3Functions.h"
 
 namespace fmi3 {
+
+/// Enumeration of FMI machine states.
+enum class FmuMachineState {
+    instantiated,            //
+    initializationMode,      //
+    eventMode,               //
+    terminated,              //
+    stepMode,                // only CoSimulation
+    intermediateUpdateMode,  // only CoSimulation
+    continuousTimeMode,      // only ModelExchange
+    configurationMode,       //
+    reconfigurationMode,     //
+    clockActivationMode,     // only ScheduledExecution
+    clockUpdateMode          // only ScheduledExecution
+};
+
+// =============================================================================
 
 struct LoggingUtilities {
     static std::string fmi3Status_toString(fmi3Status status) {

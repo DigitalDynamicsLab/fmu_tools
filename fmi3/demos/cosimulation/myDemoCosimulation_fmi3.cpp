@@ -10,7 +10,7 @@
 // in the LICENSE file at the top level of the distribution.
 //
 // =============================================================================
-// Example FMU instantiation for co-simulation (FMI 2.0 standard)
+// Example FMU instantiation for co-simulation (FMI 3.0 standard)
 // Illustrates the FMU importing capabilities in fmu_tools (FmuToolsImport.h)
 // =============================================================================
 
@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
 
     try {
         my_fmu.Load(FmuType::COSIMULATION, FMU_FILENAME, FMU_UNPACK_DIRECTORY);
-        ////my_fmu.Load(fmi3Type::fmi3CoSimulation, FMU_FILENAME);                 // unpack in  /tmp
-        ////my_fmu.LoadUnzipped(fmi3Type::fmi3CoSimulation, unzipped_fmu_folder);  // already unpacked
+        ////my_fmu.Load(FmuType::COSIMULATION, FMU_FILENAME);                 // unpack in  /tmp
+        ////my_fmu.LoadUnzipped(FmuType::COSIMULATION, unzipped_fmu_folder);  // already unpacked
     } catch (std::exception& my_exception) {
         std::cout << "ERROR loading FMU: " << my_exception.what() << std::endl;
         return 1;

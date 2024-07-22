@@ -31,8 +31,7 @@
 
 #include "FmuToolsCommonDefinitions.h"
 #include "FmuToolsUnitDefinitions.h"
-#include "fmi3/FmuToolsCommon.h"
-#include "fmi3/FmuToolsDefinitions.h"
+#include "fmi3/FmuToolsVariable.h"
 #include "fmi3/fmi3_headers/fmi3Functions.h"
 
 //// RADU TODO - do we want/need custom type variants?
