@@ -1498,7 +1498,7 @@ template <class T>
 fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<T>& values_vect) const noexcept(false) {
     fmi3Status status = fmi3Status::fmi3Error;
 
-    FmuVariableImport& var = m_variables.at(vr);
+    const FmuVariableImport& var = m_variables.at(vr);
 
     size_t nValues = GetVariableSize(var);
     auto vartype = var.GetType();
