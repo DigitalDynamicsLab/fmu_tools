@@ -66,10 +66,10 @@ int main(int argc, char* argv[]) {
     {
         fmi3ValueReference valref = 3;
         fmi3Float64 m_in = 1.5;
-        my_fmu.SetVariable(valref, &m_in);
+        my_fmu.SetVariable(valref, m_in);
 
         fmi3Float64 m_out;
-        my_fmu.GetVariable(valref, &m_out);
+        my_fmu.GetVariable(valref, m_out);
         std::cout << "m_out: " << m_out << std::endl;
 
         // String array as std::vector<std::string>
@@ -88,8 +88,8 @@ int main(int argc, char* argv[]) {
 
     while (time < time_end) {
         double x, theta;
-        my_fmu.GetVariable("x", &x);
-        my_fmu.GetVariable("theta", &theta);
+        my_fmu.GetVariable("x", x);
+        my_fmu.GetVariable("theta", theta);
         ofile << time << " " << x << " " << theta << std::endl;
 
         // Set next communication time
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
     fmi3Float64 val_real;
     fmi3ValueReference valrefs_float64[11] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 15};
     for (auto valref : valrefs_float64) {
-        my_fmu.GetVariable(valref, &val_real);
+        my_fmu.GetVariable(valref, val_real);
         std::cout << "Float64: valref: " << valref << " | val: " << val_real << std::endl;
     }
 
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
     fmi3ValueReference valref_float64_array = 10;
 
     val_real_array.resize(my_fmu.GetVariableSize(valref_float64_array));
-    my_fmu.GetVariable(valref_float64_array, val_real_array.data());
+    my_fmu.GetVariable(valref_float64_array, *val_real_array.data());
 
     auto dims = my_fmu.GetVariableDimensions(valref_float64_array);
     std::cout << "Float64 (array): valref: " << valref_float64_array << " | val: \n";
@@ -127,13 +127,13 @@ int main(int argc, char* argv[]) {
     }
 
     // Getting FMU variables through custom fmu-tools functions, directly using the variable name
-    auto status = my_fmu.GetVariable("m", &val_real);
+    auto status = my_fmu.GetVariable("m", val_real);
 
     // Boolean data
     fmi3Boolean val_bool;
     fmi3ValueReference valrefs_bool[1] = {16};
     for (auto valref : valrefs_bool) {
-        my_fmu.GetVariable(valref, &val_bool);
+        my_fmu.GetVariable(valref, val_bool);
         std::cout << "Boolean: valref: " << valref << " | val: " << val_bool << std::endl;
     }
 

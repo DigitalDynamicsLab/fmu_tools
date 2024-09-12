@@ -79,8 +79,8 @@ int main(int argc, char* argv[]) {
 
     while (time < time_end) {
         double x, theta;
-        my_fmu.GetVariable("x", &x);
-        my_fmu.GetVariable("theta", &theta);
+        my_fmu.GetVariable("x", x);
+        my_fmu.GetVariable("theta", theta);
         ofile << time << " " << x << " " << theta << std::endl;
 
         // Compute derivatives (RHS)

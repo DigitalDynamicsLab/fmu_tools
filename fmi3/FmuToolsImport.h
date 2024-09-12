@@ -209,7 +209,7 @@ class FmuUnit {
             else {
                 // the size of the current dimension is given by another variable
                 size_t cur_size;
-                GetVariable(static_cast<fmi3ValueReference>(d.first), &cur_size);
+                GetVariable(static_cast<fmi3ValueReference>(d.first), cur_size);
                 sizes.push_back(cur_size);
             }
         }
@@ -238,7 +238,7 @@ class FmuUnit {
     /// Values will be fetched from 'values' assuming its dimensions, memory alignment and allocation are according
     /// to FMI standard.
     template <class T>
-    fmi3Status SetVariable(fmi3ValueReference vr, const T* values, size_t nValues = 0) noexcept(false);
+    fmi3Status SetVariable(fmi3ValueReference vr, const T& values, size_t nValues = 0) noexcept(false);
 
     template <class T>
     fmi3Status SetVariable(fmi3ValueReference vr, const std::vector<T>& values_vect) noexcept(false);
@@ -293,7 +293,7 @@ class FmuUnit {
     /// just the pointer to the head of the fmi3String array, but no copy happened. The size is inferred by the
     /// null-termination of the string.
     template <class T>
-    fmi3Status GetVariable(fmi3ValueReference vr, T* values, size_t nValues = 0) const noexcept(false);
+    fmi3Status GetVariable(fmi3ValueReference vr, T& values, size_t nValues = 0) const noexcept(false);
 
     /// Get the value of the array of variables.
     template <class T>
@@ -1174,7 +1174,7 @@ fmi3Status FmuUnit::GetContinuousStateDerivatives(fmi3Float64 derivatives[], siz
 }
 
 template <class T>
-fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const T* value, size_t nValues) noexcept(false) {
+fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const T& value, size_t nValues) noexcept(false) {
     fmi3Status status = fmi3Status::fmi3Error;
 
     FmuVariableImport& var = m_variables.at(vr);
@@ -1190,47 +1190,47 @@ fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const T* value, size_t nV
 
     switch (vartype) {
         case FmuVariable::Type::Float32:
-            status = this->_fmi3SetFloat32(this->instance, &vr, nValueReferences, (fmi3Float32*)value, nValues);
+            status = this->_fmi3SetFloat32(this->instance, &vr, nValueReferences, (fmi3Float32*)&value, nValues);
             break;
         case FmuVariable::Type::Float64:
-            status = this->_fmi3SetFloat64(this->instance, &vr, nValueReferences, (fmi3Float64*)value, nValues);
+            status = this->_fmi3SetFloat64(this->instance, &vr, nValueReferences, (fmi3Float64*)&value, nValues);
             break;
         case FmuVariable::Type::Int8:
-            status = this->_fmi3SetInt8(this->instance, &vr, nValueReferences, (fmi3Int8*)value, nValues);
+            status = this->_fmi3SetInt8(this->instance, &vr, nValueReferences, (fmi3Int8*)&value, nValues);
             break;
         case FmuVariable::Type::UInt8:
-            status = this->_fmi3SetUInt8(this->instance, &vr, nValueReferences, (fmi3UInt8*)value, nValues);
+            status = this->_fmi3SetUInt8(this->instance, &vr, nValueReferences, (fmi3UInt8*)&value, nValues);
             break;
         case FmuVariable::Type::Int16:
-            status = this->_fmi3SetInt16(this->instance, &vr, nValueReferences, (fmi3Int16*)value, nValues);
+            status = this->_fmi3SetInt16(this->instance, &vr, nValueReferences, (fmi3Int16*)&value, nValues);
             break;
         case FmuVariable::Type::UInt16:
-            status = this->_fmi3SetUInt16(this->instance, &vr, nValueReferences, (fmi3UInt16*)value, nValues);
+            status = this->_fmi3SetUInt16(this->instance, &vr, nValueReferences, (fmi3UInt16*)&value, nValues);
             break;
         case FmuVariable::Type::Int32:
-            status = this->_fmi3SetInt32(this->instance, &vr, nValueReferences, (fmi3Int32*)value, nValues);
+            status = this->_fmi3SetInt32(this->instance, &vr, nValueReferences, (fmi3Int32*)&value, nValues);
             break;
         case FmuVariable::Type::UInt32:
-            status = this->_fmi3SetUInt32(this->instance, &vr, nValueReferences, (fmi3UInt32*)value, nValues);
+            status = this->_fmi3SetUInt32(this->instance, &vr, nValueReferences, (fmi3UInt32*)&value, nValues);
             break;
         case FmuVariable::Type::Int64:
-            status = this->_fmi3SetInt64(this->instance, &vr, nValueReferences, (fmi3Int64*)value, nValues);
+            status = this->_fmi3SetInt64(this->instance, &vr, nValueReferences, (fmi3Int64*)&value, nValues);
             break;
         case FmuVariable::Type::UInt64:
-            status = this->_fmi3SetUInt64(this->instance, &vr, nValueReferences, (fmi3UInt64*)value, nValues);
+            status = this->_fmi3SetUInt64(this->instance, &vr, nValueReferences, (fmi3UInt64*)&value, nValues);
             break;
         case FmuVariable::Type::Boolean:
-            status = this->_fmi3SetBoolean(this->instance, &vr, nValueReferences, (fmi3Boolean*)value, nValues);
+            status = this->_fmi3SetBoolean(this->instance, &vr, nValueReferences, (fmi3Boolean*)&value, nValues);
             break;
         case FmuVariable::Type::String:
-            status = this->_fmi3SetString(this->instance, &vr, nValueReferences, (fmi3String*)value, nValues);
+            status = this->_fmi3SetString(this->instance, &vr, nValueReferences, (fmi3String*)&value, nValues);
             break;
         case FmuVariable::Type::Binary:
             // WARNING: this case may be hit when T* is:
             // - std::vector<fmi3Byte>*
             // - fmi3Binary*
             valueSizes.resize(nValues);
-            status = this->_fmi3SetBinary(this->instance, &vr, nValueReferences, valueSizes.data(), (fmi3Binary*)value,
+            status = this->_fmi3SetBinary(this->instance, &vr, nValueReferences, valueSizes.data(), (fmi3Binary*)&value,
                                           nValues);
             break;
 
@@ -1426,7 +1426,7 @@ fmi3Status FmuUnit::SetVariable(fmi3ValueReference vr, const std::vector<std::st
 }
 
 template <class T>
-fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, T* value, size_t nValues) const noexcept(false) {
+fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, T& value, size_t nValues) const noexcept(false) {
     fmi3Status status = fmi3Status::fmi3Error;
 
     // TODO
@@ -1445,45 +1445,45 @@ fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, T* value, size_t nValues)
 
     switch (vartype) {
         case FmuVariable::Type::Float32:
-            status = this->_fmi3GetFloat32(this->instance, &vr, nValueReferences, (fmi3Float32*)value, nValues);
+            status = this->_fmi3GetFloat32(this->instance, &vr, nValueReferences, (fmi3Float32*)&value, nValues);
             break;
         case FmuVariable::Type::Float64:
-            status = this->_fmi3GetFloat64(this->instance, &vr, nValueReferences, (fmi3Float64*)value, nValues);
+            status = this->_fmi3GetFloat64(this->instance, &vr, nValueReferences, (fmi3Float64*)&value, nValues);
             break;
         case FmuVariable::Type::Int8:
-            status = this->_fmi3GetInt8(this->instance, &vr, nValueReferences, (fmi3Int8*)value, nValues);
+            status = this->_fmi3GetInt8(this->instance, &vr, nValueReferences, (fmi3Int8*)&value, nValues);
             break;
         case FmuVariable::Type::UInt8:
-            status = this->_fmi3GetUInt8(this->instance, &vr, nValueReferences, (fmi3UInt8*)value, nValues);
+            status = this->_fmi3GetUInt8(this->instance, &vr, nValueReferences, (fmi3UInt8*)&value, nValues);
             break;
         case FmuVariable::Type::Int16:
-            status = this->_fmi3GetInt16(this->instance, &vr, nValueReferences, (fmi3Int16*)value, nValues);
+            status = this->_fmi3GetInt16(this->instance, &vr, nValueReferences, (fmi3Int16*)&value, nValues);
             break;
         case FmuVariable::Type::UInt16:
-            status = this->_fmi3GetUInt16(this->instance, &vr, nValueReferences, (fmi3UInt16*)value, nValues);
+            status = this->_fmi3GetUInt16(this->instance, &vr, nValueReferences, (fmi3UInt16*)&value, nValues);
             break;
         case FmuVariable::Type::Int32:
-            status = this->_fmi3GetInt32(this->instance, &vr, nValueReferences, (fmi3Int32*)value, nValues);
+            status = this->_fmi3GetInt32(this->instance, &vr, nValueReferences, (fmi3Int32*)&value, nValues);
             break;
         case FmuVariable::Type::UInt32:
-            status = this->_fmi3GetUInt32(this->instance, &vr, nValueReferences, (fmi3UInt32*)value, nValues);
+            status = this->_fmi3GetUInt32(this->instance, &vr, nValueReferences, (fmi3UInt32*)&value, nValues);
             break;
         case FmuVariable::Type::Int64:
-            status = this->_fmi3GetInt64(this->instance, &vr, nValueReferences, (fmi3Int64*)value, nValues);
+            status = this->_fmi3GetInt64(this->instance, &vr, nValueReferences, (fmi3Int64*)&value, nValues);
             break;
         case FmuVariable::Type::UInt64:
-            status = this->_fmi3GetUInt64(this->instance, &vr, nValueReferences, (fmi3UInt64*)value, nValues);
+            status = this->_fmi3GetUInt64(this->instance, &vr, nValueReferences, (fmi3UInt64*)&value, nValues);
             break;
         case FmuVariable::Type::Boolean:
-            status = this->_fmi3GetBoolean(this->instance, &vr, nValueReferences, (fmi3Boolean*)value, nValues);
+            status = this->_fmi3GetBoolean(this->instance, &vr, nValueReferences, (fmi3Boolean*)&value, nValues);
             break;
         case FmuVariable::Type::String:
-            status = this->_fmi3GetString(this->instance, &vr, nValueReferences, (fmi3String*)value, nValues);
+            status = this->_fmi3GetString(this->instance, &vr, nValueReferences, (fmi3String*)&value, nValues);
             break;
         case FmuVariable::Type::Binary:
             // the only case that should end up here is when T* is fmi3Binary*
             status =
-                this->_fmi3GetBinary(this->instance, &vr, nValueReferences, valueSizes, (fmi3Binary*)value, nValues);
+                this->_fmi3GetBinary(this->instance, &vr, nValueReferences, valueSizes, (fmi3Binary*)&value, nValues);
             break;
         case FmuVariable::Type::Unknown:
             throw std::runtime_error("Fmu Variable type not initialized.");
