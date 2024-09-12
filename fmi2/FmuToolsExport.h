@@ -74,26 +74,26 @@ class FmuVariableExport : public FmuVariable {
     using StartType = FmuVariableStartType;
 
     FmuVariableExport(const VarbindType& varbind,
-                      const std::string& _name,
-                      FmuVariable::Type _type,
-                      CausalityType _causality = CausalityType::local,
-                      VariabilityType _variability = VariabilityType::continuous,
-                      InitialType _initial = InitialType::none);
+                      const std::string& name,
+                      FmuVariable::Type type,
+                      CausalityType causality = CausalityType::local,
+                      VariabilityType variability = VariabilityType::continuous,
+                      InitialType initial = InitialType::none);
 
     FmuVariableExport(const FmuVariableExport& other);
 
     /// Copy assignment operator.
     FmuVariableExport& operator=(const FmuVariableExport& other);
 
-    void Bind(VarbindType newvarbind) { varbind = newvarbind; }
+    void Bind(VarbindType varbind) { m_varbind = varbind; }
 
     /// Set the value of this FMU variable (for all cases, except variables of type fmi2String).
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
     void SetValue(const T& val) const {
-        if (is_pointer_variant(this->varbind))
-            *varns::get<T*>(this->varbind) = val;
+        if (is_pointer_variant(m_varbind))
+            *varns::get<T*>(m_varbind) = val;
         else
-            varns::get<FunGetSet<T>>(this->varbind).second(val);
+            varns::get<FunGetSet<T>>(m_varbind).second(val);
     }
 
     /// Set the value of this FMU variable of type fmi2String.
@@ -102,8 +102,8 @@ class FmuVariableExport : public FmuVariable {
     /// Get the value of this FMU variable (for all cases, except variables of type fmi2String).
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
     void GetValue(T* varptr) const {
-        *varptr = is_pointer_variant(this->varbind) ? *varns::get<T*>(this->varbind)
-                                                    : varns::get<FunGetSet<T>>(this->varbind).first();
+        *varptr =
+            is_pointer_variant(m_varbind) ? *varns::get<T*>(m_varbind) : varns::get<FunGetSet<T>>(m_varbind).first();
     }
 
     /// Get the value of this FMU variable of type fmi2String.
@@ -111,26 +111,26 @@ class FmuVariableExport : public FmuVariable {
 
     /// Set the start value for this FMU variable (for all cases, except variables of type fmi2String).
     template <typename T, typename = typename std::enable_if<!std::is_same<T, fmi2String>::value>::type>
-    void SetStartVal(T startval) {
-        if (!allowed_start)
+    void SetStartVal(T start) {
+        if (!m_allowed_start)
             return;
-        has_start = true;
-        this->start = startval;
+        m_has_start = true;
+        m_start = start;
     }
 
     /// Set the start value for this FMU variable of type fmi2String.
-    void SetStartVal(fmi2String startval);
+    void SetStartVal(fmi2String start);
 
     void ExposeCurrentValueAsStart();
 
   protected:
-    bool allowed_start = true;
-    bool required_start = false;
+    bool m_allowed_start = true;    ///< specification of start value permitted
+    bool m_required_start = false;  ///< specification of start value required
 
-    VarbindType varbind;  // value of this variable
-    StartType start;      // start value for this variable
+    VarbindType m_varbind;  ///< value of this variable
+    StartType m_start;      ///< start value for this variable
 
-    // TODO: in C++17 should be possible to either use constexpr or use lambda with 'overload' keyword
+    //// TODO: in C++17 should be possible to either use constexpr or use lambda with 'overload' keyword
     template <typename T>
     void setStartFromVar(FunGetSet<T> funPair);
 
@@ -146,22 +146,22 @@ class FmuVariableExport : public FmuVariable {
 
 template <typename T>
 void FmuVariableExport::setStartFromVar(FunGetSet<T> funPair) {
-    if (allowed_start)
-        has_start = true;
+    if (m_allowed_start)
+        m_has_start = true;
     else
         return;
 
-    this->start = funPair.first();
+    m_start = funPair.first();
 }
 
 template <typename T>
 void FmuVariableExport::setStartFromVar(T* var_ptr) {
-    if (allowed_start)
-        has_start = true;
+    if (m_allowed_start)
+        m_has_start = true;
     else
         return;
 
-    this->start = *var_ptr;
+    m_start = *var_ptr;
 }
 
 // =============================================================================

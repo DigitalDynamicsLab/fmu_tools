@@ -41,29 +41,30 @@ namespace fmi2 {
 
 // =============================================================================
 
+/// Implementation of an FMU variable for import.
 class FmuVariableImport : public FmuVariable {
   public:
     FmuVariableImport() : FmuVariableImport("", FmuVariable::Type::Real) {}
 
-    FmuVariableImport(const std::string& _name,
-                      FmuVariable::Type _type,
-                      CausalityType _causality = CausalityType::local,
-                      VariabilityType _variability = VariabilityType::continuous,
-                      InitialType _initial = InitialType::none,
-                      int _index = -1)
-        : FmuVariable(_name, _type, _causality, _variability, _initial),
-          index(_index),
-          is_state(false),
-          is_deriv(false) {}
+    FmuVariableImport(const std::string& name,
+                      FmuVariable::Type type,
+                      CausalityType causality = CausalityType::local,
+                      VariabilityType variability = VariabilityType::continuous,
+                      InitialType initial = InitialType::none,
+                      int index = -1)
+        : FmuVariable(name, type, causality, variability, initial),
+          m_index(index),
+          m_is_state(false),
+          m_is_deriv(false) {}
 
-    int GetIndex() const { return index; }
-    bool IsState() const { return is_state; }
-    bool IsDeriv() const { return is_deriv; }
+    int GetIndex() const { return m_index; }
+    bool IsState() const { return m_is_state; }
+    bool IsDeriv() const { return m_is_deriv; }
 
   private:
-    int index;      // index of this variable in the mode description XML
-    bool is_state;  // true is this is a state variable
-    bool is_deriv;  // true if this is a state derivative variable
+    int m_index;      ///< index of this variable in the mode description XML
+    bool m_is_state;  ///< true is this is a state variable
+    bool m_is_deriv;  ///< true if this is a state derivative variable
 
     friend class FmuUnit;
 };
@@ -92,7 +93,7 @@ class FmuVariableTreeNode {
 
 // =============================================================================
 
-/// Class for managing an FMU.
+/// Class for managing an imported FMU.
 /// Provides functions to parse the model description XML file, load the shared library in run-time, set/get variables,
 /// and invoke FMI functions on the FMU.
 class FmuUnit {
@@ -601,7 +602,7 @@ void FmuUnit::LoadXML() {
 
         // Create and cache the new variable (also caching its index)
         FmuVariableImport var(var_name, var_type, causality_enum, variability_enum, initial_enum, crt_index);
-        var.is_deriv = is_deriv;
+        var.m_is_deriv = is_deriv;
         var.SetValueReference(valref);
 
         scalarVariables[var_name] = var;
@@ -611,7 +612,7 @@ void FmuUnit::LoadXML() {
     for (const auto& si : state_indices) {
         auto it = FindByIndex(si);
         if (it != scalarVariables.end())
-            it->second.is_state = true;
+            it->second.m_is_state = true;
     }
 
     m_nx = state_indices.size();

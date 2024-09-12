@@ -27,6 +27,7 @@
 #include "fmi3/fmi3_headers/fmi3Functions.h"
 
 namespace fmu_tools {
+/// Namespace for FMI 3.0 classes
 namespace fmi3 {
 
 // =============================================================================
@@ -94,7 +95,6 @@ struct LoggingUtilities {
 /// Objects of this type are created during:
 /// - FMU export (and encoded in the model description XML)
 /// - FMU import (retrieved from the model description XML)
-/// The model description XML lists variables grouped by type, in increasing order of the Type enum values.
 class FmuVariable {
   public:
     enum class Type {
@@ -124,35 +124,35 @@ class FmuVariable {
 
     FmuVariable() : FmuVariable("", FmuVariable::Type::Float64) {}
 
-    FmuVariable(const std::string& _name,
-                FmuVariable::Type _type,
+    FmuVariable(const std::string& name,
+                FmuVariable::Type type,
                 const DimensionsArrayType& _dimensions = DimensionsArrayType(),
-                CausalityType _causality = CausalityType::local,
-                VariabilityType _variability = VariabilityType::continuous,
-                InitialType _initial = InitialType::automatic)
-        : name(_name),
-          valueReference(0),
-          unitname("1"),
-          type(_type),
+                CausalityType causality = CausalityType::local,
+                VariabilityType variability = VariabilityType::continuous,
+                InitialType initial = InitialType::automatic)
+        : m_name(name),
+          m_valueReference(0),
+          m_unitname("1"),
+          m_type(type),
           m_dimensions(_dimensions),
-          causality(_causality),
-          variability(_variability),
-          initial(_initial),
-          description("") {
+          m_causality(causality),
+          m_variability(variability),
+          m_initial(initial),
+          m_description("") {
         // Readibility replacements
-        bool c_structural = (causality == CausalityType::structuralParameter);
-        bool c_parameter = (causality == CausalityType::parameter);
-        bool c_calculated = (causality == CausalityType::calculatedParameter);
-        bool c_input = (causality == CausalityType::input);
-        bool c_output = (causality == CausalityType::output);
-        bool c_local = (causality == CausalityType::local);
-        bool c_independent = (causality == CausalityType::independent);
+        bool c_structural = (m_causality == CausalityType::structuralParameter);
+        bool c_parameter = (m_causality == CausalityType::parameter);
+        bool c_calculated = (m_causality == CausalityType::calculatedParameter);
+        bool c_input = (m_causality == CausalityType::input);
+        bool c_output = (m_causality == CausalityType::output);
+        bool c_local = (m_causality == CausalityType::local);
+        bool c_independent = (m_causality == CausalityType::independent);
 
-        bool v_constant = (variability == VariabilityType::constant);
-        bool v_fixed = (variability == VariabilityType::fixed);
-        bool v_tunable = (variability == VariabilityType::tunable);
-        bool v_discrete = (variability == VariabilityType::discrete);
-        bool v_continuous = (variability == VariabilityType::continuous);
+        bool v_constant = (m_variability == VariabilityType::constant);
+        bool v_fixed = (m_variability == VariabilityType::fixed);
+        bool v_tunable = (m_variability == VariabilityType::tunable);
+        bool v_discrete = (m_variability == VariabilityType::discrete);
+        bool v_continuous = (m_variability == VariabilityType::continuous);
 
         // Check on 'initial' attribute (see Table 22 in FMI3.0 specification)
         // - if initital == InitialType::automatic: automatically sets the "initial" property to its default value
@@ -165,68 +165,68 @@ class FmuVariable {
             ((v_fixed || v_tunable) && (c_structural || c_parameter)) ||  //
             ((v_discrete || v_continuous) && (c_input))                   //
         ) {
-            if (initial == InitialType::automatic)
-                initial = InitialType::exact;
-            else if (initial != InitialType::exact)
-                throw std::runtime_error("'initial' attribute for variable '" + _name + "' not set properly.");
+            if (m_initial == InitialType::automatic)
+                m_initial = InitialType::exact;
+            else if (m_initial != InitialType::exact)
+                throw std::runtime_error("'initial' attribute for variable '" + name + "' not set properly.");
         }
         // (B)
         else if ((v_fixed || v_tunable) && (c_calculated || c_local)) {
-            if (initial == InitialType::automatic)
-                initial = InitialType::calculated;
-            else if (initial != InitialType::approx && initial != InitialType::calculated)
-                throw std::runtime_error("'initial' attribute for variable '" + _name + "' not set properly.");
+            if (m_initial == InitialType::automatic)
+                m_initial = InitialType::calculated;
+            else if (m_initial != InitialType::approx && m_initial != InitialType::calculated)
+                throw std::runtime_error("'initial' attribute for variable '" + name + "' not set properly.");
         }
         // (C)
         else if ((v_discrete || v_continuous) && (c_output || c_local)) {
-            if (initial == InitialType::automatic)
-                initial = InitialType::calculated;
-            else if (initial != InitialType::approx && initial != InitialType::calculated &&
-                     initial != InitialType::exact)
-                throw std::runtime_error("'initial' attribute for variable '" + _name + "' not set properly.");
-        } else if (initial == InitialType::automatic)
-            initial = InitialType::none;
-        else if (initial != InitialType::none) {
-            throw std::runtime_error("'initial' attribute for variable '" + _name +
+            if (m_initial == InitialType::automatic)
+                m_initial = InitialType::calculated;
+            else if (m_initial != InitialType::approx && m_initial != InitialType::calculated &&
+                     m_initial != InitialType::exact)
+                throw std::runtime_error("'initial' attribute for variable '" + name + "' not set properly.");
+        } else if (m_initial == InitialType::automatic)
+            m_initial = InitialType::none;
+        else if (m_initial != InitialType::none) {
+            throw std::runtime_error("'initial' attribute for variable '" + name +
                                      "' can be set to 'automatic' or 'none' only.");
         }
 
-        assert(initial != InitialType::automatic);
+        assert(m_initial != InitialType::automatic);
 
         // Incompatible variability/causality settings (see Tables 18 and 19 of the FMI3.0 specification)
         // (a)
         if (v_constant && (c_structural || c_parameter || c_calculated || c_input))
-            throw std::runtime_error("Variable '" + _name +
+            throw std::runtime_error("Variable '" + name +
                                      "': constants always have their value already set, thus their causality can be "
                                      "only 'output' or 'local'.");
         // (b)
         if ((v_discrete || v_continuous) && (c_structural || c_parameter || c_calculated))
-            throw std::runtime_error("Variable '" + _name +
+            throw std::runtime_error("Variable '" + name +
                                      "': structuralParameters, parameters and calculatedParameters cannot be discrete "
                                      "nor continuous, as they "
                                      "do not change over time.");
         // (c)
         if (c_independent && !v_continuous)
-            throw std::runtime_error("Variable '" + _name +
+            throw std::runtime_error("Variable '" + name +
                                      "': for an 'independent' variable only variability = 'continuous' makes sense.");
         // (d) + (e)
         if (c_input && (v_fixed || v_tunable))
             throw std::runtime_error(
-                "Variable '" + _name +
+                "Variable '" + name +
                 "': a fixed or tunable 'input'|'output' have exactly the same properties as a fixed or tunable "
                 "parameter. "
                 "For simplicity, only fixed and tunable parameters|calculatedParameters shall be defined.");
     }
 
     FmuVariable(const FmuVariable& other) {
-        type = other.type;
-        name = other.name;
-        valueReference = other.valueReference;
-        unitname = other.unitname;
-        causality = other.causality;
-        variability = other.variability;
-        initial = other.initial;
-        description = other.description;
+        m_type = other.m_type;
+        m_name = other.m_name;
+        m_valueReference = other.m_valueReference;
+        m_unitname = other.m_unitname;
+        m_causality = other.m_causality;
+        m_variability = other.m_variability;
+        m_initial = other.m_initial;
+        m_description = other.m_description;
         m_dimensions = other.m_dimensions;
     }
 
@@ -237,14 +237,14 @@ class FmuVariable {
             return *this;  // Self-assignment guard
         }
 
-        type = other.type;
-        name = other.name;
-        valueReference = other.valueReference;
-        unitname = other.unitname;
-        causality = other.causality;
-        variability = other.variability;
-        initial = other.initial;
-        description = other.description;
+        m_type = other.m_type;
+        m_name = other.m_name;
+        m_valueReference = other.m_valueReference;
+        m_unitname = other.m_unitname;
+        m_causality = other.m_causality;
+        m_variability = other.m_variability;
+        m_initial = other.m_initial;
+        m_description = other.m_description;
         m_dimensions = other.m_dimensions;
 
         return *this;
@@ -253,35 +253,38 @@ class FmuVariable {
     virtual ~FmuVariable() {}
 
     bool operator<(const FmuVariable& other) const {
-        return this->type != other.type ? this->type < other.type : this->valueReference < other.valueReference;
+        return this->m_type != other.m_type ? this->m_type < other.m_type
+                                            : this->m_valueReference < other.m_valueReference;
     }
 
     bool operator==(const FmuVariable& other) const {
         // according to FMI Reference can exist two different variables with same type and same valueReference;
         // they are called "alias" thus they should be allowed but not considered equal
-        return this->name == other.name;
+        return this->m_name == other.m_name;
     }
 
     /// Check if setting this variable is allowed given the current FMU state.
     bool IsSetAllowed(FmuMachineState fmu_machine_state) const {
         //// RADU TODO: additional checks for configurationMode state?
 
-        bool is_groupA = variability != FmuVariable::VariabilityType::constant &&
-                         (initial == FmuVariable::InitialType::exact || initial == FmuVariable::InitialType::approx);
+        bool is_groupA =
+            m_variability != FmuVariable::VariabilityType::constant &&
+            (m_initial == FmuVariable::InitialType::exact || m_initial == FmuVariable::InitialType::approx);
         bool is_groupB =
-            variability != FmuVariable::VariabilityType::constant && initial == FmuVariable::InitialType::exact;
-        bool is_groupC =
-            causality == FmuVariable::CausalityType::input || (causality == FmuVariable::CausalityType::parameter &&
-                                                               variability == FmuVariable::VariabilityType::tunable);
-        bool is_groupD = causality == FmuVariable::CausalityType::structuralParameter &&
-                         (variability == FmuVariable::VariabilityType::fixed ||
-                          variability == FmuVariable::VariabilityType::tunable);
-        bool is_groupE = causality == FmuVariable::CausalityType::structuralParameter &&
-                         variability == FmuVariable::VariabilityType::tunable;
-        bool is_groupF =
-            causality == FmuVariable::CausalityType::input && variability == FmuVariable::VariabilityType::continuous;
+            m_variability != FmuVariable::VariabilityType::constant && m_initial == FmuVariable::InitialType::exact;
+        bool is_groupC = m_causality == FmuVariable::CausalityType::input ||
+                         (m_causality == FmuVariable::CausalityType::parameter &&
+                          m_variability == FmuVariable::VariabilityType::tunable);
+        bool is_groupD = m_causality == FmuVariable::CausalityType::structuralParameter &&
+                         (m_variability == FmuVariable::VariabilityType::fixed ||
+                          m_variability == FmuVariable::VariabilityType::tunable);
+        bool is_groupE = m_causality == FmuVariable::CausalityType::structuralParameter &&
+                         m_variability == FmuVariable::VariabilityType::tunable;
+        bool is_groupF = m_causality == FmuVariable::CausalityType::input &&
+                         m_variability == FmuVariable::VariabilityType::continuous;
         bool is_groupG =
-            causality == FmuVariable::CausalityType::input && variability != FmuVariable::VariabilityType::discrete &&
+            m_causality == FmuVariable::CausalityType::input &&
+            m_variability != FmuVariable::VariabilityType::discrete &&
             m_intermediateUpdate == true;  // the variable must be contained in requiredIntermediateVariables
 
         switch (fmu_machine_state) {
@@ -322,8 +325,6 @@ class FmuVariable {
                 throw std::runtime_error("IsSetAllowed: received bad state.");
                 break;
         }
-
-        throw std::runtime_error("IsSetAllowed: case not catched.");
 
         return false;
     }
@@ -382,17 +383,17 @@ class FmuVariable {
         return "";
     }
 
-    const inline std::string& GetName() const { return name; }
-    inline CausalityType GetCausality() const { return causality; }
-    inline VariabilityType GetVariability() const { return variability; }
-    inline InitialType GetInitial() const { return initial; }
-    const inline std::string& GetDescription() const { return description; }
-    void SetDescription(const std::string& _description) { description = _description; }
-    const inline fmi3ValueReference GetValueReference() const { return valueReference; }
-    void SetValueReference(fmi3ValueReference valref) { valueReference = valref; }
-    const inline std::string& GetUnitName() const { return unitname; }
-    void SetUnitName(const std::string& _unitname) { unitname = _unitname; }
-    Type GetType() const { return type; }
+    const inline std::string& GetName() const { return m_name; }
+    inline CausalityType GetCausality() const { return m_causality; }
+    inline VariabilityType GetVariability() const { return m_variability; }
+    inline InitialType GetInitial() const { return m_initial; }
+    const inline std::string& GetDescription() const { return m_description; }
+    void SetDescription(const std::string& description) { m_description = description; }
+    const inline fmi3ValueReference GetValueReference() const { return m_valueReference; }
+    void SetValueReference(fmi3ValueReference valref) { m_valueReference = valref; }
+    const inline std::string& GetUnitName() const { return m_unitname; }
+    void SetUnitName(const std::string& unitname) { m_unitname = unitname; }
+    Type GetType() const { return m_type; }
 
     /// [INTERNAL] Return the dimensions array.
     /// WARNING: the dimension array might be empty in case of scalar arrays.
@@ -401,6 +402,7 @@ class FmuVariable {
     /// FmuComponentBase::GetVariableDimensions().
     DimensionsArrayType GetDimensions() const { return m_dimensions; }
 
+    /// Return true is this variable is a scalar (i.e., has dimension 1).
     bool IsScalar() const { return m_dimensions.empty(); }
 
     /// Try to retrieve the size of the variable.
@@ -425,21 +427,21 @@ class FmuVariable {
     }
 
   protected:
-    Type type = Type::Unknown;          // variable type
-    std::string name;                   // variable name
-    fmi3ValueReference valueReference;  // reference among variables of same type
-    std::string unitname;               // variable units
-    CausalityType causality;            // variable causality
-    VariabilityType variability;        // variable variability
-    InitialType initial;                // type of initial value
-    std::string description;            // description of this variable
-    bool m_intermediateUpdate = false;  // TODO: if true, this variable is updated at intermediate steps
+    Type m_type = Type::Unknown;          ///< variable type
+    std::string m_name;                   ///< variable name
+    fmi3ValueReference m_valueReference;  ///< reference among variables of same type
+    std::string m_unitname;               ///< variable units
+    CausalityType m_causality;            ///< variable causality
+    VariabilityType m_variability;        ///< variable variability
+    InitialType m_initial;                ///< type of initial value
+    std::string m_description;            ///< description of this variable
+    bool m_intermediateUpdate = false;    ///< TODO: if true, this variable is updated at intermediate steps
 
-    /// list of pairs (size, fixed) for each dimension;
-    /// - if m_dimensions[i].second == true (i.e. labelled as 'fixed') then 'size' provides the actual size for that
-    /// dimension
+    /// List of pairs (size, fixed) for each dimension.
+    /// - if m_dimensions[i].second == true (i.e. labelled as 'fixed') then 'size' is the actual size for that
+    /// dimension;
     /// - if m_dimensions[i].second == false (i.e. labelled as not 'fixed') then 'size' provides an fmi3ValueReference
-    /// to another variable that will provides the size of this variable
+    /// to another variable that will provides the size of this variable;
     mutable DimensionsArrayType m_dimensions;
 };
 

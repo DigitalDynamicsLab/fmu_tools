@@ -23,6 +23,7 @@
 #include "miniz-cpp/zip_file.hpp"
 #include "filesystem.hpp"
 
+/// Main namespace for the fmu_tools package
 namespace fmu_tools {
 
 /// Enumeration of supported FMI standard versions.

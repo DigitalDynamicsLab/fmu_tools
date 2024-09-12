@@ -102,41 +102,41 @@ bool createModelDescription(const std::string& path, std::string& err_msg) {
 // =============================================================================
 
 FmuVariableExport::FmuVariableExport(const VarbindType& varbind,
-                                     const std::string& _name,
-                                     FmuVariable::Type _type,
-                                     CausalityType _causality,
-                                     VariabilityType _variability,
-                                     InitialType _initial)
-    : FmuVariableExport(varbind, _name, _type, {}, _causality, _variability, _initial) {}
+                                     const std::string& name,
+                                     FmuVariable::Type type,
+                                     CausalityType causality,
+                                     VariabilityType variability,
+                                     InitialType initial)
+    : FmuVariableExport(varbind, name, type, {}, causality, variability, initial) {}
 
 FmuVariableExport::FmuVariableExport(const VarbindType& varbind,
-                                     const std::string& _name,
-                                     FmuVariable::Type _type,
+                                     const std::string& name,
+                                     FmuVariable::Type type,
                                      const DimensionsArrayType& dimensions,
-                                     CausalityType _causality,
-                                     VariabilityType _variability,
-                                     InitialType _initial)
-    : FmuVariable(_name, _type, dimensions, _causality, _variability, _initial) {
+                                     CausalityType causality,
+                                     VariabilityType variability,
+                                     InitialType initial)
+    : FmuVariable(name, type, dimensions, causality, variability, initial) {
     // From FMI Reference
     // If initial = 'exact' or 'approx', or causality = 'input',       a start value MUST be provided.
     // If initial = 'calculated',        or causality = 'independent', a start value CANNOT be provided.
-    if (initial == InitialType::calculated || causality == CausalityType::independent) {
-        allowed_start = false;
-        required_start = false;
+    if (m_initial == InitialType::calculated || m_causality == CausalityType::independent) {
+        m_allowed_start = false;
+        m_required_start = false;
     }
 
-    if (initial == InitialType::exact || initial == InitialType::approx || causality == CausalityType::input) {
-        allowed_start = true;
-        required_start = true;
+    if (m_initial == InitialType::exact || m_initial == InitialType::approx || m_causality == CausalityType::input) {
+        m_allowed_start = true;
+        m_required_start = true;
     }
 
-    this->varbind = varbind;
+    m_varbind = varbind;
 }
 
 FmuVariableExport::FmuVariableExport(const FmuVariableExport& other) : FmuVariable(other) {
-    varbind = other.varbind;
-    allowed_start = other.allowed_start;
-    required_start = other.required_start;
+    m_varbind = other.m_varbind;
+    m_allowed_start = other.m_allowed_start;
+    m_required_start = other.m_required_start;
 }
 
 FmuVariableExport& FmuVariableExport::operator=(const FmuVariableExport& other) {
@@ -146,24 +146,24 @@ FmuVariableExport& FmuVariableExport::operator=(const FmuVariableExport& other) 
 
     FmuVariable::operator=(other);
 
-    varbind = other.varbind;
-    allowed_start = other.allowed_start;
-    required_start = other.required_start;
+    m_varbind = other.m_varbind;
+    m_allowed_start = other.m_allowed_start;
+    m_required_start = other.m_required_start;
 
     return *this;
 }
 
 void FmuVariableExport::SetValue(const fmi3String* val, size_t nValues) const {
-    if (is_pointer_variant(this->varbind)) {
+    if (is_pointer_variant(m_varbind)) {
         assert((nValues == 0 || (IsScalar() && nValues == 1) || m_dimensions.size() > 0) &&
                ("Requested to get the value of " + std::to_string(nValues) +
-                " coefficients for variable with valueReference: " + std::to_string(valueReference) +
+                " coefficients for variable with valueReference: " + std::to_string(m_valueReference) +
                 " but it seems that it is a scalar.")
                    .c_str());
 
-        std::string* varptr_this = varns::get<std::string*>(this->varbind);
+        std::string* varptr_this = varns::get<std::string*>(m_varbind);
 
-        //*varns::get<std::string*>(this->varbind) = std::string(*val);
+        //*varns::get<std::string*>(m_varbind) = std::string(*val);
 
         // try to fetch the dimension of the variable
         size_t var_size;
@@ -178,19 +178,19 @@ void FmuVariableExport::SetValue(const fmi3String* val, size_t nValues) const {
             varptr_this[s] = std::string(val[s]);
         }
     } else {
-        varns::get<FunGetSet<std::string>>(this->varbind).second(std::string(*val));
+        varns::get<FunGetSet<std::string>>(m_varbind).second(std::string(*val));
     }
 }
 
 void FmuVariableExport::SetValue(const fmi3Binary* val, size_t nValues, const size_t* valueSize_ptr) const {
-    if (is_pointer_variant(this->varbind)) {
+    if (is_pointer_variant(m_varbind)) {
         assert((nValues == 0 || (IsScalar() && nValues == 1) || m_dimensions.size() > 0) &&
                ("Requested to get the value of " + std::to_string(nValues) +
-                " coefficients for variable with valueReference: " + std::to_string(valueReference) +
+                " coefficients for variable with valueReference: " + std::to_string(m_valueReference) +
                 " but it seems that it is a scalar.")
                    .c_str());
 
-        std::vector<fmi3Byte>* varptr_this = varns::get<std::vector<fmi3Byte>*>(this->varbind);
+        std::vector<fmi3Byte>* varptr_this = varns::get<std::vector<fmi3Byte>*>(m_varbind);
 
         // try to fetch the dimension of the variable
         size_t var_size;
@@ -216,9 +216,9 @@ void FmuVariableExport::SetValue(const fmi3Binary* val, size_t nValues, const si
 }
 
 void FmuVariableExport::GetValue(fmi3String* varptr_ext, size_t nValues) const {
-    if (is_pointer_variant(this->varbind)) {
+    if (is_pointer_variant(m_varbind)) {
         // the fmi3Binary is implemented by default as an std::vector<fmi3Byte>
-        std::string* varptr_this = varns::get<std::string*>(this->varbind);
+        std::string* varptr_this = varns::get<std::string*>(m_varbind);
         size_t var_size;
         bool success = GetSize(var_size);
         assert(success &&
@@ -232,14 +232,14 @@ void FmuVariableExport::GetValue(fmi3String* varptr_ext, size_t nValues) const {
     } else {
         // returns the address of the underlying string, does not copy any value
         *varptr_ext =
-            varns::get<FunGetSet<std::string>>(this->varbind).first().data();  // TODO: check if c_str or data is needed
+            varns::get<FunGetSet<std::string>>(m_varbind).first().data();  // TODO: check if c_str or data is needed
     }
 }
 
 void FmuVariableExport::GetValue(fmi3Binary* varptr_ext, size_t nValues, size_t* valueSize_ptr) const {
-    if (is_pointer_variant(this->varbind)) {
+    if (is_pointer_variant(m_varbind)) {
         // the fmi3Binary is implemented by default as an std::vector<fmi3Byte>
-        std::vector<fmi3Byte>* varptr_this = varns::get<std::vector<fmi3Byte>*>(this->varbind);
+        std::vector<fmi3Byte>* varptr_this = varns::get<std::vector<fmi3Byte>*>(m_varbind);
         size_t var_size;
         bool success = GetSize(var_size);
         assert(success &&
@@ -281,9 +281,9 @@ std::string FmuVariableExport::GetStartValAsString(size_t size_id) const {
 
     std::stringstream start_value;
 
-    if (type == Type::String || type == Type::Binary) {
+    if (m_type == Type::String || m_type == Type::Binary) {
         size_t id = size_id;  // alias, just to make the code more readable
-        varns::visit([&start_value, id](auto&& varb) { variant_to_string(varb, id, start_value); }, this->varbind);
+        varns::visit([&start_value, id](auto&& varb) { variant_to_string(varb, id, start_value); }, m_varbind);
     } else {
         size_t size = size_id;  // alias, just to make the code more readable
         if (size == 0) {
@@ -291,7 +291,7 @@ std::string FmuVariableExport::GetStartValAsString(size_t size_id) const {
             if (!success)
                 throw std::runtime_error("GetStartValAsString: cannot get size of variable.");
         }
-        varns::visit([&start_value, size](auto&& varb) { variant_to_string(varb, size, start_value); }, this->varbind);
+        varns::visit([&start_value, size](auto&& varb) { variant_to_string(varb, size, start_value); }, m_varbind);
     }
     std::string s = start_value.str();
     return start_value.str();
@@ -420,26 +420,26 @@ const FmuVariableExport& FmuComponentBase::AddFmuVariable(const FmuVariableExpor
 
     // create new variable
     // check if same-name variable exists
-    std::set<FmuVariableExport>::iterator it = findByName(name);
-    if (it != m_variables.end())
+    std::set<FmuVariableExport>::iterator it_name = findByName(name);
+    if (it_name != m_variables.end())
         throw std::runtime_error("Cannot add two FMU variables with the same name.");
 
     // check if dimensions are valid
     for (auto& dim : dimensions) {
         if (dim.second == false) {
-            std::set<FmuVariableExport>::iterator it = findByValref(dim.first);
-            if (it == m_variables.end()) {
+            std::set<FmuVariableExport>::iterator it_ref = findByValref(dim.first);
+            if (it_ref == m_variables.end()) {
                 sendToLog("WARNING: the variable with name '" + name +
                               "' have dimensions that depend on a variable not yet added to the FMU.\n",
                           fmi3Status::fmi3Warning, "logStatusWarning");
             } else {
-                if (it->GetType() != FmuVariable::Type::UInt64) {
+                if (it_ref->GetType() != FmuVariable::Type::UInt64) {
                     sendToLog("WARNING: the variable with name '" + name +
                                   "' have dimensions that depend on a variable that is not of type UInt64.\n",
                               fmi3Status::fmi3Warning, "logStatusWarning");
                 }
-                if (it->GetVariability() != FmuVariable::VariabilityType::constant &&
-                    it->GetCausality() != FmuVariable::CausalityType::structuralParameter) {
+                if (it_ref->GetVariability() != FmuVariable::VariabilityType::constant &&
+                    it_ref->GetCausality() != FmuVariable::CausalityType::structuralParameter) {
                     sendToLog("WARNING: the variable with name '" + name +
                                   "' have dimensions that depend on a variable that is not constant nor a structural "
                                   "parameter.\n",
@@ -1098,7 +1098,7 @@ void FmuComponentBase::sendToLog(std::string msg, fmi3Status status, std::string
 }
 
 }  // namespace fmi3
-}
+}  // namespace fmu_tools
 
 // =============================================================================
 // FMU FUNCTIONS

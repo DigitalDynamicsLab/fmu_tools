@@ -86,33 +86,33 @@ bool createModelDescription(const std::string& path, std::string& err_msg) {
 // =============================================================================
 
 FmuVariableExport::FmuVariableExport(const VarbindType& varbind,
-                                     const std::string& _name,
-                                     FmuVariable::Type _type,
-                                     CausalityType _causality,
-                                     VariabilityType _variability,
-                                     InitialType _initial)
-    : FmuVariable(_name, _type, _causality, _variability, _initial) {
+                                     const std::string& name,
+                                     FmuVariable::Type type,
+                                     CausalityType causality,
+                                     VariabilityType variability,
+                                     InitialType initial)
+    : FmuVariable(name, type, causality, variability, initial) {
     // From FMI Reference
     // If initial = 'exact' or 'approx', or causality = 'input',       a start value MUST be provided.
     // If initial = 'calculated',        or causality = 'independent', a start value CANNOT be provided.
-    if (initial == InitialType::calculated || causality == CausalityType::independent) {
-        allowed_start = false;
-        required_start = false;
+    if (m_initial == InitialType::calculated || m_causality == CausalityType::independent) {
+        m_allowed_start = false;
+        m_required_start = false;
     }
 
-    if (initial == InitialType::exact || initial == InitialType::approx || causality == CausalityType::input) {
-        allowed_start = true;
-        required_start = true;
+    if (m_initial == InitialType::exact || m_initial == InitialType::approx || m_causality == CausalityType::input) {
+        m_allowed_start = true;
+        m_required_start = true;
     }
 
-    this->varbind = varbind;
+    m_varbind = varbind;
 }
 
 FmuVariableExport::FmuVariableExport(const FmuVariableExport& other) : FmuVariable(other) {
-    varbind = other.varbind;
-    start = other.start;
-    allowed_start = other.allowed_start;
-    required_start = other.required_start;
+    m_varbind = other.m_varbind;
+    m_start = other.m_start;
+    m_allowed_start = other.m_allowed_start;
+    m_required_start = other.m_required_start;
 }
 
 FmuVariableExport& FmuVariableExport::operator=(const FmuVariableExport& other) {
@@ -122,45 +122,45 @@ FmuVariableExport& FmuVariableExport::operator=(const FmuVariableExport& other) 
 
     FmuVariable::operator=(other);
 
-    varbind = other.varbind;
-    start = other.start;
-    allowed_start = other.allowed_start;
-    required_start = other.required_start;
+    m_varbind = other.m_varbind;
+    m_start = other.m_start;
+    m_allowed_start = other.m_allowed_start;
+    m_required_start = other.m_required_start;
 
     return *this;
 }
 
 void FmuVariableExport::SetValue(const fmi2String& val) const {
-    if (is_pointer_variant(this->varbind))
-        *varns::get<std::string*>(this->varbind) = std::string(val);
+    if (is_pointer_variant(m_varbind))
+        *varns::get<std::string*>(m_varbind) = std::string(val);
     else
-        varns::get<FunGetSet<std::string>>(this->varbind).second(std::string(val));
+        varns::get<FunGetSet<std::string>>(m_varbind).second(std::string(val));
 }
 
 void FmuVariableExport::GetValue(fmi2String* varptr) const {
-    *varptr = is_pointer_variant(this->varbind) ? varns::get<std::string*>(this->varbind)->c_str()
-                                                : varns::get<FunGetSet<std::string>>(this->varbind).first().c_str();
+    *varptr = is_pointer_variant(m_varbind) ? varns::get<std::string*>(m_varbind)->c_str()
+                                            : varns::get<FunGetSet<std::string>>(m_varbind).first().c_str();
 }
 
-void FmuVariableExport::SetStartVal(fmi2String startval) {
-    if (!allowed_start)
+void FmuVariableExport::SetStartVal(fmi2String start) {
+    if (!m_allowed_start)
         return;
-    has_start = true;
-    this->start = std::string(startval);
+    m_has_start = true;
+    m_start = std::string(start);
 }
 
 void FmuVariableExport::ExposeCurrentValueAsStart() {
-    if (required_start) {
-        varns::visit([this](auto&& arg) { this->setStartFromVar(arg); }, this->varbind);
+    if (m_required_start) {
+        varns::visit([this](auto&& arg) { this->setStartFromVar(arg); }, m_varbind);
 
-        // if (is_pointer_variant(this->varbind)){
+        // if (is_pointer_variant(m_varbind)){
         //     // check if string TODO: check if this check is needed .-)
-        //     if (varns::holds_alternative<fmi2String*>(this->varbind)) {
+        //     if (varns::holds_alternative<fmi2String*>(m_varbind)) {
         //         // TODO
-        //         varns::visit([this](auto& arg){ return this->start = arg; }, this->varbind);
+        //         varns::visit([this](auto& arg){ return m_start = arg; }, m_varbind);
         //     }
         //     else{
-        //         varns::visit([this](auto& arg){ return this->SetStartVal(*arg); }, this->varbind);
+        //         varns::visit([this](auto& arg){ return this->SetStartVal(*arg); }, m_varbind);
         //     }
         // }
         // else{
@@ -174,13 +174,13 @@ std::string FmuVariableExport::GetStartValAsString() const {
     // std::string start_string;
     // varns::visit([&start_string](auto&& arg) -> std::string {return start_string = std::to_string(*start_ptr)});
 
-    if (const fmi2Real* start_ptr = varns::get_if<fmi2Real>(&this->start))
+    if (const fmi2Real* start_ptr = varns::get_if<fmi2Real>(&m_start))
         return std::to_string(*start_ptr);
-    if (const fmi2Integer* start_ptr = varns::get_if<fmi2Integer>(&this->start))
+    if (const fmi2Integer* start_ptr = varns::get_if<fmi2Integer>(&m_start))
         return std::to_string(*start_ptr);
-    if (const fmi2Boolean* start_ptr = varns::get_if<fmi2Boolean>(&this->start))
+    if (const fmi2Boolean* start_ptr = varns::get_if<fmi2Boolean>(&m_start))
         return std::to_string(*start_ptr);
-    if (const std::string* start_ptr = varns::get_if<std::string>(&this->start))
+    if (const std::string* start_ptr = varns::get_if<std::string>(&m_start))
         return *start_ptr;
     return "";
 }

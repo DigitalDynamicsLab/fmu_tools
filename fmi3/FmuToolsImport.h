@@ -41,26 +41,27 @@ namespace fmi3 {
 
 // =============================================================================
 
+/// Implementation of an FMU variable for import.
 class FmuVariableImport : public FmuVariable {
   public:
     FmuVariableImport() : FmuVariableImport("", FmuVariable::Type::Float64) {}
 
-    FmuVariableImport(const std::string& _name,
-                      FmuVariable::Type _type,
-                      const FmuVariable::DimensionsArrayType& _dimensions = FmuVariable::DimensionsArrayType(),
-                      CausalityType _causality = CausalityType::local,
-                      VariabilityType _variability = VariabilityType::continuous,
-                      InitialType _initial = InitialType::automatic)
-        : FmuVariable(_name, _type, _dimensions, _causality, _variability, _initial),
-          is_state(false),
-          is_deriv(false) {}
+    FmuVariableImport(const std::string& name,
+                      FmuVariable::Type type,
+                      const FmuVariable::DimensionsArrayType& dimensions = FmuVariable::DimensionsArrayType(),
+                      CausalityType causality = CausalityType::local,
+                      VariabilityType variability = VariabilityType::continuous,
+                      InitialType initial = InitialType::automatic)
+        : FmuVariable(name, type, dimensions, causality, variability, initial),
+          m_is_state(false),
+          m_is_deriv(false) {}
 
-    bool IsState() const { return is_state; }
-    bool IsDeriv() const { return is_deriv; }
+    bool IsState() const { return m_is_state; }
+    bool IsDeriv() const { return m_is_deriv; }
 
   private:
-    bool is_state;  // true if this is a state variable
-    bool is_deriv;  // true if this is a state derivative variable
+    bool m_is_state;  ///< true if this is a state variable
+    bool m_is_deriv;  ///< true if this is a state derivative variable
 
     friend class FmuUnit;
 };
@@ -89,7 +90,7 @@ class FmuVariableTreeNode {
 
 // =============================================================================
 
-/// Class for managing an FMU3.0.
+/// Class for managing an impoerted FMU.
 /// Provides functions to parse the model description XML file, load the shared library in run-time, set/get variables,
 /// and invoke FMI functions on the FMU.
 class FmuUnit {
@@ -319,7 +320,8 @@ class FmuUnit {
                            std::vector<size_t>& valueSizes) const noexcept(false);
 
     /// Get the value from an array of fmi3Binary variable in the shape of a std::vector<std::vector<fmi3Byte>>.
-    fmi3Status GetVariable(fmi3ValueReference vr, std::vector<std::vector<fmi3Byte>>& values_vect) const noexcept(false);
+    fmi3Status GetVariable(fmi3ValueReference vr, std::vector<std::vector<fmi3Byte>>& values_vect) const
+        noexcept(false);
 
     /// Get the location of an array of fmi3String variables in the shape of a std::vector<fmi3String>.
     /// The function will return in 'values_vect' the pointer to the fmi3String arrays. The user must then allocate
@@ -832,12 +834,12 @@ void FmuUnit::LoadXML() {
             unit = attr->value();
         }
         if (auto attr = var_node->first_attribute("start")) {
-          //// TODO
+            //// TODO
         }
 
         // Create and cache the new variable (also caching its value reference)
         FmuVariableImport var(var_name, var_type, dimensions, causality_enum, variability_enum, initial_enum);
-        var.is_deriv = is_deriv;
+        var.m_is_deriv = is_deriv;
         var.SetValueReference(valref);
 
         m_variables[valref] = var;
@@ -845,7 +847,7 @@ void FmuUnit::LoadXML() {
 
     // Traverse the list of state value references and mark the corresponding FMU variable as a state
     for (const auto& si : state_valref) {
-        m_variables.at(si).is_state = true;
+        m_variables.at(si).m_is_state = true;
     }
 
     m_nx = state_valref.size();
@@ -1627,8 +1629,8 @@ fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr,
     return status;
 }
 
-fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr,
-                                std::vector<std::vector<fmi3Byte>>& values_vect) const noexcept(false) {
+fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<std::vector<fmi3Byte>>& values_vect) const
+    noexcept(false) {
     const FmuVariableImport& var = m_variables.at(vr);
 
     size_t nValues = GetVariableSize(var);

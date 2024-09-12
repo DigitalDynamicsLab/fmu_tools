@@ -29,6 +29,7 @@
 // =============================================================================
 
 namespace fmu_tools {
+/// Namespace for FMI 2.0 classes
 namespace fmi2 {
 
 /// Enumeration of supported FMU types (interfaces).
@@ -121,58 +122,58 @@ class FmuVariable {
 
     FmuVariable() : FmuVariable("", FmuVariable::Type::Real) {}
 
-    FmuVariable(const std::string& _name,
-                FmuVariable::Type _type,
-                CausalityType _causality = CausalityType::local,
-                VariabilityType _variability = VariabilityType::continuous,
-                InitialType _initial = InitialType::none)
-        : name(_name),
-          valueReference(0),
-          unitname("1"),
-          type(_type),
-          causality(_causality),
-          variability(_variability),
-          initial(_initial),
-          description(""),
-          has_start(false) {
+    FmuVariable(const std::string& name,
+                FmuVariable::Type type,
+                CausalityType causality = CausalityType::local,
+                VariabilityType variability = VariabilityType::continuous,
+                InitialType initial = InitialType::none)
+        : m_name(name),
+          m_valueReference(0),
+          m_unitname("1"),
+          m_type(type),
+          m_causality(causality),
+          m_variability(variability),
+          m_initial(initial),
+          m_description(""),
+          m_has_start(false) {
         // Readibility replacements
-        bool c_parameter = (causality == CausalityType::parameter);
-        bool c_calculated = (causality == CausalityType::calculatedParameter);
-        bool c_input = (causality == CausalityType::input);
-        bool c_output = (causality == CausalityType::output);
-        bool c_local = (causality == CausalityType::local);
-        bool c_independent = (causality == CausalityType::independent);
+        bool c_parameter = (m_causality == CausalityType::parameter);
+        bool c_calculated = (m_causality == CausalityType::calculatedParameter);
+        bool c_input = (m_causality == CausalityType::input);
+        bool c_output = (m_causality == CausalityType::output);
+        bool c_local = (m_causality == CausalityType::local);
+        bool c_independent = (m_causality == CausalityType::independent);
 
-        bool v_constant = (variability == VariabilityType::constant);
-        bool v_fixed = (variability == VariabilityType::fixed);
-        bool v_tunable = (variability == VariabilityType::tunable);
-        bool v_discrete = (variability == VariabilityType::discrete);
-        bool v_continuous = (variability == VariabilityType::continuous);
+        bool v_constant = (m_variability == VariabilityType::constant);
+        bool v_fixed = (m_variability == VariabilityType::fixed);
+        bool v_tunable = (m_variability == VariabilityType::tunable);
+        bool v_discrete = (m_variability == VariabilityType::discrete);
+        bool v_continuous = (m_variability == VariabilityType::continuous);
 
-        bool i_none = (initial == InitialType::none);
-        bool i_exact = (initial == InitialType::exact);
-        bool i_approx = (initial == InitialType::approx);
-        bool i_calculated = (initial == InitialType::calculated);
+        bool i_none = (m_initial == InitialType::none);
+        bool i_exact = (m_initial == InitialType::exact);
+        bool i_approx = (m_initial == InitialType::approx);
+        bool i_calculated = (m_initial == InitialType::calculated);
 
         // Set "initial" property if empty (see Table on page 51 of the FMI2.0.4 specification)
         // (A)
         if (((v_constant) && (c_output || c_local)) || ((v_fixed || v_tunable) && (c_parameter))) {
             if (i_none)
-                initial = InitialType::exact;
+                m_initial = InitialType::exact;
             else if (!i_exact)
                 throw std::runtime_error("initial not set properly.");
         }
         // (B)
         else if ((v_fixed || v_tunable) && (c_calculated || c_local)) {
             if (i_none)
-                initial = InitialType::calculated;
+                m_initial = InitialType::calculated;
             else if (!i_approx && !i_calculated)
                 throw std::runtime_error("initial not set properly.");
         }
         // (C)
         else if ((v_discrete || v_continuous) && (c_output || c_local)) {
             if (i_none)
-                initial = InitialType::calculated;
+                m_initial = InitialType::calculated;
         }
 
         // From page 51 of FMI2.0.4 specification:
@@ -212,15 +213,15 @@ class FmuVariable {
     }
 
     FmuVariable(const FmuVariable& other) {
-        type = other.type;
-        name = other.name;
-        valueReference = other.valueReference;
-        unitname = other.unitname;
-        causality = other.causality;
-        variability = other.variability;
-        initial = other.initial;
-        description = other.description;
-        has_start = other.has_start;
+        m_type = other.m_type;
+        m_name = other.m_name;
+        m_valueReference = other.m_valueReference;
+        m_unitname = other.m_unitname;
+        m_causality = other.m_causality;
+        m_variability = other.m_variability;
+        m_initial = other.m_initial;
+        m_description = other.m_description;
+        m_has_start = other.m_has_start;
     }
 
     // Copy assignment operator
@@ -229,15 +230,15 @@ class FmuVariable {
             return *this;  // Self-assignment guard
         }
 
-        type = other.type;
-        name = other.name;
-        valueReference = other.valueReference;
-        unitname = other.unitname;
-        causality = other.causality;
-        variability = other.variability;
-        initial = other.initial;
-        description = other.description;
-        has_start = other.has_start;
+        m_type = other.m_type;
+        m_name = other.m_name;
+        m_valueReference = other.m_valueReference;
+        m_unitname = other.m_unitname;
+        m_causality = other.m_causality;
+        m_variability = other.m_variability;
+        m_initial = other.m_initial;
+        m_description = other.m_description;
+        m_has_start = other.m_has_start;
 
         return *this;
     }
@@ -245,32 +246,33 @@ class FmuVariable {
     virtual ~FmuVariable() {}
 
     bool operator<(const FmuVariable& other) const {
-        return this->type != other.type ? this->type < other.type : this->valueReference < other.valueReference;
+        return this->m_type != other.m_type ? this->m_type < other.m_type
+                                            : this->m_valueReference < other.m_valueReference;
     }
 
     bool operator==(const FmuVariable& other) const {
         // according to FMI Reference can exist two different variables with same type and same valueReference;
         // they are called "alias" thus they should be allowed but not considered equal
-        return this->name == other.name;
+        return this->m_name == other.m_name;
     }
 
     /// Return true if a start value is specified for this variable.
-    bool HasStartVal() const { return has_start; }
+    bool HasStartVal() const { return m_has_start; }
 
     /// Check if setting this variable is allowed given the current FMU state.
     bool IsSetAllowed(FmuMachineState fmu_machine_state) const {
-        if (variability != VariabilityType::constant) {
-            if (initial == InitialType::approx)
+        if (m_variability != VariabilityType::constant) {
+            if (m_initial == InitialType::approx)
                 return fmu_machine_state == FmuMachineState::instantiated ||
                        fmu_machine_state == FmuMachineState::anySettableState;
-            else if (initial == InitialType::exact)
+            else if (m_initial == InitialType::exact)
                 return fmu_machine_state == FmuMachineState::instantiated ||
                        fmu_machine_state == FmuMachineState::initializationMode ||
                        fmu_machine_state == FmuMachineState::anySettableState;
         }
 
-        if (causality == CausalityType::input ||
-            (causality == CausalityType::parameter && variability == VariabilityType::tunable))
+        if (m_causality == CausalityType::input ||
+            (m_causality == CausalityType::parameter && m_variability == VariabilityType::tunable))
             return fmu_machine_state == FmuMachineState::initializationMode ||
                    fmu_machine_state == FmuMachineState::stepCompleted ||
                    fmu_machine_state == FmuMachineState::anySettableState;
@@ -304,29 +306,29 @@ class FmuVariable {
         return "";
     }
 
-    const inline std::string& GetName() const { return name; }
-    inline CausalityType GetCausality() const { return causality; }
-    inline VariabilityType GetVariability() const { return variability; }
-    inline InitialType GetInitial() const { return initial; }
-    const inline std::string& GetDescription() const { return description; }
-    void SetDescription(const std::string& _description) { description = _description; }
-    const inline fmi2ValueReference GetValueReference() const { return valueReference; }
-    void SetValueReference(fmi2ValueReference valref) { valueReference = valref; }
-    const inline std::string& GetUnitName() const { return unitname; }
-    void SetUnitName(const std::string& _unitname) { unitname = _unitname; }
-    Type GetType() const { return type; }
+    const inline std::string& GetName() const { return m_name; }
+    inline CausalityType GetCausality() const { return m_causality; }
+    inline VariabilityType GetVariability() const { return m_variability; }
+    inline InitialType GetInitial() const { return m_initial; }
+    const inline std::string& GetDescription() const { return m_description; }
+    void SetDescription(const std::string& description) { m_description = description; }
+    const inline fmi2ValueReference GetValueReference() const { return m_valueReference; }
+    void SetValueReference(fmi2ValueReference valref) { m_valueReference = valref; }
+    const inline std::string& GetUnitName() const { return m_unitname; }
+    void SetUnitName(const std::string& unitname) { m_unitname = unitname; }
+    Type GetType() const { return m_type; }
 
   protected:
-    Type type = Type::Unknown;          // variable type
-    std::string name;                   // variable name
-    fmi2ValueReference valueReference;  // reference among variables of same type
-    std::string unitname;               // variable units
-    CausalityType causality;            // variable causality
-    VariabilityType variability;        // variable variability
-    InitialType initial;                // type of initial value
-    std::string description;            // description of this variable
+    Type m_type = Type::Unknown;          ///< variable type
+    std::string m_name;                   ///< variable name
+    fmi2ValueReference m_valueReference;  ///< reference among variables of same type
+    std::string m_unitname;               ///< variable units
+    CausalityType m_causality;            ///< variable causality
+    VariabilityType m_variability;        ///< variable variability
+    InitialType m_initial;                ///< type of initial value
+    std::string m_description;            ///< description of this variable
 
-    bool has_start;  // start value provided
+    bool m_has_start;  ///< start value provided
 };
 
 }  // namespace fmi2

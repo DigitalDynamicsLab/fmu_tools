@@ -76,40 +76,40 @@ class FmuVariableExport : public FmuVariable {
 
     //// TODO: can we remove it and keep only the constructor with dimensions with default argument?
     FmuVariableExport(const VarbindType& varbind,
-                      const std::string& _name,
-                      FmuVariable::Type _type,
-                      CausalityType _causality = CausalityType::local,
-                      VariabilityType _variability = VariabilityType::continuous,
-                      InitialType _initial = InitialType::automatic);
+                      const std::string& name,
+                      FmuVariable::Type type,
+                      CausalityType causality = CausalityType::local,
+                      VariabilityType variability = VariabilityType::continuous,
+                      InitialType initial = InitialType::automatic);
 
     FmuVariableExport(const VarbindType& varbind,
-                      const std::string& _name,
-                      FmuVariable::Type _type,
+                      const std::string& name,
+                      FmuVariable::Type type,
                       const DimensionsArrayType& dimensions,
-                      CausalityType _causality = CausalityType::local,
-                      VariabilityType _variability = VariabilityType::continuous,
-                      InitialType _initial = InitialType::automatic);
+                      CausalityType causality = CausalityType::local,
+                      VariabilityType variability = VariabilityType::continuous,
+                      InitialType initial = InitialType::automatic);
 
     FmuVariableExport(const FmuVariableExport& other);
 
     /// Copy assignment operator.
     FmuVariableExport& operator=(const FmuVariableExport& other);
 
-    void Bind(VarbindType newvarbind) { varbind = newvarbind; }
+    void Bind(VarbindType varbind) { m_varbind = varbind; }
 
     /// Set the value of this FMU variable (for all cases, except variables of type fmi3String).
     /// 'values' is expected to have a size of at least 'nValues'.
     template <typename fmi3VarType,
               typename = typename std::enable_if<!std::is_same<fmi3VarType, fmi3String>::value>::type>
     void SetValue(const fmi3VarType* values, size_t nValues) const {
-        if (is_pointer_variant(this->varbind)) {
+        if (is_pointer_variant(m_varbind)) {
             assert((nValues == 0 || (IsScalar() && nValues == 1) || m_dimensions.size() > 0) &&
                    ("Requested to get the value of " + std::to_string(nValues) +
-                    " coefficients for variable with valueReference: " + std::to_string(valueReference) +
+                    " coefficients for variable with valueReference: " + std::to_string(m_valueReference) +
                     " but it seems that it is a scalar.")
                        .c_str());
 
-            fmi3VarType* varptr_this = varns::get<fmi3VarType*>(this->varbind);
+            fmi3VarType* varptr_this = varns::get<fmi3VarType*>(m_varbind);
 
             // try to fetch the dimension of the variable
             if (nValues == 0) {
@@ -125,7 +125,7 @@ class FmuVariableExport : public FmuVariable {
             }
         } else {
             // TODO: consider multi-dimensional variables
-            varns::get<FunGetSet<fmi3VarType>>(this->varbind).second(*values);
+            varns::get<FunGetSet<fmi3VarType>>(m_varbind).second(*values);
         }
     }
 
@@ -143,14 +143,14 @@ class FmuVariableExport : public FmuVariable {
     template <typename fmi3VarType,
               typename = typename std::enable_if<!std::is_same<fmi3VarType, fmi3String>::value>::type>
     void GetValue(fmi3VarType* varptr_ext, size_t nValues) const {
-        if (is_pointer_variant(this->varbind)) {
+        if (is_pointer_variant(m_varbind)) {
             assert(((IsScalar() && nValues == 1) || m_dimensions.size() > 0) &&
                    ("Requested to get the value of " + std::to_string(nValues) +
-                    " coefficients for variable with valueReference: " + std::to_string(valueReference) +
+                    " coefficients for variable with valueReference: " + std::to_string(m_valueReference) +
                     " but it seems that it is a scalar.")
                        .c_str());
 
-            fmi3VarType* varptr_this = varns::get<fmi3VarType*>(this->varbind);
+            fmi3VarType* varptr_this = varns::get<fmi3VarType*>(m_varbind);
 
             // try to fetch the dimension of the variable
             if (nValues == 0) {
@@ -167,7 +167,7 @@ class FmuVariableExport : public FmuVariable {
             }
         } else {
             // TODO: consider multi-dimensional variables
-            *varptr_ext = varns::get<FunGetSet<fmi3VarType>>(this->varbind).first();
+            *varptr_ext = varns::get<FunGetSet<fmi3VarType>>(m_varbind).first();
         }
     }
 
@@ -185,19 +185,19 @@ class FmuVariableExport : public FmuVariable {
     virtual void GetValue(fmi3Binary* varptr_ext, size_t nValues, size_t* valueSize_ptr) const;
 
     /// Force the exposure of the start value in the modelDescription (if allowed).
-    void ExposeStartValue(bool val) const { expose_start = val; }
+    void ExposeStartValue(bool val) const { m_expose_start = val; }
 
     /// Check if the start value should be exposed in the modelDescription.
-    bool IsStartValueExposed() const { return expose_start || required_start; }
+    bool IsStartValueExposed() const { return m_expose_start || m_required_start; }
 
   protected:
-    bool allowed_start = true;
-    bool required_start = false;
-    mutable bool expose_start = false;
+    bool m_allowed_start = true;          ///< specification of start value permitted
+    bool m_required_start = false;        ///< specification of start value required
+    mutable bool m_expose_start = false;  ///< force exposure of start value
 
-    VarbindType varbind;  // value of this variable
+    VarbindType m_varbind;  ///< value of this variable
 
-    /// Converts the start value to a string.
+    /// Convert the start value to a string.
     /// In case of arrays it concatenates the values with space delimitations.
     /// However, in the case of Binary or String data (that basically are arrays of arrays of chars|bytes),
     /// the argument is not used to tell the size of the array (since it is already known), but to select which of the
