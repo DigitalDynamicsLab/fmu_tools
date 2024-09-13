@@ -30,6 +30,9 @@ namespace fmu_tools {
 /// Namespace for FMI 3.0 classes
 namespace fmi3 {
 
+/// @addtogroup fmu_tools_fmi3
+/// @{
+
 // =============================================================================
 
 /// Enumeration of supported FMU types (interfaces).
@@ -444,6 +447,8 @@ class FmuVariable {
     /// to another variable that will provides the size of this variable;
     mutable DimensionsArrayType m_dimensions;
 };
+
+/// @} fmu_tools_fmi3
 
 }  // namespace fmi3
 }  // namespace fmu_tools

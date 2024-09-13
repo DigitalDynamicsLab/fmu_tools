@@ -41,6 +41,9 @@
 
 namespace fmu_tools {
 
+/// @addtogroup fmu_tools
+/// @{
+
 /// Runtime/Dynamic linking of shared library.
 /// @param dynlib_dir The directory where the shared library is located.
 /// @param dynlib_name The name of the shared library.
@@ -106,6 +109,8 @@ std::string GetLibraryLocation() {
     fs::path library_folder = library_path.parent_path();
     return library_folder.string();
 }
+
+/// @} fmu_tools
 
 }  // namespace fmu_tools
 

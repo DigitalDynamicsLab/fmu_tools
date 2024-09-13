@@ -33,6 +33,9 @@
 namespace fmu_tools {
 namespace fmi3 {
 
+/// @addtogroup fmu_tools_fmi3
+/// @{
+
 #define LOAD_FMI_FUNCTION(funcName)                                                                    \
     this->_##funcName = (funcName##TYPE*)get_function_ptr(this->dynlib_handle, #funcName);             \
     if (!this->_##funcName)                                                                            \
@@ -1681,6 +1684,8 @@ fmi3Status FmuUnit::GetVariable(fmi3ValueReference vr, std::vector<std::string>&
 
     return status;
 }
+
+/// @} fmu_tools_fmi3
 
 }  // namespace fmi3
 }  // namespace fmu_tools

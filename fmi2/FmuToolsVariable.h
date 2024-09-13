@@ -32,6 +32,9 @@ namespace fmu_tools {
 /// Namespace for FMI 2.0 classes
 namespace fmi2 {
 
+/// @addtogroup fmu_tools_fmi2
+/// @{
+
 /// Enumeration of supported FMU types (interfaces).
 enum class FmuType {
     MODEL_EXCHANGE,  ///< FMU for model exchange
@@ -330,6 +333,8 @@ class FmuVariable {
 
     bool m_has_start;  ///< start value provided
 };
+
+/// @} fmu_tools_fmi2
 
 }  // namespace fmi2
 }  // namespace fmu_tools

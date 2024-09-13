@@ -33,6 +33,9 @@
 namespace fmu_tools {
 namespace fmi2 {
 
+/// @addtogroup fmu_tools_fmi2
+/// @{
+
 #define LOAD_FMI_FUNCTION(funcName)                                                                    \
     this->_##funcName = (funcName##TYPE*)get_function_ptr(this->dynlib_handle, #funcName);             \
     if (!this->_##funcName)                                                                            \
@@ -948,6 +951,8 @@ fmi2Status FmuUnit::GetVariable(const std::string& varname, bool& value) noexcep
 fmi2Status FmuUnit::SetVariable(const std::string& varname, const bool& value) noexcept(false) {
     return SetVariable(varname, value ? 1 : 0, FmuVariable::Type::Boolean);
 }
+
+/// @} fmu_tools_fmi2
 
 }  // namespace fmi2
 }  // namespace fmu_tools

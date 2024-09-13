@@ -24,7 +24,12 @@
 namespace fmu_tools {
 namespace fmi3 {
 
+/// @addtogroup fmu_tools_fmi3
+/// @{
+
 #define FMITYPESPLATFORM_DEFAULT
+
+// TODO: DARIOM double check if it setter function for big objects can pass by (const?) reference instead of value
 
 /// List of pointers to all (unique) types used to define VariableTypes.
 /// No duplicated entries are allowed.
@@ -39,7 +44,6 @@ namespace fmi3 {
 /// should be both considered as scalar variables instead of arrays by themselves.
 /// The only slight difference is that functions handling fmi3Binary should consider that its size is not fixed.
 ///
-//// TODO: DARIOM double check if it setter function for big objects can pass by (const?) reference instead of value
 using FmuVariableBindType = varns::variant<float*,                  // fmi3Float32
                                            double*,                 // fmi3Float64
                                            int8_t*,                 // fmi3Int8
@@ -66,6 +70,8 @@ using FmuVariableBindType = varns::variant<float*,                  // fmi3Float
                                            std::pair<std::function<bool()>, std::function<void(bool)>>,
                                            std::pair<std::function<char()>, std::function<void(char)>>,
                                            std::pair<std::function<std::string()>, std::function<void(std::string)>>>;
+
+/// @} fmu_tools_fmi3
 
 }  // namespace fmi3
 }  // namespace fmu_tools

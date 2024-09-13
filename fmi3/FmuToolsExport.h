@@ -45,6 +45,9 @@
 namespace fmu_tools {
 namespace fmi3 {
 
+/// @addtogroup fmu_tools_fmi3
+/// @{
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -672,6 +675,8 @@ FmuComponentBase* fmi3InstantiateIMPL(FmuType fmiInterfaceType,
                                       fmi3Boolean loggingOn,
                                       fmi3InstanceEnvironment instanceEnvironment,
                                       fmi3LogMessageCallback logMessage);
+
+/// @} fmu_tools_fmi3
 
 }  // namespace fmi3
 }  // namespace fmu_tools

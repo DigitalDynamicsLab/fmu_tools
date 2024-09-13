@@ -26,6 +26,9 @@
 /// Main namespace for the fmu_tools package
 namespace fmu_tools {
 
+/// @addtogroup fmu_tools
+/// @{
+
 /// Enumeration of supported FMI standard versions.
 enum class FmuVersion { FMI2, FMI3 };
 
@@ -72,6 +75,8 @@ FmuVersion GetFmuVersion(const std::string& fmufilename) {
     else
         throw std::runtime_error("Unsupported FMI version. \n");
 }
+
+/// @} fmu_tools
 
 }  // namespace fmu_tools
 

@@ -44,6 +44,9 @@
 namespace fmu_tools {
 namespace fmi2 {
 
+/// @addtogroup fmu_tools_fmi2
+/// @{
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -459,6 +462,8 @@ FmuComponentBase* fmi2InstantiateIMPL(fmi2String instanceName,
                                       const fmi2CallbackFunctions* functions,
                                       fmi2Boolean visible,
                                       fmi2Boolean loggingOn);
+
+/// @} fmu_tools_fmi2
 
 }  // namespace fmi2
 }  // namespace fmu_tools
