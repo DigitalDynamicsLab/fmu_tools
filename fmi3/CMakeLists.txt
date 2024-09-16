@@ -203,8 +203,8 @@ add_dependencies(${FMU_MODEL_IDENTIFIER} fmi_modeldescription)
 # ---------------------------------------------
 # Add custom commands to:
 # - Copy external dependencies (if any)
-# - Generate the FMU model description
 # - Add the FMU resources directory (if any)
+# - Generate the FMU model description
 # - Create the FMU archive
 # ---------------------------------------------
 
@@ -218,13 +218,6 @@ if (DEFINED FMU_DEPENDENCIES AND NOT FMU_DEPENDENCIES STREQUAL "")
 else()
     message(STATUS "${FMU_MSG_PREFIX}No dependencies specified.")    
 endif()
-
-add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
-    COMMENT "\nGenerating modelDescription.xml for '${FMU_RUNTIME_OUTPUT_DIRECTORY}/${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX}' into '${FMU_DIRECTORY}'"
-    COMMAND $<TARGET_FILE:fmi_modeldescription> ${FMU_RUNTIME_OUTPUT_DIRECTORY} ${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX} ${FMU_DIRECTORY}
-    BYPRODUCTS "${FMU_DIRECTORY}/modelDescription.xml"
-    WORKING_DIRECTORY ${FMU_DIRECTORY}
-)
 
 if (DEFINED FMU_RESOURCES_DIRECTORY AND NOT FMU_RESOURCES_DIRECTORY STREQUAL "")
     if(EXISTS ${FMU_RESOURCES_DIRECTORY})
@@ -246,6 +239,13 @@ else()
     message(STATUS "${FMU_MSG_PREFIX}No resources directory specified.")
     set(FMU_RESOURCES_DIR_OUT "")
 endif()
+
+add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
+    COMMENT "\nGenerating modelDescription.xml for '${FMU_RUNTIME_OUTPUT_DIRECTORY}/${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX}' into '${FMU_DIRECTORY}'"
+    COMMAND $<TARGET_FILE:fmi_modeldescription> ${FMU_RUNTIME_OUTPUT_DIRECTORY} ${FMU_MODEL_IDENTIFIER}${CMAKE_SHARED_LIBRARY_SUFFIX} ${FMU_DIRECTORY}
+    BYPRODUCTS "${FMU_DIRECTORY}/modelDescription.xml"
+    WORKING_DIRECTORY ${FMU_DIRECTORY}
+)
 
 add_custom_command(TARGET ${FMU_MODEL_IDENTIFIER} POST_BUILD
     COMMENT "\nCreating FMU file: ${FMU_MODEL_IDENTIFIER}.fmu"
